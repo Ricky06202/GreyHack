@@ -1,0 +1,29 @@
+// GETSHELL - Uso: getshell [IP] [PORT] o getshell [/ruta/libreria.so]
+if params.len == 0 then exit("Uso: getshell [ip] [port] o getshell [ruta_lib]")
+
+metax = include_lib("/lib/metaxploit.so")
+if not metax then exit("Error: No tienes metaxploit.so")
+
+net_session = metax.net_use(params[0], params[1].to_int)
+if not net_session then exit("Error: No se pudo conectar a la IP")
+lib = net_session.dump_lib
+
+if not lib then exit("Error: No se pudo cargar la librería.")
+
+print "Analizando " + lib.lib_name + " v" + lib.version + "..."
+vulns = metax.scan(lib)
+
+for v in vulns
+	info = metax.scan_address(lib, v)
+	// Extraemos lo que el juego resalta entre tags <b>
+	valor = info.split("<b>")[1].split("</b>")[0]
+	print "Dir: " + v + " | Valor: " + valor
+	res = lib.overflow(v, valor)
+	if typeof(res) == "shell" then
+		print "[$$$] ¡SALTO EXITOSO! Conectado a " + params[0]
+		res.start_terminal
+		exit
+	else
+		print "[-] El exploit no devolvió una shell."
+	end if
+end for
