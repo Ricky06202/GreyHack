@@ -1,0 +1,36 @@
+// IVULNERAR - Uso: run ivulnerar [/ruta/lib] [memoria] [valor]
+if params.len < 3 then exit("Uso: run ivulnerar [/lib/kernel_module.so] [memoria] [valor]")
+
+comp = get_shell.host_computer
+lib_path = params[0]
+mem = params[1]
+val = params[2]
+
+// --- BÚSQUEDA DE MUNICIÓN (IGUAL QUE ISCAN) ---
+meta = null
+// Buscamos en todo /home por si whoami falla
+carpetas = comp.File("/home").get_folders
+for c in carpetas
+	f = comp.File(c.path + "/metaxploit.so")
+	if f then
+		meta = include_lib(f.path)
+		if meta then break
+	end if
+end for
+
+if not meta then meta = include_lib("/lib/metaxploit.so")
+if not meta then exit("[-] Error: No se halló metaxploit.so")
+
+// --- EJECUCIÓN DEL ATAQUE ---
+lib = meta.load(lib_path)
+if not lib then exit("[-] Error: No se pudo cargar " + lib_path)
+
+print "[*] Disparando exploit interno contra " + lib.lib_name + "..."
+res = lib.overflow(mem, val)
+
+if typeof(res) == "shell" then
+	print "[$$$] SALTO DE PRIVILEGIOS EXITOSO"
+	res.start_terminal
+else
+	print "[-] El exploit falló. Verifica si la memoria cambió."
+end if

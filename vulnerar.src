@@ -1,0 +1,69 @@
+// =======================================================
+// VULNERAR - VERSIÓN DE ALTA COMPATIBILIDAD (SINFALLOS)
+// =======================================================
+
+if params.len < 4 then exit("Uso: run vulnerar [ip] [port] [memoria] [valor]")
+
+ip = params[0]
+port = params[1].to_int
+mem = params[2]
+val = params[3]
+
+metax = include_lib("/lib/metaxploit.so")
+if not metax then exit("[-] No tienes metaxploit.so localmente.")
+
+print "[*] Conectando a " + ip + "..."
+session = metax.net_use(ip, port)
+if not session then exit("[-] Conexión fallida.")
+
+libRemota = session.dump_lib
+print "[*] Ejecutando exploit inicial..."
+
+res = libRemota.overflow(mem, val)
+if typeof(res) != "shell" then exit("[-] El exploit no devolvió una shell.")
+
+// --- DETECCIÓN DE RUTA POR PERMISOS (MÉTODO PRO) ---
+comp = res.host_computer
+home_folder = comp.File("/home")
+carpetas = home_folder.get_folders
+ruta_destino = ""
+
+for carpeta in carpetas
+	// Buscamos cualquier carpeta en /home donde tengamos permiso de escritura
+	if carpeta.has_permission("w") then
+		ruta_destino = carpeta.path
+		break
+	end if
+end for
+
+// Si por alguna razón lo anterior falla, usamos un fallback
+if ruta_destino == "" then ruta_destino = "/home/guest"
+
+print "[+] Acceso obtenido. Carpeta de trabajo: " + ruta_destino
+
+// --- TRANSFERENCIA DE KIT (Upload: 1) ---
+miPC = get_shell
+print "[>] Subiendo herramientas desde Ninilin..."
+
+// Subimos la librería y el escalador
+res.scp(
+	"/lib/metaxploit.so",
+	ruta_destino,
+	miPC,
+	1)
+
+listHerramientas = [
+	"imap",
+	"iscan",
+	"ivulnerar",
+]
+for herramienta in listHerramientas
+	res.scp(
+		"/bin/" + herramienta,
+		ruta_destino,
+		miPC,
+		1)
+end for
+
+print "[!] Kit listo."
+res.start_terminal

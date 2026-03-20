@@ -1,0 +1,31 @@
+// SCAN - Uso: scan [IP] [PORT] o scan [/ruta/libreria.so]
+if params.len == 0 then exit("Uso: scan [ip] [port] o scan [ruta_lib]")
+
+metax = include_lib("/lib/metaxploit.so")
+if not metax then exit("Error: No tienes metaxploit.so")
+
+// Caso A: Escaneo Remoto
+if params.len == 2 then
+	net_session = metax.net_use(params[0], params[1].to_int)
+	if not net_session then exit("Error: No se pudo conectar a la IP")
+	lib = net_session.dump_lib
+else
+	// Caso B: Escaneo Local (Útil para el Kernel una vez dentro)
+	lib = metax.load(params[0])
+end if
+
+if not lib then exit("Error: No se pudo cargar la librería.")
+
+print "Analizando " + lib.lib_name + " v" + lib.version + "..."
+vulns = metax.scan(lib)
+
+for v in vulns
+	info = metax.scan_address(lib, v)
+	// Extraemos lo que el juego resalta entre tags <b>
+	if info.indexOf("<b>") != -1 then
+		valor = info.split("<b>")[1].split("</b>")[0]
+		print "Dir: " + v + " | Valor: " + valor
+	else
+		print "Dir: " + v + " | [Manual: " + info + "]"
+	end if
+end for

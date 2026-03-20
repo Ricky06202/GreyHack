@@ -1,0 +1,50 @@
+// ISCAN - Uso: run iscan [/ruta/libreria.so]
+if params.len < 1 then exit("Uso: run iscan [/lib/kernel_module.so]")
+
+comp = get_shell.host_computer
+
+// --- BÚSQUEDA ROBUSTA DE METAXPLOIT ---
+meta = null
+// 1. Intentamos en la carpeta actual (donde lo subió vulnerar.ms)
+// Como no hay current_path, buscamos en el home del usuario actual
+usuario = comp.File("/bin/whoami").get_content.trim
+ruta_home = "/home/" + usuario + "/metaxploit.so"
+
+meta = include_lib(ruta_home)
+
+// 2. Si no está ahí, intentamos en la ruta estándar del sistema
+if not meta then meta = include_lib("/lib/metaxploit.so")
+
+// 3. Si sigue sin estar, buscamos en CUALQUIER home (por si acaso)
+if not meta then
+	carpetas = comp.File("/home").get_folders
+	for c in carpetas
+		f = comp.File(c.path + "/metaxploit.so")
+		if f then
+			meta = include_lib(f.path)
+			break
+		end if
+	end for
+end if
+
+if not meta then exit("[-] Error: No se encontró metaxploit.so en el sistema.")
+
+// --- CARGA DE LA LIBRERÍA OBJETIVO ---
+// Aquí es donde daba el error: ahora verificamos que meta no sea null
+lib = meta.load(params[0])
+if not lib then exit("[-] Error: No se pudo cargar la librería objetivo: " + params[0])
+
+print "\n--- ANALIZANDO: " + lib.lib_name + " v" + lib.version + " ---"
+vulns = meta.scan(lib)
+
+for v in vulns
+	info = meta.scan_address(lib, v)
+	if info.indexOf("<b>") != -1 then
+		valor = info.split("<b>")[1].split("</b>")[0]
+
+		tipo = "USER"
+		if info.indexOf("root") != -1 then tipo = "ROOT"
+
+		print "[" + tipo + "] Mem: " + v + " | Val: " + valor
+	end if
+end for

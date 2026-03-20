@@ -1,0 +1,63 @@
+// =======================================================
+// IPIVOT - SALTO LATERAL EN RED INTERNA
+// Uso: run ipivot [IP_INTERNA] [PUERTO]
+// =======================================================
+
+if params.len < 2 then exit("Uso: run ipivot [ip_interna] [puerto]")
+
+ip_objetivo = params[0]
+puerto = params[1].to_int
+
+// 1. CARGAR METAXPLOIT (Búsqueda local en el Salto 1)
+meta = include_lib("/root/metaxploit.so")
+if not meta then meta = include_lib("/lib/metaxploit.so")
+if not meta then exit("[-] Error: No se halló metaxploit.so en el servidor de salto.")
+
+print "[*] Intentando conexión interna a " + ip_objetivo + "..."
+net_session = meta.net_use(ip_objetivo, puerto)
+if not net_session then exit("[-] No se pudo conectar. ¿IP activa? ¿Puerto abierto?")
+
+lib = net_session.dump_lib
+print "[*] Librería detectada en objetivo: " + lib.lib_name + " v" + lib.version
+
+// 2. ESCANEO AUTOMÁTICO DE VULNERABILIDADES
+print "[*] Buscando debilidades en la red local..."
+vulns = meta.scan(lib)
+if vulns.len == 0 then exit("[-] No se hallaron vulnerabilidades automáticas.")
+
+// 3. SELECCIÓN Y ATAQUE
+// Buscamos la primera que nos dé una shell
+for v in vulns
+	info = meta.scan_address(lib, v)
+	if info.indexOf("<b>") != -1 then
+		valor = info.split("<b>")[1].split("</b>")[0]
+		print "[!] Intentando exploit con " + v + " -> " + valor
+
+		resultado = lib.overflow(v, valor)
+
+		if typeof(resultado) == "shell" then
+			print "[$$$] ¡SALTO EXITOSO! Conectado a " + ip_objetivo
+
+			// 4. PREPARACIÓN AUTOMÁTICA DE LA SIGUIENTE MÁQUINA
+			// Pasamos las herramientas de la PC 1 a la PC 2 por si queremos seguir pivotando
+			print "[*] Propagando herramientas al nuevo objetivo..."
+			mi_shell_actual = get_shell
+			resultado.scp(
+				"/root/metaxploit.so",
+				"/home/guest",
+				mi_shell_actual,
+				1)
+			resultado.scp(
+				"/root/ipivot.ms",
+				"/home/guest",
+				mi_shell_actual,
+				1)
+
+			print "[!] Entorno listo en " + ip_objetivo
+			resultado.start_terminal
+			exit
+		end if
+	end if
+end for
+
+print "[-] Se intentaron todas las vulnerabilidades sin éxito."

@@ -1,0 +1,58 @@
+// =======================================================
+// GETROOT - ESCALADA AUTOMÁTICA SIN RUTAS FIJAS
+// =======================================================
+
+comp = get_shell.host_computer
+print "[*] Iniciando fase de escalada local..."
+
+// --- BUSCAR MUNICIÓN DINÁMICAMENTE ---
+// Buscamos el metaxploit.so que subimos en las carpetas de /home
+home_folder = comp.File("/home")
+carpetas = home_folder.get_folders
+ruta_lib = ""
+
+for c in carpetas
+	archivo = comp.File(c.path + "/metaxploit.so")
+	if archivo then
+		ruta_lib = archivo.path
+		break
+	end if
+end for
+
+if ruta_lib == "" then
+	// Último intento en la carpeta del sistema
+	if comp.File("/lib/metaxploit.so") then ruta_lib = "/lib/metaxploit.so"
+end if
+
+if ruta_lib == "" then exit("[-] Error: No se encontró metaxploit.so para escalar.")
+
+// --- CARGAR Y EXPLOITEAR ---
+print "[*] Cargando librería desde: " + ruta_lib
+metaLocal = include_lib(ruta_lib)
+libKernel = metaLocal.load("/lib/kernel_module.so")
+
+print "[*] Analizando Kernel v" + libKernel.version
+vulns = metaLocal.scan(libKernel)
+
+for v in vulns
+	info = metaLocal.scan_address(libKernel, v)
+	if info.indexOf("root") != -1 then
+		// Extraemos el valor entre los tags <b> que usa el juego
+		valorReal = info.split("<b>")[1].split("</b>")[0]
+		print "[!] Intentando Root con: " + valorReal
+
+		resultado = libKernel.overflow(v, valorReal)
+		if typeof(resultado) == "shell" then
+			print "[$$$] ¡ACCESO ROOT CONSEGUIDO!"
+
+			// Limpieza: borramos el rastro
+			f = comp.File(ruta_lib)
+			if f then f.delete
+
+			resultado.start_terminal
+			exit
+		end if
+	end if
+end for
+
+print "[-] No se pudo obtener Root automáticamente."

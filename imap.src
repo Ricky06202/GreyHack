@@ -1,0 +1,20 @@
+// IMAP - Escaneo de librerías locales
+comp = get_shell.host_computer
+print "[*] Mapeando librerías del sistema..."
+
+rutas = [
+	"/lib",
+	"/usr/lib",
+	"/bin",
+]
+for ruta in rutas
+	dir = comp.File(ruta)
+	if not dir then continue
+
+	archivos = dir.get_files
+	for f in archivos
+		if f.name.indexOf(".so") != null then
+			print "[+] Hallada: " + f.path
+		end if
+	end for
+end for
