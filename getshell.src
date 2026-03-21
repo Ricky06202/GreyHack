@@ -1,13 +1,19 @@
-// GETSHELL SILENT - Uso: getshell [IP] [PORT]
-if params.len < 2 then exit("Uso: getshell [ip] [port]")
+// GETSHELL UNIVERSAL - Uso: getshell [IP] [PORT] o getshell [RUTA_LIB]
+if params.len == 0 then exit("Uso: getshell [ip] [port] o getshell [ruta_lib]")
 
 metax = include_lib("/lib/metaxploit.so")
+if not metax then metax = include_lib("/home/guest/metaxploit.so")
 if not metax then exit("Error: No tienes metaxploit.so")
+lib = null
 
-net_session = metax.net_use(params[0], params[1].to_int)
-if not net_session then exit("Error: No se pudo conectar a la IP " + params[0])
+if params.len == 1 then
+	lib = metax.load(params[0])
+else
+	// MODO REMOTO: Conectar a IP
+	net_session = metax.net_use(params[0], params[1].to_int)
+	if net_session then lib = net_session.dump_lib
+end if
 
-lib = net_session.dump_lib
 if not lib then exit("Error: No se pudo cargar la librería.")
 
 print "Analizando " + lib.lib_name + " v" + lib.version + "..."
@@ -15,18 +21,16 @@ vulns = metax.scan(lib)
 
 for v in vulns
 	info = metax.scan_address(lib, v)
-	// Extraemos el valor necesario para el overflow
 	valor = info.split("<b>")[1].split("</b>")[0]
 
-	// Ejecutamos el exploit en silencio
+	// Intentamos el exploit
 	res = lib.overflow(v, valor)
 
 	if typeof(res) == "shell" then
-		print "[$$$] ¡SALTO EXITOSO! Acceso obtenido en " + params[0]
+		print "[$$$] ¡ACCESO OBTENIDO!"
 		res.start_terminal
 		exit
 	end if
-	// Si no es shell, el bucle continúa sin imprimir nada (Silencio total)
 end for
 
-print "[-] No se hallaron vulnerabilidades de tipo shell en este puerto."
+print "[-] No se hallaron vulnerabilidades explotables."

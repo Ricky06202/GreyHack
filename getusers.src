@@ -1,11 +1,22 @@
-// GETCLEAN - Extracción Minimalista de Credenciales
+// GETCLEAN UNIVERSAL - Extracción de Datos y Passwd
+if params.len == 0 then exit("Uso: run getclean [ip] [port] o [ruta_lib]")
+
 metax = include_lib("/lib/metaxploit.so")
-if params.len < 2 then exit("Uso: run getclean [ip] [port]")
+if not metax then metax = include_lib("/home/guest/metaxploit.so")
+if not metax then exit("Error: No tienes metaxploit.so")
+lib = null
 
-net_session = metax.net_use(params[0], params[1].to_int)
-lib = net_session.dump_lib
+// Lógica Universal: Carga Local o Remota
+if params.len == 1 then
+	lib = metax.load(params[0])
+else
+	net_session = metax.net_use(params[0], params[1].to_int)
+	if net_session then lib = net_session.dump_lib
+end if
+
+if not lib then exit("Error: No se pudo cargar la librería.")
+
 vulns = metax.scan(lib)
-
 for v in vulns
 	info = metax.scan_address(lib, v)
 	valor = info.split("<b>")[1].split("</b>")[0]
@@ -16,44 +27,51 @@ for v in vulns
 		if typeof(res) == "shell" then comp = res.host_computer
 		if typeof(comp) != "computer" then continue
 
+		print "--- RESULTADOS DE ACCESO ---"
+
+		// 1. Intento de lectura de /etc/passwd (Prioridad máxima)
+		passFile = comp.File("/etc/passwd")
+		if passFile then
+			print "PASSWD: ENCONTRADO"
+			print passFile.get_content
+			print "---------------------------"
+		else
+			print "PASSWD: Sin permisos de lectura"
+			print "---------------------------"
+		end if
+
+		// 2. Búsqueda en /home (Para correos y bancos)
 		homeDir = comp.File("/home")
-		if not homeDir then exit("Error: Sin acceso a /home")
+		if homeDir then
+			for userFolder in homeDir.get_folders
+				usuario = userFolder.name
+				mail = "No hallado"
+				bank = "No hallado"
 
-		print "--- RESULTADOS DE ESCANEO ---"
-
-		for userFolder in homeDir.get_folders
-			usuario = userFolder.name
-			mail = "No hallado"
-			bank = "No hallado"
-
-			// Revisamos Config y Desktop de cada usuario
-			rutas = [
-				"/home/" + usuario + "/Config",
-				"/home/" + usuario + "/Desktop",
-			]
-			for ruta in rutas
-				dir = comp.File(ruta)
-				if not dir then continue
-
-				for archivo in dir.get_files
-					contenido = archivo.get_content
-					lineas = contenido.split(char(10))
-
-					for l in lineas
-						l = l.trim
-						if l.indexOf("@") != -1 then mail = l
-						if l.indexOf("bank") != -1 or 
-							(l.indexOf(":") != -1 and l.val == 0 and l.length > 5) then bank = l
+				rutas = [
+					"/home/" + usuario + "/Config",
+					"/home/" + usuario + "/Desktop",
+				]
+				for ruta in rutas
+					dir = comp.File(ruta)
+					if not dir then continue
+					for archivo in dir.get_files
+						contenido = archivo.get_content
+						lineas = contenido.split(char(10))
+						for l in lineas
+							l = l.trim
+							if l.indexOf("@") != -1 then mail = l
+							if l.indexOf("bank") != -1 or 
+								(l.indexOf(":") != -1 and l.val == 0 and l.length > 5) then bank = l
+						end for
 					end for
 				end for
+				print "USUARIO: " + usuario
+				print "MAIL: " + mail
+				print "BANK: " + bank
+				print "---------------------------"
 			end for
-
-			// Imprimimos el bloque limpio por cada usuario
-			print "USUARIO: " + usuario
-			print "MAIL: " + mail
-			print "BANK: " + bank
-			print "---------------------------"
-		end for
+		end if
 		exit
 	end if
 end for
