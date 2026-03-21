@@ -1,5 +1,5 @@
-// GETSHELL - Uso: getshell [IP] [PORT] o getshell [/ruta/libreria.so]
-if params.len == 0 then exit("Uso: getshell [ip] [port] o getshell [ruta_lib]")
+// GETSHELL - Uso: getshell [IP] [PORT]
+if params.len == 0 then exit("Uso: getshell [ip] [port]")
 
 metax = include_lib("/lib/metaxploit.so")
 if not metax then exit("Error: No tienes metaxploit.so")

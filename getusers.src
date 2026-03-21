@@ -1,0 +1,52 @@
+// GETUSERS - Automatización de recolección de info
+// Uso: Basado en tu lógica de iteración de carpetas Home
+
+metax = include_lib("/lib/metaxploit.so")
+if params.len < 2 then exit("Uso: run getdata [ip] [port]")
+
+net_session = metax.net_use(params[0], params[1].to_int)
+lib = net_session.dump_lib
+vulns = metax.scan(lib)
+
+for v in vulns
+	info = metax.scan_address(lib, v)
+	valor = info.split("<b>")[1].split("</b>")[0]
+	res = lib.overflow(v, valor)
+
+	// Verificamos si obtuvimos acceso a la computadora
+	if typeof(res) == "computer" or typeof(res) == "shell" then
+		print "[+] Acceso concedido. Iniciando recolección..."
+
+		// Si es shell, obtenemos el objeto computer
+		comp = res
+		if typeof(res) == "shell" then comp = res.host_computer
+
+		// 1. Ir a /home e iterar usuarios
+		homeDir = comp.File("/home")
+		if not homeDir then exit("[-] No se pudo acceder a /home")
+
+		usuarios = homeDir.get_folders
+		for userFolder in usuarios
+			print "[*] Revisando usuario: " + userFolder.name
+
+			// 2. Entrar a la carpeta Config de cada usuario
+			configPath = "/home/" + userFolder.name + "/Config"
+			configDir = comp.File(configPath)
+
+			if configDir then
+				archivos = configDir.get_files
+				for archivo in archivos
+					// 3. Filtrar y leer archivos .txt (mails, banks, etc.)
+					if archivo.name.indexOf(".txt") != -1 or archivo.name.indexOf(".conf") != -1 then
+						print "--- Contenido de: " + archivo.name + " ---"
+						print comp.File(archivo.path).get_content
+						print "---------------------------------"
+					end if
+				end for
+			else
+				print " [!] Carpeta Config no hallada o sin permisos para: " + userFolder.name
+			end if
+		end for
+		exit
+	end if
+end for
