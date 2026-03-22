@@ -1,0 +1,188 @@
+// command nmap
+if params.len != 1 then exit("Uso: nmap [ip]")
+
+globals.ipAddress = params[0]
+globals.ports = null
+globals.router = null
+globals.isLanIp = false
+
+printMessage = function(message)
+	info = "PORT STATE SERVICE VERSION LAN"
+	print "\nStarting nmap at " + current_date
+	print "Interesting ports on " + globals.ipAddress + "\n"
+
+	if globals.ports.len == 0 then exit("Scan finished. No open ports.")
+	if typeof(globals.ports) == "string" then exit(globals.ports)
+
+	for port in globals.ports
+		service_info = globals.router.port_info(port)
+		lan_ips = port.get_lan_ip
+		port_status = "open"
+
+		if port.is_closed and not globals.isLanIp then
+			port_status = "closed"
+		end if
+
+		info = info + "\n" + port.port_number + " " + port_status + " " + service_info + " " + lan_ips
+	end for
+
+	print format_columns(info) + "\n"
+end function
+
+scanLocal = function
+	globals.ipAddress = get_shell.host_computer.local_ip
+	globals.router = get_router
+	if globals.router == null then exit("nmap: ip address not found")
+	globals.ports = globals.router.device_ports(globals.ipAddress)
+	if globals.ports == null then exit("nmap: ip address has no open ports")
+	printMessage "Scan finished"
+end function
+
+scanRemote = function
+	globals.router = get_router(globals.ipAddress)
+	if globals.router == null then exit("nmap: ip address not found")
+	globals.ports = globals.router.used_ports
+	if globals.ports == null then exit("nmap: ip address has no open ports")
+	printMessage "Scan finished"
+end function
+
+menu = function
+	while true
+		print ""
+		print "¿Qué deseas hacer?"
+		print "1. Encontrar vulnerabilidades en puertos"
+		print "2. Obtener acceso a Shell"
+		print "3. Obtener Usuarios"
+		print "4. Obtener Archivos"
+		print "5. Salir"
+		print ""
+		option = user_input("Opcion: ").to_int
+		if option >= 1 and option <= 5 then
+			return option
+		else
+			print "nmap: opcion invalida"
+		end if
+	end while
+end function
+
+globals.vulnerabilidades = []
+globals.lib = null
+
+encontrarVulnerabilidades = function
+	while true
+		print "En que puerto deseas buscar vulnerabilidades?"
+		port = user_input("Puerto: ").to_int
+		if port >= 1 and port <= 65535 then
+			break
+		else
+			print "nmap: puerto invalido"
+		end if
+	end while
+
+	metax = include_lib("/lib/metaxploit.so")
+	session = metax.net_use(globals.ipAddress, port)
+	if session == null then exit("nmap: no se pudo establecer conexion")
+	globals.lib = session.dump_lib
+	areas = metax.scan(globals.lib)
+	if areas == null then exit("nmap: no se pudo escanear el puerto")
+	for area in areas
+		vulnerability = metax.scan_address(globals.lib, area)
+		vulnerability = vulnerability.split("<b>")[1].split("</b>")[0]
+		globals.vulnerabilidades.push {
+			"area": area,
+			"vulnerability": vulnerability,
+		}
+	end for
+
+	print "Vulnerabilidades encontradas: " + globals.vulnerabilidades.len
+	for vulnerability in globals.vulnerabilidades
+		print vulnerability.area + " " + vulnerability.vulnerability
+	end for
+
+end function
+
+obtenerShell = function
+	if globals.lib == null then exit("nmap: no se pudo obtener shell")
+	for vulnerability in globals.vulnerabilidades
+		result = globals.lib.overflow(vulnerability.area, vulnerability.vulnerability)
+		print "Obtubimos: " + typeof(result)
+		if typeof(result) == "shell" then
+			print "Shell obtenido exitosamente"
+			result.start_terminal
+			return 
+		end if
+	end for
+	print "No se pudo obtener shell"
+end function
+
+obtenerUsuarios = function
+	if globals.lib == null then exit("nmap: no se pudo obtener usuarios")
+	for vulnerability in globals.vulnerabilidades
+		result = globals.lib.overflow(vulnerability.area, vulnerability.vulnerability)
+		print "Obtubimos: " + typeof(result)
+		if typeof(result) == "computer" then
+			pass = result.File("/etc/passwd").get_content
+			if pass then
+				print "archivo /etc/passwd"
+				print pass
+				print ""
+			end if
+
+			users = result.File("/home").get_folders
+			for user in users
+				if user.name == "guest" then continue
+				print "Usuario: " + user.name
+				print "Mail: " + result.File("/home/" + user.name + "/Config/Mail.txt").get_content
+				print "Bank: " + result.File("/home/" + user.name + "/Config/Bank.txt").get_content
+				print ""
+			end for
+		end if
+	end for
+end function
+
+obtenerArchivos = function
+	if globals.lib == null then exit("nmap: no se pudo obtener archivos")
+	for vulnerability in globals.vulnerabilidades
+		result = globals.lib.overflow(vulnerability.area, vulnerability.vulnerability)
+		print "Obtubimos: " + typeof(result)
+		if typeof(result) == "file" then
+			print "Name: " + result.name
+			print "Path: " + result.path + " Permissions: " + result.permissions
+			print "Content: " + result.get_content
+			print ""
+			folders = result.get_folders
+			for folder in folders
+				print "Folder: " + folder.name
+			end for
+			files = result.get_files
+			for file in files
+				print "File: " + file.name
+				print "Content: " + result.File(file.path).get_content
+				print ""
+			end for
+		end if
+	end for
+end function
+
+if globals.ipAddress == "127.0.0.1" or globals.ipAddress == "localhost" then
+	globals.isLanIp = true
+	scanLocal
+else
+	globals.isLanIp = false
+	scanRemote
+end if
+
+while true
+	option = menu
+	if option == 1 then
+		encontrarVulnerabilidades
+	else if option == 2 then
+		obtenerShell
+	else if option == 3 then
+		obtenerUsuarios
+	else if option == 4 then
+		obtenerArchivos
+	else if option == 5 then
+		exit
+	end if
+end while
