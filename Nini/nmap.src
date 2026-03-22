@@ -1,155 +1,161 @@
 // ==========================================================
-// nmap & Exploit Suite Pro - Ricardo Edition (v8.0 - FULL)
+// nmap & Exploit Suite Pro - v10.2 (ELITE EDITION)
 // ==========================================================
 
-if params.len != 1 then exit("<color=red>Uso: nmap [ip] o nmap -L</color>")
+C_G = "<color=#00FF00>"
+C_R = "<color=#FF0000>"
+C_B = "<color=#00FFFF>"
+C_Y = "<color=#FFFF00>"
+C_W = "<color=#FFFFFF>"
+C_E = "</color>"
+B_LINE = C_B + "--------------------------------------------------" + C_E
 
-// --- CONFIGURACIÓN DE MODO ---
+if params.len != 1 then exit(C_R + "Uso: nmap [ip] o nmap -L" + C_E)
+
 globals.modoPrivEsc = (params[0] == "-L" or params[0] == "-l")
 globals.ipTarget = params[0]
-
-if globals.ipTarget == "localhost" or globals.ipTarget == "127.0.0.1" then
-	globals.ipTarget = get_shell.host_computer.local_ip
-end if
-
-// --- GLOBALES ---
 globals.objetoAcceso = null
-globals.nmapTable = ""
-C_GREEN = "<color=#00FF00>"
-C_RED = "<color=#FF0000>"
-C_BLUE = "<color=#00FFFF>"
-C_YELLOW = "<color=#FFFF00>"
-C_END = "</color>"
+
+metax = include_lib("/lib/metaxploit.so")
+if not metax then metax = include_lib(current_path + "/metaxploit.so")
+if not metax then metax = include_lib("/home/guest/metaxploit.so")
 
 limpiar = function
 	clear_screen
 end function
 
-// --- TABLAS DE INFORMACIÓN ---
-generarTablaPrivEsc = function
-	info = "ARCHIVO_LIB  ESTADO  RUTA"
-	header = "\n[!] MODO PRIV-ESC: Analizando /lib local\n"
-	libFolder = get_shell.host_computer.File("/lib")
-	if not libFolder then return "Acceso denegado a /lib"
-	for f in libFolder.get_files
-		if f.name.indexOf(".so") != -1 then
-			info = info + "\n" + f.name + "  LOADED  " + f.path
-		end if
-	end for
-	return header + format_columns(info) + "\n"
+mostrarBanner = function
+	print C_B + "  _  _  __  __   _   ___ " + C_E
+	print C_B + " | \| ||  \/  | /_\ | _ \" + C_E
+	print C_B + " | .  || |\/| |/ _ \|  _/" + C_E
+	print C_B + " |_|\_||_|  |_/_/ \_\_|  " + C_E
+	print C_W + " Elite Security Suite | Build 10.2.x" + C_E
+	print B_LINE
 end function
 
+// --- LOGICA NMAP REFORZADA ---
 generarTablaNmap = function
-	info = "PORT STATE SERVICE LAN"
-	header = "\nStarting nmap v1.1 en " + globals.ipTarget + "\n"
-	router = get_router
-	if not router then return "Error: Router no hallado."
-	ports = router.device_ports(globals.ipTarget)
-	if not ports or ports.len == 0 then return "No hay puertos abiertos en " + globals.ipTarget
+	if not get_shell.host_computer.is_network_active then return C_R + "No internet access." + C_E
+
+	target = globals.ipTarget
+	if target == "127.0.0.1" or target == "localhost" then target = get_shell.host_computer.local_ip
+
+	isLan = is_lan_ip(target)
+	router = null
+	ports = null
+
+	if isLan then
+		router = get_router
+		if router then ports = router.device_ports(target)
+	else
+		router = get_router(target)
+		if router then ports = router.used_ports
+	end if
+
+	// --- EL FIX: Si ports sigue siendo null o vacio, intentamos scan directo ---
+	if not ports or ports.len == 0 then
+		// Algunos servidores solo sueltan puertos si les pides info de red directa
+		net_session = metax.net_use(target)
+		if net_session then
+			lib = net_session.dump_lib
+			// Si llegamos aqui, al menos hay un puerto abierto que metax detectó
+			return C_Y + "[!] Router oculto. Prueba atacar puertos comunes (21, 22, 80, 443)." + C_E
+		end if
+		return C_R + "Scan finished. No open ports found on " + target + C_E
+	end if
+
+	info = "PORT" + " " + "STATE" + " " + "SERVICE" + " " + "LAN"
+
 	for port in ports
 		service = router.port_info(port)
-		lan = port.get_lan_ip
 		status = "open"
-		if port.is_closed then status = "closed"
-		info = info + "\n" + port.port_number + " " + status + " " + service + " " + lan
+		if port.is_closed and not isLan then status = "closed"
+		info = info + "\n" + C_G + port.port_number + C_E + " " + status + " " + service + " " + port.get_lan_ip
 	end for
-	return header + format_columns(info) + "\n"
+
+	return format_columns(info)
 end function
 
-// --- MÓDULO AUTO-PWN ---
+// --- RESTO DE FUNCIONES (ATAQUE, USUARIOS, ARCHIVOS) ---
 autoExplotar = function
-	metax = include_lib("/lib/metaxploit.so")
-	if not metax then metax = include_lib(current_path + "/metaxploit.so")
-	if not metax then exit("Falta metaxploit.so")
+	if not metax then return print(C_R + "Error: metaxploit.so no cargado" + C_E)
 	lib = null
 	if globals.modoPrivEsc then
-		libName = user_input("Librería a atacar (en /lib/): ")
+		libName = user_input("Lib en /lib: ")
 		lib = metax.load("/lib/" + libName)
 	else
-		p_input = user_input("Puerto a atacar: ")
-		session = metax.net_use(globals.ipTarget, p_input.to_int)
+		p_num = user_input("Puerto: ")
+		session = metax.net_use(globals.ipTarget, p_num.to_int)
 		if session then lib = session.dump_lib
 	end if
-	if not lib then return print(C_RED + "No se obtuvo la librería." + C_END)
+	if not lib then return print(C_R + "No se pudo obtener la libreria." + C_E)
+	print "[*] Explotando vulnerabilidades..."
 	areas = metax.scan(lib)
 	for area in areas
 		v = metax.scan_address(lib, area).split("<b>")[1].split("</b>")[0]
 		res = lib.overflow(area, v)
 		if res then
 			globals.objetoAcceso = res
-			print C_GREEN + "[OK] Acceso: " + typeof(res) + C_END
+			print C_G + "ACCESO CONCEDIDO: " + typeof(res).upper + C_E
 			return true
 		end if
 	end for
-	print C_RED + "Ataque fallido." + C_END
+	print C_R + "Ataque fallido." + C_E
 end function
 
-// --- MÓDULOS DE EXTRACCIÓN (REINTEGRADOS) ---
 obtenerUsuarios = function
-	if typeof(globals.objetoAcceso) != "computer" then return print(C_RED + "Se requiere acceso COMPUTER." + C_END)
+	if not globals.objetoAcceso or typeof(globals.objetoAcceso) != "computer" then return print(C_R + "Error: Se requiere acceso COMPUTER" + C_E)
 	res = globals.objetoAcceso
 	home = res.File("/home")
-	if not home then return print(C_RED + "Sin acceso a /home" + C_END)
-	output = "USUARIO | MAIL | BANK"
-	for userFolder in home.get_folders
-		if userFolder.name == "guest" then continue
-		m = res.File("/home/" + userFolder.name + "/Config/Mail.txt")
-		b = res.File("/home/" + userFolder.name + "/Config/Bank.txt")
-		m_cont = "N/A"
-		b_cont = "N/A"
-		if m then m_cont = m.get_content
-		if b then b_cont = b.get_content
-		output = output + "\n" + userFolder.name + " | " + m_cont + " | " + b_cont
+	if not home then return print(C_R + "Sin acceso a /home" + C_E)
+	output = "USER | MAIL | BANK"
+	for u in home.get_folders
+		if u.name == "guest" then continue
+		m = res.File("/home/" + u.name + "/Config/Mail.txt")
+		b = res.File("/home/" + u.name + "/Config/Bank.txt")
+		m_c = "N/A"
+		b_c = "N/A"
+		if m then m_c = m.get_content
+		if b then b_c = b.get_content
+		output = output + "\n" + C_G + u.name + C_E + " | " + m_c + " | " + b_c
 	end for
 	print "\n" + format_columns(output)
 end function
 
 obtenerArchivos = function
 	res = globals.objetoAcceso
-	if res == null then return print(C_RED + "Sin acceso. Ataca primero." + C_END)
+	if not res then return print(C_R + "Sin acceso activo." + C_E)
 	if typeof(res) == "file" then
-		print C_BLUE + "\nContenido de " + res.path + ":\n" + C_END + res.get_content
+		print C_B + "Leyendo " + res.path + ":\n" + C_E + res.get_content
 	else if typeof(res) == "computer" then
 		root = res.File("/")
-		info = "TIPO | NOMBRE | PERMISOS"
+		info = "TYPE | NAME | PERMS"
 		for d in root.get_folders
-			info = info + "\nDIR | " + d.name + " | " + d.permissions
+			info = info + "\nDIR | " + C_B + d.name + C_E + " | " + d.permissions
 		end for
 		for f in root.get_files
-			info = info + "\nFILE | " + f.name + " | " + f.permissions
+			info = info + "\nFILE | " + C_G + f.name + C_E + " | " + f.permissions
 		end for
 		print "\n" + format_columns(info)
-	else
-		print C_RED + "Tipo " + typeof(res) + " no permite explorar." + C_END
 	end if
 end function
 
-// --- INICIO ---
-if globals.modoPrivEsc then
-	globals.nmapTable = generarTablaPrivEsc
-else
-	globals.nmapTable = generarTablaNmap
-end if
-
-// --- BUCLE PRINCIPAL ---
+// --- BUCLE ---
 while true
 	limpiar
-	print globals.nmapTable
-	print C_BLUE + "========================================" + C_END
-	if globals.modoPrivEsc then
-		print "MODO: PRIV-ESC LOCAL"
-		print "1. Explotar Lib | 2. Terminal | 3. Usuarios | 4. Archivos | 5. Salir"
-	else
-		print "MODO: ESCANEO DE RED"
-		print "1. Atacar Puerto | 2. Terminal | 3. Usuarios | 4. Archivos | 5. Salir"
-	end if
-	if globals.objetoAcceso then print "[!] ACCESO: " + C_YELLOW + typeof(globals.objetoAcceso).upper + C_END
-
-	opt = user_input("\nSelecciona > ").to_int
+	mostrarBanner
+	st = C_R + "NONE" + C_E
+	if globals.objetoAcceso then st = C_G + typeof(globals.objetoAcceso).upper + C_E
+	print C_W + " TARGET: " + C_Y + globals.ipTarget + C_W + " | ACCESS: " + st
+	print B_LINE
+	if globals.modoPrivEsc then print "PRIV-ESC MODE (Local)" else print generarTablaNmap
+	print B_LINE
+	print C_B + "1." + C_E + " Exploit " + C_B + "2." + C_E + " Shell " + C_B + "3." + C_E + " Users " + C_B + "4." + C_E + " Files " + C_B + "5." + C_E + " Exit"
+	opt = user_input("\n" + C_G + "root@ghost" + C_E + ":# ").to_int
 	if opt == 1 then
 		autoExplotar
 	else if opt == 2 then
-		if typeof(globals.objetoAcceso) == "shell" then globals.objetoAcceso.start_terminal else print(C_RED + "No es Shell" + C_END)
+		if typeof(globals.objetoAcceso) == "shell" then globals.objetoAcceso.start_terminal else print C_R + "No Shell" + C_E
 	else if opt == 3 then
 		obtenerUsuarios
 	else if opt == 4 then
@@ -157,5 +163,5 @@ while true
 	else if opt == 5 then
 		exit
 	end if
-	user_input "\nPresiona Enter..."
+	user_input "\n[ Presiona Enter ]"
 end while
