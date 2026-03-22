@@ -1,168 +1,192 @@
-// command nmap
-if params.len != 1 then exit("Uso: nmap [ip]")
+// ==========================================================
+// nmap & Exploit Suite Pro - Ricardo Edition (v3.0)
+// ==========================================================
 
+if params.len != 1 then exit("<color=red>Uso: nmap [ip]</color>")
+
+// --- GLOBALES Y CONFIGURACIÓN ---
 globals.ipAddress = params[0]
-globals.ports = null
+globals.ports = []
 globals.router = null
 globals.isLanIp = false
+globals.vulnerabilidades = []
+globals.lib = null
+globals.objetoAcceso = null // PERSISTENCIA: Aquí se guarda el éxito del ataque
 
-printMessage = function(message)
-	info = "PORT STATE SERVICE VERSION LAN"
-	print "\nStarting nmap at " + current_date
-	print "Interesting ports on " + globals.ipAddress + "\n"
+// Colores para UI Profesional
+C_GREEN = "<color=#00FF00>"
+C_RED = "<color=#FF0000>"
+C_BLUE = "<color=#00FFFF>"
+C_YELLOW = "<color=#FFFF00>"
+C_END = "</color>"
 
-	if globals.ports.len == 0 then exit("Scan finished. No open ports.")
-	if typeof(globals.ports) == "string" then exit(globals.ports)
+limpiar = function
+	clear_screen
+end function
 
-	for port in globals.ports
-		service_info = globals.router.port_info(port)
-		lan_ips = port.get_lan_ip
-		port_status = "open"
+es_numero = function(valor)
+	return typeof(valor.to_int) == "number" and (valor.to_int != 0 or valor == "0")
+end function
 
-		if port.is_closed and not globals.isLanIp then
-			port_status = "closed"
-		end if
+// --- LÓGICA DE RED ---
 
-		info = info + "\n" + port.port_number + " " + port_status + " " + service_info + " " + lan_ips
+printMessage = function
+	info = "PORT STATE SERVICE"
+	print "\n" + C_BLUE + "Starting nmap at " + current_date + C_END
+	print "Target IP: " + globals.ipAddress + "\n"
+
+	if globals.ports == null or globals.ports.len == 0 then exit("Scan finished. No open ports.")
+
+	for p in globals.ports
+		portNum = p
+		if typeof(p) == "port" then portNum = p.port_number
+		service_info = globals.router.port_info(portNum)
+		if not service_info then service_info = "unknown"
+		info = info + "\n" + portNum + " open " + service_info
 	end for
-
 	print format_columns(info) + "\n"
 end function
 
 scanLocal = function
-	globals.ipAddress = get_shell.host_computer.local_ip
 	globals.router = get_router
-	if globals.router == null then exit("nmap: ip address not found")
+	if not globals.router then exit(C_RED + "Error: Router local no hallado." + C_END)
 	globals.ports = globals.router.device_ports(globals.ipAddress)
-	if globals.ports == null then exit("nmap: ip address has no open ports")
-	printMessage "Scan finished"
+	printMessage
 end function
 
 scanRemote = function
 	globals.router = get_router(globals.ipAddress)
-	if globals.router == null then exit("nmap: ip address not found")
+	if not globals.router then exit(C_RED + "Error: IP remota inalcanzable." + C_END)
 	globals.ports = globals.router.used_ports
-	if globals.ports == null then exit("nmap: ip address has no open ports")
-	printMessage "Scan finished"
+	printMessage
 end function
 
+// --- INTERFAZ ---
+
 menu = function
+	print C_BLUE + "========================================" + C_END
+	print "   AUDITORÍA ACTIVA: " + globals.ipAddress
+	print C_BLUE + "========================================" + C_END
+	print "1. " + C_GREEN + "Escanear Puerto y Explotar (Auto-Pwn)" + C_END
+	print "2. Lanzar Terminal Interactiva (Shell)"
+	print "3. Extraer Datos (Usuarios/Bank/Mail)"
+	print "4. Explorar Sistema de Archivos"
+	print "5. " + C_RED + "Salir" + C_END
+
+	if globals.objetoAcceso != null then
+		print "\n[!] ACCESO ACTUAL: " + C_YELLOW + typeof(globals.objetoAcceso).upper + C_END
+	else
+		print "\n[!] ESTADO: " + C_RED + "Sin acceso. Usa Opción 1." + C_END
+	end if
+
 	while true
-		print ""
-		print "¿Qué deseas hacer?"
-		print "1. Encontrar vulnerabilidades en puertos"
-		print "2. Obtener acceso a Shell"
-		print "3. Obtener Usuarios"
-		print "4. Obtener Archivos"
-		print "5. Salir"
-		print ""
-		option = user_input("Opcion: ").to_int
-		if option >= 1 and option <= 5 then
-			return option
-		else
-			print "nmap: opcion invalida"
-		end if
+		entrada = user_input("\nSelecciona > ")
+		if entrada == "" then continue
+		option = entrada.to_int
+		if option >= 1 and option <= 5 then return option
+		print C_RED + "Opción inválida." + C_END
 	end while
 end function
 
-globals.vulnerabilidades = []
-globals.lib = null
+// --- MÓDULO AUTO-PWN (UNIFICADO) ---
 
-encontrarVulnerabilidades = function
+autoExplotar = function
 	while true
-		print "En que puerto deseas buscar vulnerabilidades?"
-		port = user_input("Puerto: ").to_int
-		if port >= 1 and port <= 65535 then
+		p_input = user_input("Puerto a atacar: ")
+		if es_numero(p_input) then
+			port = p_input.to_int
 			break
-		else
-			print "nmap: puerto invalido"
 		end if
+		print C_RED + "Puerto inválido." + C_END
 	end while
 
 	metax = include_lib("/lib/metaxploit.so")
+	if not metax then exit(C_RED + "Error: metaxploit.so no encontrado." + C_END)
+
 	session = metax.net_use(globals.ipAddress, port)
-	if session == null then exit("nmap: no se pudo establecer conexion")
+	if session == null then return print(C_RED + "Fallo de conexión en puerto " + port + C_END)
+
 	globals.lib = session.dump_lib
+	print "[*] Escaneando " + globals.lib.lib_name + " v" + globals.lib.version + "..."
+
 	areas = metax.scan(globals.lib)
-	if areas == null then exit("nmap: no se pudo escanear el puerto")
+	if areas == null or areas.len == 0 then return print(C_RED + "No se hallaron vulnerabilidades." + C_END)
+
+	globals.vulnerabilidades = []
+	globals.objetoAcceso = null // Limpiamos acceso previo
+
+	print "[*] Probando " + areas.len + " vectores de ataque..."
+
 	for area in areas
-		vulnerability = metax.scan_address(globals.lib, area)
-		vulnerability = vulnerability.split("<b>")[1].split("</b>")[0]
-		globals.vulnerabilidades.push {
-			"area": area,
-			"vulnerability": vulnerability,
-		}
-	end for
+		vuln_text = metax.scan_address(globals.lib, area)
+		v_value = vuln_text.split("<b>")[1].split("</b>")[0]
 
-	print "Vulnerabilidades encontradas: " + globals.vulnerabilidades.len
-	for vulnerability in globals.vulnerabilidades
-		print vulnerability.area + " " + vulnerability.vulnerability
-	end for
+		// Intentar el ataque inmediatamente
+		res = globals.lib.overflow(area, v_value)
 
-end function
-
-obtenerShell = function
-	if globals.lib == null then exit("nmap: no se pudo obtener shell")
-	for vulnerability in globals.vulnerabilidades
-		result = globals.lib.overflow(vulnerability.area, vulnerability.vulnerability)
-		print "Obtubimos: " + typeof(result)
-		if typeof(result) == "shell" then
-			print "Shell obtenido exitosamente"
-			result.start_terminal
-			return 
+		if res != null then
+			globals.objetoAcceso = res
+			globals.vulnerabilidades.push {
+				"area": area,
+				"vulnerability": v_value,
+			}
+			print C_GREEN + "[ÉXITO] Obtenido acceso tipo: " + typeof(res) + C_END
+			return true
 		end if
 	end for
-	print "No se pudo obtener shell"
+
+	print C_RED + "[-] Ningún overflow devolvió un objeto válido." + C_END
+	return false
 end function
+
+// --- MÓDULOS DE EXTRACCIÓN ---
 
 obtenerUsuarios = function
-	if globals.lib == null then exit("nmap: no se pudo obtener usuarios")
-	for vulnerability in globals.vulnerabilidades
-		result = globals.lib.overflow(vulnerability.area, vulnerability.vulnerability)
-		print "Obtubimos: " + typeof(result)
-		if typeof(result) == "computer" then
-			pass = result.File("/etc/passwd").get_content
-			if pass then
-				print "archivo /etc/passwd"
-				print pass
-				print ""
-			end if
+	if typeof(globals.objetoAcceso) != "computer" then
+		return print(C_RED + "Error: Se requiere acceso COMPUTER (Obtuviste " + typeof(globals.objetoAcceso) + ")" + C_END)
+	end if
 
-			users = result.File("/home").get_folders
-			for user in users
-				if user.name == "guest" then continue
-				print "Usuario: " + user.name
-				print "Mail: " + result.File("/home/" + user.name + "/Config/Mail.txt").get_content
-				print "Bank: " + result.File("/home/" + user.name + "/Config/Bank.txt").get_content
-				print ""
-			end for
-		end if
+	res = globals.objetoAcceso
+	home = res.File("/home")
+	if not home then return print(C_RED + "Sin acceso a /home" + C_END)
+
+	output = "USUARIO | MAIL | BANK"
+	for userFolder in home.get_folders
+		if userFolder.name == "guest" then continue
+		m = res.File("/home/" + userFolder.name + "/Config/Mail.txt")
+		b = res.File("/home/" + userFolder.name + "/Config/Bank.txt")
+		m_cont = "N/A"
+		b_cont = "N/A"
+		if m then m_cont = m.get_content
+		if b then b_cont = b.get_content
+		output = output + "\n" + userFolder.name + " | " + m_cont + " | " + b_cont
 	end for
+	print "\n" + format_columns(output)
 end function
 
 obtenerArchivos = function
-	if globals.lib == null then exit("nmap: no se pudo obtener archivos")
-	for vulnerability in globals.vulnerabilidades
-		result = globals.lib.overflow(vulnerability.area, vulnerability.vulnerability)
-		print "Obtubimos: " + typeof(result)
-		if typeof(result) == "file" then
-			print "Name: " + result.name
-			print "Path: " + result.path + " Permissions: " + result.permissions
-			print "Content: " + result.get_content
-			print ""
-			folders = result.get_folders
-			for folder in folders
-				print "Folder: " + folder.name
-			end for
-			files = result.get_files
-			for file in files
-				print "File: " + file.name
-				print "Content: " + result.File(file.path).get_content
-				print ""
-			end for
-		end if
-	end for
+	res = globals.objetoAcceso
+	if res == null then return print(C_RED + "Sin acceso. Usa Opción 1." + C_END)
+
+	if typeof(res) == "file" then
+		print C_BLUE + "\nLeyendo archivo directo:" + C_END
+		print "Ruta: " + res.path + "\nContenido:\n" + res.get_content
+	else if typeof(res) == "computer" then
+		root = res.File("/")
+		info = "TIPO | NOMBRE | PERMISOS"
+		for d in root.get_folders
+			info = info + "\nDIR | " + C_YELLOW + d.name + C_END + " | " + d.permissions
+		end for
+		for f in root.get_files
+			info = info + "\nFILE | " + f.name + " | " + f.permissions
+		end for
+		print "\n" + format_columns(info)
+	else
+		print C_RED + "El objeto tipo " + typeof(res) + " no permite explorar archivos." + C_END
+	end if
 end function
+
+// --- FLUJO PRINCIPAL ---
 
 if globals.ipAddress == "127.0.0.1" or globals.ipAddress == "localhost" then
 	globals.isLanIp = true
@@ -173,16 +197,22 @@ else
 end if
 
 while true
-	option = menu
-	if option == 1 then
-		encontrarVulnerabilidades
-	else if option == 2 then
-		obtenerShell
-	else if option == 3 then
+	opt = menu
+	if opt == 1 then
+		autoExplotar
+	else if opt == 2 then
+		if typeof(globals.objetoAcceso) == "shell" then
+			globals.objetoAcceso.start_terminal
+		else
+			print C_RED + "No tienes un objeto SHELL activo." + C_END
+		end if
+	else if opt == 3 then
 		obtenerUsuarios
-	else if option == 4 then
+	else if opt == 4 then
 		obtenerArchivos
-	else if option == 5 then
+	else if opt == 5 then
 		exit
 	end if
+	user_input "\nPresiona Enter para continuar..."
+	limpiar
 end while
