@@ -122,22 +122,45 @@ obtenerUsuarios = function
 	print "\n" + format_columns(output)
 end function
 
+explorarRecursivo = function(archivo, sangria = "")
+	// 1. Si es un archivo individual
+	if not archivo.is_folder then
+		print sangria + C_G + "[FILE] " + archivo.name + C_E + " (" + archivo.permissions + ")"
+		if not archivo.is_binary then
+			contenido = archivo.get_content
+			if contenido.len > 0 then
+				print sangria + "   > Contenido: " + contenido.replace("\n", "\n" + sangria + "   > ")
+			else
+				print sangria + "   > [Archivo vacío]"
+			end if
+		else
+			print sangria + "   > [Contenido Binario]"
+		end if
+		return 
+	end if
+
+	// 2. Si es una carpeta, listamos y entramos en ella
+	print sangria + C_B + "[DIR]  " + archivo.name + C_E + " (" + archivo.permissions + ")"
+
+	// Explorar subcarpetas
+	for d in archivo.get_folders
+		explorarRecursivo d, sangria + "  - "
+	end for
+
+	// Explorar archivos
+	for f in archivo.get_files
+		explorarRecursivo f, sangria + "  - "
+	end for
+end function
+
+// Función principal que llamas desde tu script
 obtenerArchivos = function
 	res = globals.objetoAcceso
 	if not res then return print(C_R + "Sin acceso activo." + C_E)
-	if typeof(res) == "file" then
-		print C_B + "Leyendo " + res.path + ":\n" + C_E + res.get_content
-	else if typeof(res) == "computer" then
-		root = res.File("/")
-		info = "TYPE | NAME | PERMS"
-		for d in root.get_folders
-			info = info + "\nDIR | " + C_B + d.name + C_E + " | " + d.permissions
-		end for
-		for f in root.get_files
-			info = info + "\nFILE | " + C_G + f.name + C_E + " | " + f.permissions
-		end for
-		print "\n" + format_columns(info)
-	end if
+
+	print "\n" + C_B + "=== INICIANDO ESCANEO RECURSIVO DE " + res.path + " ===" + C_E
+	explorarRecursivo res
+	print C_B + "=== ESCANEO FINALIZADO ===" + C_E
 end function
 
 // --- BUCLE ---
