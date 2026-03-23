@@ -166,7 +166,7 @@ gestorSesiones = function
 	tabla = C_W + "ID" + C_E + " | " + C_W + "TYPE" + C_E + " | " + C_W + "TARGET" + C_E
 	for i in range(0, globals.sesiones.len - 1)
 		s = globals.sesiones[i]
-		tabla = tabla + "\n" + C_B + (i + 1) + C_E + " | " + typeof(s.obj).upper + " | " + C_G + s.info + C_E
+		tabla = tabla + "\n" + C_Y + (i + 1) + C_E + " | " + C_P + typeof(s.obj).upper + C_E + " | " + C_G + s.info + C_E
 	end for
 	print format_columns(tabla)
 	print HUD_LINE
