@@ -1,0 +1,220 @@
+// ==========================================================
+// WRAITH OS - v15.7 (STABILITY PATCH)
+// ==========================================================
+
+C_G = "<color=#00FF41>"
+C_R = "<color=#FF3131>"
+C_B = "<color=#00D4FF>"
+C_Y = "<color=#F7FF00>"
+C_P = "<color=#B537F2>"
+C_W = "<color=#E0E0E0>"
+C_E = "</color>"
+
+HUD_LINE = C_P + "==================================================" + C_E
+HUD_SUB = C_B + "--------------------------------------------------" + C_E
+
+if params.len != 1 then exit(C_R + "CRITICAL: IP required. Usage: nmap [ip]" + C_E)
+globals.ipTarget = params[0]
+globals.sesiones = []
+globals.lastScan = []
+
+metax = include_lib("/lib/metaxploit.so")
+if not metax then metax = include_lib(current_path + "/metaxploit.so")
+crypto = include_lib("/lib/crypto.so")
+if not crypto then crypto = include_lib(current_path + "/crypto.so")
+
+limpiar = function
+	clear_screen
+end function
+
+mostrarBanner = function
+	print C_P + "      ___          ___          ___          ___      " + C_E
+	print C_P + "     /  /\        /  /\        /  /\        /  /\     " + C_E
+	print C_B + "    /  /::\      /  /:/_      /  /::\      /  /:/_    " + C_E
+	print C_B + "   /  /:/\:\    /  /:/ /\    /  /:/\:\    /  /:/ /\   " + C_E
+	print C_G + "  /  /:/~/:/   /  /:/ /:/   /  /:/~/:/   /  /:/ /:/   " + C_E
+	print C_G + " /__/:/ /:/   /__/:/ /:/   /__/:/ /:/   /__/:/ /:/    " + C_E
+	print C_Y + " \  \:\/:/    \  \:\/:/    \  \:\/:/    \  \:\/:/     " + C_E
+	print C_Y + "  \  \::/      \  \::/      \  \::/      \  \::/      " + C_E
+	print C_W + "   W R A I T H   N E T W O R K   I N T E R F A C E" + C_E
+end function
+
+nmapUX = function
+	globals.lastScan = []
+	target = globals.ipTarget
+	// Columnas: ID | OBJECT | SERVICE | VERSION | ADDRESS/PATH
+	tabla = C_W + "ID" + C_E + " | " + C_W + "OBJECT" + C_E + " | " + C_W + "SERVICE" + C_E + " | " + C_W + "VERSION" + C_E + " | " + C_W + "ADDRESS/PATH" + C_E
+
+	if target == "-L" or target == "127.0.0.1" then
+		rutas = [
+			"/lib",
+			"/usr/lib",
+		]
+		comp = get_shell.host_computer
+		id_count = 1
+		for ruta in rutas
+			dir = comp.File(ruta)
+			if not dir then continue
+			for archivo in dir.get_files
+				globals.lastScan.push archivo.path
+				tipo = "FILE"
+				col = C_W
+				if archivo.name.indexOf(".so") != null then
+					tipo = "LIBRARY"
+					col = C_G
+				end if
+				tabla = tabla + "\n" + C_B + id_count + C_E + " | " + col + archivo.name + C_E + " | " + C_Y + tipo + C_E + " | " + C_W + "---" + C_E + " | " + C_B + archivo.path + C_E
+				id_count = id_count + 1
+			end for
+		end for
+	else
+		isL = is_lan_ip(target)
+		r = null
+		p_list = null
+		if isL then
+			r = get_router
+			if r then p_list = r.device_ports(target)
+		else
+			r = get_router(target)
+			if r then p_list = r.used_ports
+		end if
+		if not p_list or p_list.len == 0 then return C_R + " [!] NO SERVICES DETECTED" + C_E
+
+		id_count = 1
+		for p in p_list
+			globals.lastScan.push p.port_number
+			info = r.port_info(p).split(" ")
+			srv = info[0]
+			ver = "---"
+			if info.len > 1 then ver = info[1]
+			tabla = tabla + "\n" + C_B + id_count + C_E + " | " + C_G + p.port_number + C_E + " | " + C_Y + srv + C_E + " | " + C_W + ver + C_E + " | " + C_B + target + C_E
+			id_count = id_count + 1
+		end for
+	end if
+	return format_columns(tabla)
+end function
+
+ejecutarAtaqueID = function(idInput)
+	numID = idInput.to_int
+	idx = numID - 1
+	if idx < 0 or idx >= globals.lastScan.len then return print(C_R + "ERROR: Invalid ID" + C_E)
+	objetivo = globals.lastScan[idx]
+	lib = null
+
+	if globals.ipTarget == "-L" or globals.ipTarget == "127.0.0.1" then
+		if typeof(objetivo) != "string" or objetivo.indexOf(".so") == null then return print(C_R + "[-] ERROR: Only .so libraries are exploitable" + C_E)
+		lib = metax.load(objetivo)
+	else
+		puertoValido = objetivo
+		if typeof(puertoValido) != "number" then puertoValido = puertoValido.to_int
+		session = metax.net_use(globals.ipTarget, puertoValido)
+		if session then lib = session.dump_lib
+	end if
+
+	if not lib then return print(C_R + "[-] ACCESS DENIED" + C_E)
+
+	areas = metax.scan(lib)
+	for area in areas
+		vulns = metax.scan_address(lib, area).split("<b>")
+		for v_raw in vulns
+			if v_raw.indexOf("</b>") == null then continue
+			v = v_raw.split("</b>")[0]
+			res = lib.overflow(area, v)
+			if res then
+				globals.sesiones.push {
+					"obj": res,
+					"info": globals.ipTarget + "@" + area,
+				}
+				print C_G + "[+] EXPLOIT SUCCESSFUL" + C_E
+				return res
+			end if
+		end for
+	end for
+	print C_R + "[-] NO VULNERABILITIES FOUND" + C_E
+end function
+
+ejecutarDecipher = function
+	if not crypto then return print("CRYPTO MISSING")
+	raw = user_input(C_G + "HASH>> ")
+	if raw == "" then return 
+	lines = raw.split("\n")
+	t = C_W + "USER | PASS" + C_E
+	for l in lines
+		if l == "" then continue
+		u = "???"
+		h = l
+		if l.indexOf(":") != -1 then
+			u = l.split(":")[0]
+			h = l.split(":")[1]
+		end if
+		p = crypto.decipher(h.trim)
+		if not p then p = C_R + "FAIL"
+		t = t + "\n" + u + " | " + C_G + p + C_E
+	end for
+	print format_columns(t)
+end function
+
+gestorSesiones = function
+	limpiar
+	print HUD_LINE
+	if globals.sesiones.len == 0 then
+		print C_R + " NO SESSIONS ACTIVE"
+		print HUD_LINE
+		user_input "[ENTER]"
+		return 
+	end if
+	tabla = C_W + "ID" + C_E + " | " + C_W + "TYPE" + C_E + " | " + C_W + "TARGET" + C_E
+	for i in range(0, globals.sesiones.len - 1)
+		s = globals.sesiones[i]
+		tabla = tabla + "\n" + C_B + (i + 1) + C_E + " | " + typeof(s.obj).upper + " | " + C_G + s.info + C_E
+	end for
+	print format_columns(tabla)
+	print HUD_LINE
+	idxStr = user_input(C_Y + "LINK ID: " + C_E)
+	if idxStr != "" then
+		idx = idxStr.to_int - 1
+		if idx >= 0 and idx < globals.sesiones.len then
+			s = globals.sesiones[idx]
+			if typeof(s.obj) == "shell" then s.obj.start_terminal
+		end if
+	end if
+end function
+
+while true
+	limpiar
+	mostrarBanner
+	sh = 0
+	pc = 0
+	fl = 0
+	for s in globals.sesiones
+		if typeof(s.obj) == "shell" then sh = sh + 1
+		if typeof(s.obj) == "computer" then pc = pc + 1
+	end for
+	// FIX del contador: Verificamos tipo antes de usar indexOf
+	for item in globals.lastScan
+		if typeof(item) == "string" then
+			if item.indexOf("/") != null then fl = fl + 1
+		end if
+	end for
+
+	print HUD_LINE
+	print " TARGET: " + C_Y + globals.ipTarget + C_E + " | " + C_G + sh + " SHELLS " + C_E + "| " + C_B + pc + " NODES " + C_E + "| " + C_W + fl + " FILES" + C_E
+	print HUD_LINE
+	print nmapUX
+	print HUD_SUB
+	print C_W + " [1] EXPLOIT    [2] SESSIONS    [3] DECIPHER    [4] EXIT" + C_E
+	print HUD_SUB
+
+	cmd = user_input(C_G + "wraith>> " + C_E)
+	if cmd == "1" then
+		idSel = user_input(C_Y + "ID: " + C_E)
+		if idSel != "" then ejecutarAtaqueID(idSel)
+	else if cmd == "2" then
+		gestorSesiones
+	else if cmd == "3" then
+		ejecutarDecipher
+		user_input "[ENTER]"
+	else if cmd == "4" then
+		exit
+	end if
+end while
