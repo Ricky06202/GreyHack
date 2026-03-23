@@ -1,5 +1,5 @@
 // ==========================================================
-// WRAITH OS - v16.4 (ZERO-SHORTCUT EDITION)
+// WRAITH OS - v27.0 (TOTAL WARFARE & SOCIAL ENG)
 // ==========================================================
 
 C_G = "<color=#00FF41>"; C_R = "<color=#FF3131>"; C_B = "<color=#00D4FF>"
@@ -9,134 +9,205 @@ C_E = "</color>"
 HUD_LINE = C_P + "==================================================" + C_E
 HUD_SUB  = C_B + "--------------------------------------------------" + C_E
 
-if params.len != 1 then exit(C_R + "CRITICAL: IP required. Usage: nmap [ip]" + C_E)
+if params.len != 1 then exit(C_R + "Uso: wraith [target_ip]" + C_E)
+
 globals.ipTarget = params[0]
 globals.sesiones = [] 
 globals.lastScan = [] 
-
-metax = include_lib("/lib/metaxploit.so")
-if not metax then metax = include_lib(current_path + "/metaxploit.so")
-crypto = include_lib("/lib/crypto.so")
-if not crypto then crypto = include_lib(current_path + "/crypto.so")
+globals.activeShell = get_shell
+globals.originDisplay = "LOCAL"
 
 limpiar = function; clear_screen; end function
 
-mostrarBanner = function
-    print C_P + "      ___          ___          ___          ___      " + C_E
-    print C_P + "     /  /\        /  /\        /  /\        /  /\     " + C_E
-    print C_B + "    /  /::\      /  /:/_      /  /::\      /  /:/_    " + C_E
-    print C_B + "   /  /:/\:\    /  /:/ /\    /  /:/\:\    /  /:/ /\   " + C_E
-    print C_G + "  /  /:/~/:/   /  /:/ /:/   /  /:/~/:/   /  /:/ /:/   " + C_E
-    print C_G + " /__/:/ /:/   /__/:/ /:/   /__/:/ /:/   /__/:/ /:/    " + C_E
-    print C_Y + " \  \:\/:/    \  \:\/:/    \  \:\/:/    \  \:\/:/     " + C_E
-    print C_Y + "  \  \::/      \  \::/      \  \::/      \  \::/      " + C_E
-    print C_W + "   W R A I T H   N E T W O R K   I N T E R F A C E" + C_E
+cargarLib = function(nombre)
+    lib = include_lib("/lib/" + nombre)
+    if not lib then lib = include_lib(current_path + "/" + nombre)
+    if not lib then exit(C_R + "FATAL: " + nombre + " no encontrada." + C_E)
+    return lib
 end function
 
-nmapUX = function
+globals.metax = cargarLib("metaxploit.so")
+globals.crypto = cargarLib("crypto.so")
+
+verificarConexion = function(ip)
+    if ip == "localhost" or ip == "127.0.0.1" then return true
+    return globals.activeShell.ping(ip)
+end function
+
+// --- CRACKER INTERNO (Para automatización) ---
+crackHash = function(raw)
+    if not globals.crypto then return "SIN_CRYPTO"
+    if raw == "" or raw == null then return "VACÍO"
+    parts = raw.split(":")
+    h = parts[0]
+    if parts.len > 1 then h = parts[1]
+    res = globals.crypto.decipher(h.trim)
+    if not res then return C_R + "FAIL" + C_E
+    return C_G + res + C_E
+end function
+
+explorarRecursivo = function(archivo, indent = "")
+    if archivo == null then return
+    print indent + C_B + " > " + C_E + archivo.name + C_W + " [" + archivo.permissions + "]" + C_E
+    if archivo.is_folder then
+        elementos = archivo.get_files + archivo.get_folders
+        for item in elementos; explorarRecursivo(item, indent + "  "); end for
+    else if not archivo.is_binary then
+        contenido = archivo.get_content
+        if contenido then 
+            if contenido.len > 60 then contenido = contenido[0:60] + "..."
+            print indent + "   " + C_G + "Preview: " + C_E + contenido
+        end if
+    end if
+end function
+
+// --- MOTOR DE RED (LÓGICA NMAP ORIGINAL) ---
+nmapUX = function()
     globals.lastScan = []
     target = globals.ipTarget
-    tabla = C_W + "ID" + C_E + " | " + C_W + "OBJECT" + C_E + " | " + C_W + "SERVICE" + C_E + " | " + C_W + "VERSION" + C_E + " | " + C_W + "ADDRESS/PATH" + C_E
+    hostActivo = globals.activeShell.host_computer
     
-    id_count = 1
-    if target == "-l" or target == "-L" then
-        comp = get_shell.host_computer
-        libDir = comp.File("/lib")
-        if not libDir then return C_R + " [!] /lib NOT ACCESSIBLE" + C_E
-        for archivo in libDir.get_files
-            if archivo.name.indexOf(".so") != null then
-                globals.lastScan.push(archivo.path)
-                tabla = tabla + "\n" + C_B + id_count + C_E + " | " + C_G + archivo.name + C_E + " | " + C_Y + "LIBRARY" + C_E + " | " + C_W + "[STATIC]" + C_E + " | " + C_B + archivo.path + C_E
-                id_count = id_count + 1
-            end if
-        end for
+    if target == "127.0.0.1" or target == "localhost" then target = hostActivo.local_ip
+    if not verificarConexion(target) then return C_R + " [!] HOST UNREACHABLE" + C_E
+
+    isL = is_lan_ip(target); router = null
+    
+    // Si el host de la shell no tiene get_router (Switch), usamos el global
+    if isL then
+        router = get_router 
     else
-        p_list = null; r = null
-        if target == "localhost" or target == "127.0.0.1" then
-            p_list = get_shell.host_computer.get_ports
-        else
-            isL = is_lan_ip(target)
-            if isL then; r = get_router; if r then p_list = r.device_ports(target)
-            else; r = get_router(target); if r then p_list = r.used_ports; end if
-        end if
-        
-        if not p_list or p_list.len == 0 then return C_R + " [!] NO PORTS DETECTED" + C_E
-        for p in p_list
-            globals.lastScan.push(p.port_number)
-            info = "Unknown"
-            if target == "localhost" or target == "127.0.0.1" then; info = "LocalService 1.0"
-            else; info = r.port_info(p); end if
-            
-            srvParts = info.split(" ")
-            srv = srvParts[0]; ver = "---"; if srvParts.len > 1 then ver = srvParts[1]
-            tabla = tabla + "\n" + C_B + id_count + C_E + " | " + C_G + p.port_number + C_E + " | " + C_Y + srv + C_E + " | " + C_W + ver + C_E + " | " + C_B + target + C_E
-            id_count = id_count + 1
-        end for
+        router = get_router(target)
     end if
-    return format_columns(tabla)
+    
+    if not router then return C_R + " [!] ERROR: No se detectó Router." + C_E
+    
+    ports = null
+    if isL then; ports = router.device_ports(target); else; ports = router.used_ports; end if
+    if not ports or ports.len == 0 then return C_Y + " [!] Scan finished. No open ports." + C_E
+
+    header = C_W+"ID"+C_E+" | "+C_W+"PORT"+C_E+" | "+C_W+"STATE"+C_E+" | "+C_W+"SERVICE"+C_E+" | "+C_W+"VERSION"+C_E+" | "+C_W+"LAN"+C_E
+    cuerpo = ""; id_count = 1
+    
+    for port in ports
+        if typeof(port) != "port" then continue
+        globals.lastScan.push(port.port_number)
+        
+        info_raw = router.port_info(port)
+        parts = info_raw.split(" "); srv = parts[0]; ver = "---"
+        if parts.len > 1 then ver = parts[1]
+        
+        lan_ip = port.get_lan_ip; status = "open"; col = C_G
+        if port.is_closed and not isL then; status = "closed"; col = C_R; end if
+        
+        cuerpo = cuerpo + "\n" + C_B+id_count+C_E + " | " + C_Y+port.port_number+C_E + " | " + col+status+C_E + " | " + C_B+srv+C_E + " | " + C_W+ver+C_E + " | " + C_W+lan_ip+C_E
+        id_count = id_count + 1
+    end for
+    return format_columns(header + cuerpo)
 end function
 
+// --- ATAQUE CON BOUNCE Y EXTRACCIÓN SOCIAL ---
 ejecutarAtaqueID = function(idInput)
     if idInput == "" then return
-    
-    // ATAJO PARA PUERTO 0
-    if idInput == "0" then
-        if globals.ipTarget == "-l" or globals.ipTarget == "-L" then return print(C_R + "[-] ID 0 invalid for file mode" + C_E)
-        print C_B + "[*] BYPASS: Forcing exploit on Port 0..." + C_E
-        session = metax.net_use(globals.ipTarget, 0)
-        if session then lib = session.dump_lib else lib = null
-    else
+    pNum = 0
+    if idInput != "0" then
         idx = idInput.to_int - 1
-        if idx < 0 or idx >= globals.lastScan.len then return print(C_R + "ERROR: ID no válido" + C_E)
-        objetivo = globals.lastScan[idx]
-        if globals.ipTarget == "-l" or globals.ipTarget == "-L" then
-            lib = metax.load(objetivo)
-        else
-            puertoNum = objetivo; if typeof(puertoNum) != "number" then puertoNum = puertoNum.to_int
-            session = metax.net_use(globals.ipTarget, puertoNum)
-            if session then lib = session.dump_lib else lib = null
-        end if
+        if idx < 0 or idx >= globals.lastScan.len then return
+        pNum = globals.lastScan[idx]
+    else; pNum = 0; end if
+
+    print C_W + "Conectando a " + globals.ipTarget + ":" + pNum + "..." + C_E
+    session = globals.metax.net_use(globals.ipTarget, pNum)
+    if not session then return
+    lib = session.dump_lib
+    if not lib then return
+    
+    lanTarget = ""
+    if lib.lib_name == "kernel_router.so" then
+        print C_P + " [!] ROUTER DETECTADO. ¿USAR BOUNCE?" + C_E
+        print " [1] NO (Atacar Router)  [2] SÍ (Saltar a IP Interna)"
+        if user_input(">> ") == "2" then lanTarget = user_input(C_Y + "IP Interna: " + C_E)
     end if
-    
-    if not lib then return print(C_R + "[-] Error: Librería inaccesible." + C_E)
-    
-    areas = metax.scan(lib)
+
+    areas = globals.metax.scan(lib)
     for area in areas
-        vulns = metax.scan_address(lib, area).split("<b>")
+        vulns = globals.metax.scan_address(lib, area).split("<b>")
         for v_raw in vulns
             if v_raw.indexOf("</b>") == null then continue
             v = v_raw.split("</b>")[0]
-            res = lib.overflow(area, v)
+            
+            res = null
+            if lanTarget != "" then; res = lib.overflow(area, v, lanTarget); else; res = lib.overflow(area, v); end if
+            
             if res then
-                globals.sesiones.push({"obj": res, "info": globals.ipTarget + "@" + area})
-                print C_G + "[+] EXPLOIT EXITOSO" + C_E
-                return res
+                infoSess = globals.ipTarget + ":" + pNum
+                if lanTarget != "" then infoSess = lanTarget + " (via " + globals.ipTarget + ")"
+                globals.sesiones.push({"obj": res, "info": infoSess})
+                print C_G + "[+] Acceso obtenido: " + typeof(res).upper + C_E
+
+                // --- EXTRACCIÓN AUTOMÁTICA (MÓDULO ORO PURO) ---
+                if typeof(res) == "computer" then
+                    home = res.File("/home")
+                    if home then
+                        for uF in home.get_folders
+                            print C_P + " [INTEL] Perfil: " + uF.name + C_E
+                            // Buscar Banco
+                            bFile = res.File("/home/"+uF.name+"/Config/Bank.txt")
+                            if bFile then print "  > BANK: " + crackHash(bFile.get_content)
+                            // Buscar Correo (Ingeniería Social)
+                            mFile = res.File("/home/"+uF.name+"/Config/Mail.txt")
+                            if mFile then print "  > MAIL: " + crackHash(mFile.get_content)
+                        end for
+                    end if
+                end if
             end if
         end for
     end for
-    print C_R + "[-] No se encontraron vulnerabilidades." + C_E
+    user_input "[ENTER]"
 end function
 
-// --- (Resto de funciones: Decipher y Gestor) ---
-ejecutarDecipher = function; if not crypto then return print("CRYPTO MISSING"); raw = user_input(C_G+"HASH>> "); if raw == "" then return; lines = raw.split("\n"); t = C_W+"USER | PASS"+C_E; for l in lines; if l=="" then continue; u="???"; h=l; if l.indexOf(":")!=-1 then; u=l.split(":")[0]; h=l.split(":")[1]; end if; p=crypto.decipher(h.trim); if not p then p=C_R+"FAIL"; t=t+"\n"+u+" | "+C_G+p+C_E; end for; print format_columns(t); end function
+ejecutarDecipher = function()
+    if not globals.crypto then return
+    raw = user_input(C_G + "HASH >> " + C_E)
+    if raw == "" then return
+    print C_W + "RESULTADO: " + C_E + crackHash(raw)
+end function
 
-gestorSesiones = function; limpiar; print HUD_LINE; if globals.sesiones.len == 0 then; print C_R + " NO SESSIONS ACTIVE"; print HUD_LINE; user_input "[ENTER]"; return; end if; tabla = C_W + "ID | TYPE | TARGET" + C_E; for i in range(0, globals.sesiones.len - 1); s = globals.sesiones[i]; tabla = tabla + "\n" + C_Y + (i + 1) + C_E + " | " + C_W + typeof(s.obj).upper + C_E + " | " + C_G + s.info + C_E; end for; print format_columns(tabla); print HUD_LINE; idxStr = user_input(C_Y + "LINK ID: " + C_E); if idxStr != "" then; idx = idxStr.to_int - 1; if idx >= 0 and idx < globals.sesiones.len then; s = globals.sesiones[idx]; if typeof(s.obj) == "shell" then s.obj.start_terminal; end if; end if; end function
+gestorSesiones = function()
+    limpiar; print HUD_LINE
+    if globals.sesiones.len == 0 then; print C_R + " NO SESSIONS"; user_input "[ENTER]"; return; end if
+    h = C_W+"ID"+C_E+" | "+C_W+"TYPE"+C_E+" | "+C_W+"TARGET"+C_E
+    c = ""; for i in range(0, globals.sesiones.len - 1)
+        s = globals.sesiones[i]; c = c + "\n" + C_Y+(i+1)+C_E + " | " + C_W+typeof(s.obj).upper+C_E + " | " + C_G+s.info+C_E
+    end for
+    print format_columns(h + c); print HUD_LINE
+    idxS = user_input(C_Y + "ID: " + C_E)
+    if idxS == "" or idxS == "q" then return
+    idx = idxS.to_int - 1; if idx < 0 or idx >= globals.sesiones.len then return; s = globals.sesiones[idx]
+    if typeof(s.obj) == "shell" then
+        print C_B + " [1] INTERACT  [2] PIVOT  [3] BACK" + C_E
+        opt = user_input(">> ")
+        if opt == "1" then; s.obj.start_terminal
+        else if opt == "2" then; globals.activeShell = s.obj; globals.originDisplay = s.obj.host_computer.local_ip; end if
+    else if typeof(s.obj) == "computer" then
+        print C_Y + " [!] Explorando archivos del objeto COMPUTER..." + C_E
+        explorarRecursivo(s.obj.File("/home")); user_input "[ENTER]"
+    end if
+end function
 
 while true
-    limpiar; mostrarBanner
-    sh = 0; pc = 0; fl = 0
-    for s in globals.sesiones; if typeof(s.obj) == "shell" then sh = sh + 1; if typeof(s.obj) == "computer" then pc = pc + 1; end for
-    for item in globals.lastScan; if typeof(item) == "string" and item.indexOf("/") != null then fl = fl + 1; end for
+    limpiar; print C_P + "      W R A I T H   N E T W O R K   I N T E R F A C E" + C_E
+    status_host = C_R + "(OFFLINE)" + C_E
+    if verificarConexion(globals.ipTarget) then status_host = C_G + "(ONLINE)" + C_E
     print HUD_LINE
-    print " TARGET: " + C_Y + globals.ipTarget + C_E + " | " + C_G + sh + " SHELLS " + C_E + "| " + C_B + pc + " NODES " + C_E + "| " + C_W + fl + " FILES" + C_E
-    print HUD_LINE
-    print nmapUX
-    print HUD_SUB
-    print C_W + " [1] EXPLOIT    [2] SESSIONS    [3] DECIPHER    [4] EXIT" + C_E
-    print HUD_SUB
+    print " ORIGIN: " + C_B + globals.originDisplay + C_E + " | TARGET: " + C_Y + globals.ipTarget + C_E + " " + status_host
+    print " SESSIONS: " + C_G + globals.sesiones.len + C_E
+    print HUD_LINE; print nmapUX; print HUD_SUB
+    print C_W + "[1] EXPLOIT [2] SESS [3] HASH [4] SHELL [5] TARGET [6] EXIT" + C_E
     cmd = user_input(C_G + "wraith>> " + C_E)
-    if cmd == "1" then; idSel = user_input(C_Y + "ID: " + C_E); ejecutarAtaqueID(idSel)
+    if cmd == "1" then; idS = user_input("ID: "); ejecutarAtaqueID(idS)
     else if cmd == "2" then; gestorSesiones
     else if cmd == "3" then; ejecutarDecipher; user_input "[ENTER]"
-    else if cmd == "4" then; exit; end if
+    else if cmd == "4" then; globals.activeShell.start_terminal
+    else if cmd == "5" then; nt = user_input("IP: "); if nt != "" then globals.ipTarget = nt
+    else if cmd == "6" then; exit; end if
 end while
