@@ -27,12 +27,9 @@ saveVault = function(data)
     if file then
         file.set_content(serialize(data))
     else
-        parentPath = parent_path(vaultPath)
-        parent = get_shell.host_computer.File(parentPath)
-        if parent then
-            newFile = parent.create_file(vaultPath)
-            if newFile then newFile.set_content(serialize(data))
-        end if
+        get_shell.host_computer.touch(current_path, ".wraith_vault")
+        file = get_shell.host_computer.File(vaultPath)
+        if file then file.set_content(serialize(data))
     end if
 end function
 

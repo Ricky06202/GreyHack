@@ -64,12 +64,9 @@ saveExploitsCache = function(cache)
     if file then
         file.set_content(content)
     else
-        parentPath = parent_path(cachePath)
-        parent = get_shell.host_computer.File(parentPath)
-        if parent then
-            newFile = parent.create_file(cachePath)
-            if newFile then newFile.set_content(content)
-        end if
+        get_shell.host_computer.touch(current_path, ".wraith_exploits")
+        file = get_shell.host_computer.File(cachePath)
+        if file then file.set_content(content)
     end if
 end function
 
