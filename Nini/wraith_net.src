@@ -45,8 +45,9 @@ scanPorts = function(targetIp, portRange = null)
         ports = filtered
     end if
     
-    // Construir tabla de resultados
-    result = "PORT STATE SERVICE VERSION LAN_IP\n"
+    // Construir tabla de resultados con IDs
+    result = "ID  PORT STATE SERVICE VERSION LAN_IP\n"
+    portId = 1
     for port in ports
         info = router.port_info(port)
         parts = info.split(" ")
@@ -59,7 +60,8 @@ scanPorts = function(targetIp, portRange = null)
         
         lanIp = port.get_lan_ip
         
-        result = result + port.port_number + " " + status + " " + service + " " + version + " " + lanIp + "\n"
+        result = result + portId + "  " + port.port_number + " " + status + " " + service + " " + version + " " + lanIp + "\n"
+        portId = portId + 1
     end for
     
     return format_columns(result)
