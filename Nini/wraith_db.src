@@ -9,8 +9,7 @@ getVaultPath = function()
     comp = shell.host_computer
     varFolder = comp.File("/var/wraith")
     if not varFolder then
-        varRoot = comp.File("/var")
-        if varRoot then varFolder = varRoot.create_folder("wraith")
+        varFolder = comp.create_folder("/var", "wraith")
     end if
     if varFolder then return varFolder.path + "/wraith_vault"
     return current_path + "/wraith_vault"
