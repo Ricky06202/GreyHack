@@ -23,7 +23,7 @@ else
 end if
 
 // 2. Copiar archivos .src a /lib/wraith
-print "[2] Copiando archivos de módulos..."
+print "[2] Copiando archivos de modulos..."
 modules = ["wraith_db.src", "wraith_fs.src", "wraith_net.src", "wraith_exploit.src", "wraith_stealth.src", "wraith_vulncache.src"]
 
 for moduleName in modules
@@ -32,14 +32,14 @@ for moduleName in modules
     sourceFile = comp.File(sourcePath)
     
     if not sourceFile then
-        print "   ERROR: No se encontró " + moduleName
+        print "   ERROR: No se encontro " + moduleName
         continue
     end if
     
     // Copiar archivo
     success = sourceFile.copy("/lib/wraith", moduleName)
     if success then
-        print "   " + moduleName + " → /lib/wraith/"
+        print "   " + moduleName + " -> /lib/wraith/"
     else
         print "   ERROR: No se pudo copiar " + moduleName
     end if
@@ -51,49 +51,49 @@ mainPath = current_path + "/wraith.src"
 mainFile = comp.File(mainPath)
 
 if not mainFile then
-    print "   ERROR: No se encontró wraith.src"
-    exit("Instalación fallida")
+    print "   ERROR: No se encontro wraith.src"
+    exit("Instalacion fallida")
 end if
 
 // Intentar compilar con build
 print "   Usando build para compilar..."
 buildResult = shell.build(mainPath, "/bin/")
-// build devuelve cadena vacía si éxito, o mensaje de error
+// build devuelve cadena vacia si exito, o mensaje de error
 binPath = "/bin/wraith"
 binFile = comp.File(binPath)
 if buildResult == "" and binFile then
     print "   wraith compilado exitosamente en " + binPath
 else
-    print "   Compilación fallida"
+    print "   Compilacion fallida"
     if buildResult != "" then
         print "   Error: " + buildResult
     end if
     print "   Puedes compilar manualmente: build " + mainPath + " /bin/"
 end if
 
-// 4. Verificar instalación
-print "[4] Verificando instalación..."
+// 4. Verificar instalacion
+print "[4] Verificando instalacion..."
 wraithBin = comp.File("/bin/wraith")
 wraithFolder = comp.File("/lib/wraith")
 
 if wraithBin then
-    print "   ✓ Ejecutable: /bin/wraith"
+    print "   [OK] Ejecutable: /bin/wraith"
 else
-    print "   ✗ Ejecutable no encontrado"
+    print "   [X] Ejecutable no encontrado"
 end if
 
 if wraithFolder then
-    print "   ✓ Módulos: /lib/wraith/"
+    print "   [OK] Modulos: /lib/wraith/"
     // Listar archivos
     files = wraithFolder.get_files
     for file in files
         print "     - " + file.name
     end for
 else
-    print "   ✗ Directorio de módulos no encontrado"
+    print "   [X] Directorio de modulos no encontrado"
 end if
 
 print ""
-print "Instalación completada!"
+print "Instalacion completada!"
 print "Uso: wraith [target_ip]"
 print "Ejemplo: wraith 192.168.1.100"

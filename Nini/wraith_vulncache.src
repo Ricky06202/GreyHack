@@ -91,7 +91,7 @@ saveExploit = function(service, version, ip, area, vuln)
     return true
 end function
 
-// Obtener exploits conocidos para un servicio y versión
+// Obtener exploits conocidos para un servicio y version
 getExploits = function(service, version)
     if not service or not version then return []
     
@@ -114,7 +114,7 @@ clearExploits = function()
     return true
 end function
 
-// Exportar funciones como librería
+// Exportar funciones como libreria
 wraith_exploits = {
     "getExploitsPath": @getExploitsPath,
     "loadExploitsCache": @loadExploitsCache,

@@ -1,8 +1,8 @@
 // ==========================================================
-// WRAITH STEALTH - Gestión de Logs para Wraith OS
+// WRAITH STEALTH - Gestion de Logs para Wraith OS
 // ==========================================================
 
-// Función para leer logs del sistema
+// Funcion para leer logs del sistema
 readSystemLog = function(computer, lines = 0)
     if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
     
@@ -22,7 +22,7 @@ readSystemLog = function(computer, lines = 0)
     return content
 end function
 
-// Función para filtrar logs por IP
+// Funcion para filtrar logs por IP
 filterLogsByIP = function(computer, ipAddress)
     if not computer or typeof(computer) != "computer" then return []
     
@@ -45,7 +45,7 @@ filterLogsByIP = function(computer, ipAddress)
     return filtered
 end function
 
-// Función para eliminar líneas específicas de logs (quirúrgico)
+// Funcion para eliminar lineas especificas de logs (quirurgico)
 deleteLogLines = function(computer, ipAddress = null, lineNumber = null, pattern = null)
     if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
     
@@ -61,7 +61,7 @@ deleteLogLines = function(computer, ipAddress = null, lineNumber = null, pattern
     deletedCount = 0
     
     if ipAddress then
-        // Eliminar líneas que contengan la IP
+        // Eliminar lineas que contengan la IP
         for line in lines
             if line.indexOf(ipAddress) == null then
                 newLines.push(line)
@@ -70,7 +70,7 @@ deleteLogLines = function(computer, ipAddress = null, lineNumber = null, pattern
             end if
         end for
     else if lineNumber then
-        // Eliminar línea específica por número
+        // Eliminar linea especifica por numero
         if lineNumber >= 1 and lineNumber <= lines.len then
             for i in range(0, lines.len - 1)
                 if i != (lineNumber - 1) then
@@ -83,7 +83,7 @@ deleteLogLines = function(computer, ipAddress = null, lineNumber = null, pattern
             return "Error: Line number out of range"
         end if
     else if pattern then
-        // Eliminar líneas que contengan patrón
+        // Eliminar lineas que contengan patron
         for line in lines
             if line.indexOf(pattern) == null then
                 newLines.push(line)
@@ -102,12 +102,12 @@ deleteLogLines = function(computer, ipAddress = null, lineNumber = null, pattern
     return "Deleted " + deletedCount + " log entries"
 end function
 
-// Función para limpiar logs de una IP específica
+// Funcion para limpiar logs de una IP especifica
 cleanLogsByIP = function(computer, ipAddress)
     return deleteLogLines(computer, ipAddress)
 end function
 
-// Función para obtener estadísticas de logs
+// Funcion para obtener estadisticas de logs
 getLogStats = function(computer)
     if not computer or typeof(computer) != "computer" then return {}
     
@@ -126,7 +126,7 @@ getLogStats = function(computer)
         "last_modified": logFile.date
     }
     
-    // Analizar líneas
+    // Analizar lineas
     for line in lines
         // Extraer IP
         parts = line.split(" ")
@@ -162,7 +162,7 @@ getLogStats = function(computer)
     return stats
 end function
 
-// Función para visualizar logs con formato
+// Funcion para visualizar logs con formato
 viewLogsFormatted = function(computer, lines = 50, filter = null)
     if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
     
@@ -186,7 +186,7 @@ viewLogsFormatted = function(computer, lines = 50, filter = null)
     return filtered.join(char(10))
 end function
 
-// Función para buscar en logs
+// Funcion para buscar en logs
 searchInLogs = function(computer, searchTerm)
     if not computer or typeof(computer) != "computer" then return []
     
@@ -209,7 +209,7 @@ searchInLogs = function(computer, searchTerm)
     return results
 end function
 
-// Función para ver logs con números de línea
+// Funcion para ver logs con numeros de linea
 viewLogsNumbered = function(computer, lines = 50, filter = null)
     if not computer or typeof(computer) != "computer" then return []
     
@@ -235,7 +235,7 @@ viewLogsNumbered = function(computer, lines = 50, filter = null)
     return result
 end function
 
-// Función para eliminar líneas por números (múltiples)
+// Funcion para eliminar lineas por numeros (multiples)
 deleteLogLinesByNumbers = function(computer, lineNumbers)
     if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
     if not lineNumbers or lineNumbers.len == 0 then return "No line numbers provided"
@@ -251,7 +251,7 @@ deleteLogLinesByNumbers = function(computer, lineNumbers)
     newLines = []
     deletedCount = 0
     
-    // Crear set de líneas a borrar (1-indexado)
+    // Crear set de lineas a borrar (1-indexado)
     toDelete = {}
     for num in lineNumbers
         toDelete[num] = true
@@ -272,7 +272,7 @@ deleteLogLinesByNumbers = function(computer, lineNumbers)
     return "Deleted " + deletedCount + " log entries"
 end function
 
-// Exportar funciones como librería
+// Exportar funciones como libreria
 wraith_stealth = {
     "readSystemLog": @readSystemLog,
     "filterLogsByIP": @filterLogsByIP,

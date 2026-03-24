@@ -14,9 +14,9 @@ HUD_SUB  = C_B + "--------------------------------------------------" + C_E
 // SISTEMA DE ENCABEZADOS VARIADOS (10 estilos)
 // ==========================================================
 
-// Función para encabezado aleatorio
+// Funcion para encabezado aleatorio
 displayRandomHeader = function()
-    // Colores neón
+    // Colores neon
     neonGreen = "<color=#39FF14>"
     neonCyan = "<color=#00FFFF>"
     neonPurple = "<color=#FF00FF>"
@@ -27,163 +27,60 @@ displayRandomHeader = function()
     neonBlue = "<color=#0066FF>"
     reset = "</color>"
     
-    // Estilo 1: Mountains (el del usuario)
-    style1 = function()
-        lines = []
-        lines.push C_P + "      ___          ___          ___          ___      " + reset
-        lines.push C_P + "     /  /\        /  /\        /  /\        /  /\     " + reset
-        lines.push C_B + "    /  /::\      /  /:/_      /  /::\      /  /:/_    " + reset
-        lines.push C_B + "   /  /:/\:\    /  /:/ /\    /  /:/\:\    /  /:/ /\   " + reset
-        lines.push C_G + "  /  /:/~/:/   /  /:/ /:/   /  /:/~/:/   /  /:/ /:/   " + reset
-        lines.push C_G + " /__/:/ /:/   /__/:/ /:/   /__/:/ /:/   /__/:/ /:/    " + reset
-        lines.push C_Y + " \  \:\/:/    \  \:\/:/    \  \:\/:/    \  \:\/:/     " + reset
-        lines.push C_Y + "  \  \::/      \  \::/      \  \::/      \  \::/      " + reset
-        lines.push neonCyan + "            W R A I T H   O S                    " + reset
-        return lines
-    end function
+    // Estilos predefinidos (solo texto, sin funciones anidadas)
+    styles = []
     
-    // Estilo 2: Circuit Board
-    style2 = function()
-        lines = []
-        lines.push neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
-        lines.push neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset
-        lines.push neonPurple + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
-        lines.push neonPink + "| | | | | | | | |  | | | | | | | | |" + reset
-        lines.push neonYellow + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
-        lines.push neonOrange + "    W R A I T H   O S            " + reset
-        lines.push neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
-        lines.push neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset
-        return lines
-    end function
+    // Estilo 1
+    styles.push([
+        C_P + "      ___          ___          ___          ___      " + reset,
+        C_P + "     /  /\        /  /\        /  /\        /  /\     " + reset,
+        C_B + "    /  /::\      /  /:/_      /  /::\      /  /:/_    " + reset,
+        C_B + "   /  /:/\:\    /  /:/ /\    /  /:/\:\    /  /:/ /\   " + reset,
+        C_G + "  /  /:/~/:/   /  /:/ /:/   /  /:/~/:/   /  /:/ /:/   " + reset,
+        C_G + " /__/:/ /:/   /__/:/ /:/   /__/:/ /:/   /__/:/ /:/    " + reset,
+        C_Y + " \  \:\/:/    \  \:\/:/    \  \:\/:/    \  \:\/:/     " + reset,
+        C_Y + "  \  \::/      \  \::/      \  \::/      \  \::/      " + reset,
+        neonCyan + "            W R A I T H   O S                    " + reset
+    ])
     
-    // Estilo 3: Cubos isométricos
-    style3 = function()
-        lines = []
-        lines.push neonPurple + "     /\\    /\\    /\\    /\\    /\\    " + reset
-        lines.push neonPurple + "    /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
-        lines.push neonCyan + "   /    \\/    \\/    \\/    \\/    \\  " + reset
-        lines.push neonCyan + "   \\    /\\    /\\    /\\    /\\    /  " + reset
-        lines.push neonGreen + "    \\  /  \\  /  \\  /  \\  /  \\  /   " + reset
-        lines.push neonGreen + "     \\/    \\/    \\/    \\/    \\/    " + reset
-        lines.push neonPink + "  W R A I T H   O S                " + reset
-        return lines
-    end function
+    // Estilo 2
+    styles.push([
+        neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset,
+        neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset,
+        neonPurple + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset,
+        neonPink + "| | | | | | | | |  | | | | | | | | |" + reset,
+        neonYellow + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset,
+        neonOrange + "    W R A I T H   O S            " + reset,
+        neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset,
+        neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset
+    ])
     
-    // Estilo 4: Hex Grid
-    style4 = function()
-        lines = []
-        lines.push neonPurple + "  / \ / \ / \ / \ / \ / \ / \ / \ " + reset
-        lines.push neonCyan + " |   |   |   |   |   |   |   |   |" + reset
-        lines.push neonGreen + "  \ / \ / \ / \ / \ / \ / \ / \ / " + reset
-        lines.push neonPink + "   W R A I T H   O S          " + reset
-        lines.push neonYellow + "  / \ / \ / \ / \ / \ / \ / \ / \ " + reset
-        lines.push neonOrange + " |   |   |   |   |   |   |   |   |" + reset
-        lines.push neonRed + "  \ / \ / \ / \ / \ / \ / \ / \ / " + reset
-        return lines
-    end function
-    
-    // Estilo 5: Pirámides isométricas
-    style5 = function()
-        lines = []
-        lines.push neonYellow + "           /\\          " + reset
-        lines.push neonYellow + "          /  \\         " + reset
-        lines.push neonOrange + "         /    \\        " + reset
-        lines.push neonOrange + "        /      \\       " + reset
-        lines.push neonRed + "       /________\\      " + reset
-        lines.push neonRed + "      /\\        /\\     " + reset
-        lines.push neonPink + "     /  \\      /  \\    " + reset
-        lines.push neonPink + "    /    \\    /    \\   " + reset
-        lines.push neonPurple + " W R A I T H   O S     " + reset
-        return lines
-    end function
-    
-    // Estilo 6: Edificios isométricos
-    style6 = function()
-        lines = []
-        lines.push neonCyan + "    /\\    /\\    /\\    /\\    /\\    " + reset
-        lines.push neonCyan + "   /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
-        lines.push neonGreen + "  /____\\/____\\/____\\/____\\/____\\  " + reset
-        lines.push neonGreen + "  |    ||    ||    ||    ||    |  " + reset
-        lines.push neonYellow + "  |    ||    ||    ||    ||    |  " + reset
-        lines.push neonYellow + "  |____||____||____||____||____|  " + reset
-        lines.push neonPink + "   W R A I T H   O S              " + reset
-        return lines
-    end function
-    
-    // Estilo 7: Escaleras isométricas
-    style7 = function()
-        lines = []
-        lines.push neonPurple + "      /\\      /\\      /\\      /\\   " + reset
-        lines.push neonPurple + "     /  \\    /  \\    /  \\    /  \\  " + reset
-        lines.push neonCyan + "    /____\\  /____\\  /____\\  /____\\ " + reset
-        lines.push neonCyan + "    \\    /  \\    /  \\    /  \\    / " + reset
-        lines.push neonGreen + "     \\  /    \\  /    \\  /    \\  /  " + reset
-        lines.push neonGreen + "      \\/      \\/      \\/      \\/   " + reset
-        lines.push neonPink + "  W R A I T H   O S                " + reset
-        return lines
-    end function
-    
-    // Estilo 8: Diamantes isométricos
-    style8 = function()
-        lines = []
-        lines.push neonYellow + "      /\\      /\\      /\\      /\\   " + reset
-        lines.push neonYellow + "     /  \\    /  \\    /  \\    /  \\  " + reset
-        lines.push neonOrange + "    /    \\  /    \\  /    \\  /    \\ " + reset
-        lines.push neonOrange + "    \\    /  \\    /  \\    /  \\    / " + reset
-        lines.push neonRed + "     \\  /    \\  /    \\  /    \\  /  " + reset
-        lines.push neonRed + "      \\/      \\/      \\/      \\/   " + reset
-        lines.push neonPurple + "   W R A I T H   O S               " + reset
-        return lines
-    end function
-    
-    // Estilo 9: Flechas isométricas
-    style9 = function()
-        lines = []
-        lines.push neonGreen + "        /\\        /\\        /\\      " + reset
-        lines.push neonGreen + "       /  \\      /  \\      /  \\     " + reset
-        lines.push neonCyan + "      /    \\    /    \\    /    \\    " + reset
-        lines.push neonCyan + "     /      \\  /      \\  /      \\   " + reset
-        lines.push neonPurple + "    /________\\/________\\/________\\  " + reset
-        lines.push neonPurple + "    \\        /\\        /\\        /  " + reset
-        lines.push neonPink + "     \\      /  \\      /  \\      /   " + reset
-        lines.push neonPink + "  W R A I T H   O S                 " + reset
-        return lines
-    end function
-    
-    // Estilo 10: Ondas isométricas
-    style10 = function()
-        lines = []
-        lines.push neonPink + "    /\\    /\\    /\\    /\\    /\\    " + reset
-        lines.push neonPink + "   /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
-        lines.push neonPurple + "  /    \\/    \\/    \\/    \\/    \\  " + reset
-        lines.push neonPurple + "  \\    /\\    /\\    /\\    /\\    /  " + reset
-        lines.push neonCyan + "   \\  /  \\  /  \\  /  \\  /  \\  /   " + reset
-        lines.push neonCyan + "    \\/    \\/    \\/    \\/    \\/    " + reset
-        lines.push neonGreen + "  W R A I T H   O S                " + reset
-        return lines
-    end function
-    
-    // Lista de estilos
-    styles = [@style1, @style2, @style3, @style4, @style5, 
-              @style6, @style7, @style8, @style9, @style10]
+    // Estilo 3
+    styles.push([
+        neonPurple + "     /\\    /\\    /\\    /\\    /\\    " + reset,
+        neonPurple + "    /  \\  /  \\  /  \\  /  \\  /  \\   " + reset,
+        neonCyan + "   /    \\/    \\/    \\/    \\/    \\  " + reset,
+        neonCyan + "   \\    /\\    /\\    /\\    /\\    /  " + reset,
+        neonGreen + "    \\  /  \\  /  \\  /  \\  /  \\  /   " + reset,
+        neonGreen + "     \\/    \\/    \\/    \\/    \\/    " + reset,
+        neonPink + "  W R A I T H   O S                " + reset
+    ])
     
     // Elegir estilo aleatorio
-    styleIndex = rnd(styles.len).floor
-    selectedStyle = styles[styleIndex]
+    index = floor(rnd * styles.len)
+    selected = styles[index]
     
-    // Imprimir líneas del estilo
-    lines = selectedStyle()
-    for line in lines
+    for line in selected
         print line
     end for
     
-    // Información adicional debajo del header
+    // Informacion adicional debajo del header
     print neonPurple + "  [+] Grey Hack Modular Framework [+] " + reset
     print neonGreen + "  [+] Wraith OS - Hacking Toolkit [+] " + reset
 end function
 
-// Importar módulos (usando import_code)
-// Módulos organizados en subcarpeta /lib/wraith/
+// Importar modulos (usando import_code)
+// Modulos organizados en subcarpeta /lib/wraith/
 wraith_db = import_code("/lib/wraith/wraith_db.src")
 wraith_fs = import_code("/lib/wraith/wraith_fs.src")
 wraith_net = import_code("/lib/wraith/wraith_net.src")
@@ -200,12 +97,12 @@ globals.originDisplay = "LOCAL"
 globals.currentComputer = null
 globals.route = ["LOCAL"]
 
-// Función para limpiar pantalla
+// Funcion para limpiar pantalla
 limpiar = function
     clear_screen
 end function
 
-// Función para cargar librerías (compatibilidad)
+// Funcion para cargar librerias (compatibilidad)
 cargarLib = function(nombre)
     lib = include_lib("/lib/" + nombre)
     if not lib then lib = include_lib(current_path + "/" + nombre)
@@ -216,20 +113,20 @@ end function
 globals.metax = cargarLib("metaxploit.so")
 globals.crypto = cargarLib("crypto.so")
 
-// Función para verificar conexión
+// Funcion para verificar conexion
 verificarConexion = function(ip)
     if ip == "localhost" or ip == "127.0.0.1" then return true
     return globals.activeShell.ping(ip)
 end function
 
-// Función para actualizar HUD de ruta
+// Funcion para actualizar HUD de ruta
 updateRoute = function(description)
     if globals.route.indexOf(description) == null then
         globals.route.push(description)
     end if
 end function
 
-// Función para mostrar HUD de ruta
+// Funcion para mostrar HUD de ruta
 displayRoute = function
     routeStr = ""
     for i in range(0, globals.route.len - 1)
@@ -239,7 +136,7 @@ displayRoute = function
     print C_B + "RUTA: " + C_W + routeStr + C_E
 end function
 
-// Función para obtener objeto computer actual
+// Funcion para obtener objeto computer actual
 getCurrentComputer = function
     if globals.currentComputer then return globals.currentComputer
     if typeof(globals.activeShell) == "shell" then
@@ -250,7 +147,7 @@ getCurrentComputer = function
     return get_shell.host_computer
 end function
 
-// Función para actualizar computer actual
+// Funcion para actualizar computer actual
 updateCurrentComputer = function(newComputer)
     globals.currentComputer = newComputer
     if typeof(newComputer) == "computer" then
@@ -261,7 +158,7 @@ end function
 
 
 // ==========================================================
-// MÓDULOS DE FUNCIONALIDAD
+// MODULOS DE FUNCIONALIDAD
 // ==========================================================
 
 // Motor de red mejorado
@@ -274,7 +171,7 @@ nmapWraith = function()
     if target == "127.0.0.1" or target == "localhost" then target = hostActivo.local_ip
     if not verificarConexion(target) then return C_R + " [!] HOST UNREACHABLE" + C_E
     
-    // Usar módulo wraith_net
+    // Usar modulo wraith_net
     result = wraith_net.scanPorts(target)
     if typeof(result) == "string" and result.indexOf("Error") != null then
         return C_R + result + C_E
@@ -310,7 +207,7 @@ ejecutarAtaqueID = function(idInput)
     
     print C_W + "Conectando a " + globals.ipTarget + ":" + pNum + "..." + C_E
     
-    // Usar módulo wraith_exploit
+    // Usar modulo wraith_exploit
     connection = wraith_exploit.connectToTarget(globals.ipTarget, pNum)
     if connection.hasIndex("error") then
         print C_R + connection["error"] + C_E
@@ -323,15 +220,15 @@ ejecutarAtaqueID = function(idInput)
     // Detectar si es router
     lanTarget = ""
     if lib.lib_name == "kernel_router.so" then
-        print C_P + " [!] ROUTER DETECTADO. ¿USAR BOUNCE?" + C_E
-        print " [1] NO (Atacar Router)  [2] SÍ (Saltar a IP Interna)"
+        print C_P + " [!] ROUTER DETECTADO. ?USAR BOUNCE?" + C_E
+        print " [1] NO (Atacar Router)  [2] SI (Saltar a IP Interna)"
         if user_input(">> ") == "2" then
             lanTarget = user_input(C_Y + "IP Interna: " + C_E)
             updateRoute("Router -> " + lanTarget)
         end if
     end if
     
-    // Obtener información del servicio para cache
+    // Obtener informacion del servicio para cache
     portInfo = wraith_net.getPortInfo(globals.ipTarget, pNum)
     service = ""
     version = ""
@@ -365,7 +262,7 @@ ejecutarAtaqueID = function(idInput)
             globals.sesiones.push({"obj": res, "info": infoSess})
             print C_G + "[+] Acceso obtenido: " + typeof(res).upper + C_E
             
-            // Extracción automática de intel (REQ-INTEL)
+            // Extraccion automatica de intel (REQ-INTEL)
             if typeof(res) == "computer" then
                 intel = wraith_exploit.extractIntel(res, true)
                 if intel["users"].len > 0 then
@@ -384,7 +281,7 @@ ejecutarAtaqueID = function(idInput)
     user_input "[ENTER]"
 end function
 
-// Función para explorar archivos recursivamente
+// Funcion para explorar archivos recursivamente
 exploreFileRecursively = function(fileObj, depth = 0)
     if not fileObj then return
     indent = ""
@@ -399,7 +296,7 @@ exploreFileRecursively = function(fileObj, depth = 0)
             exploreFileRecursively(item, depth + 1)
         end for
     else
-        // Mostrar tipo según extensión
+        // Mostrar tipo segun extension
         ext = ""
         if fileObj.name.indexOf(".") != null then
             parts = fileObj.name.split(".")
@@ -412,7 +309,7 @@ exploreFileRecursively = function(fileObj, depth = 0)
         
         print indent + color + "  " + fileObj.name + " (" + fileObj.size + " bytes)" + C_E
         
-        // Mostrar contenido si es pequeño y texto
+        // Mostrar contenido si es pequeno y texto
         if not fileObj.is_binary and fileObj.size < 1000 then
             content = fileObj.get_content
             if content then
@@ -469,15 +366,15 @@ gestorSesiones = function()
             globals.originDisplay = obj.host_computer.local_ip
             updateRoute("Pivot -> " + obj.host_computer.local_ip)
         else if opt == "3" then
-            // Establecer como sesión activa y abrir remote shell
+            // Establecer como sesion activa y abrir remote shell
             globals.activeShell = obj
             globals.currentComputer = obj.host_computer
             remoteShell
         end if
         
     else if typ == "computer" then
-        // Extraer intel automático
-        print C_P + " [INTEL] Extrayendo información..." + C_E
+        // Extraer intel automatico
+        print C_P + " [INTEL] Extrayendo informacion..." + C_E
         intel = wraith_exploit.extractIntel(obj, false)
         if intel["users"].len > 0 then
             print C_G + " Usuarios: " + intel["users"].join(", ") + C_E
@@ -504,7 +401,7 @@ gestorSesiones = function()
         opt = user_input(">> ")
         if opt == "1" then
             // Explorar recursivamente
-            print C_W + " Exploración recursiva de /home:" + C_E
+            print C_W + " Exploracion recursiva de /home:" + C_E
             home = obj.File("/home")
             if home then
                 exploreFileRecursively(home, 0)
@@ -533,7 +430,7 @@ gestorSesiones = function()
     else if typ == "file" then
         // Es un objeto File
         print C_W + " Archivo: " + obj.path + C_E
-        print " Permisos: " + obj.permissions + " Tamaño: " + obj.size + " bytes"
+        print " Permisos: " + obj.permissions + " Tamano: " + obj.size + " bytes"
         if obj.is_folder then
             print C_B + " Es un directorio" + C_E
             print C_W + " [1] LISTAR CONTENIDO  [2] EXPLORAR RECURSIVO" + C_E
@@ -549,7 +446,7 @@ gestorSesiones = function()
         else
             print C_B + " Es un archivo" + C_E
             if not obj.is_binary then
-                print C_W + " Contenido (últimas 20 líneas):" + C_E
+                print C_W + " Contenido (ultimas 20 lineas):" + C_E
                 content = obj.get_content
                 if content then
                     lines = content.split(char(10))
@@ -571,12 +468,12 @@ gestorSesiones = function()
         user_input "[ENTER]"
         
     else
-        print C_R + " Tipo de sesión no manejado: " + typ + C_E
+        print C_R + " Tipo de sesion no manejado: " + typ + C_E
         user_input "[ENTER]"
     end if
 end function
 
-// Función para gestión de logs (REQ-STEALTH)
+// Funcion para gestion de logs (REQ-STEALTH)
 gestorLogs = function()
     if not globals.currentComputer then
         print C_R + " [!] No active computer session" + C_E
@@ -592,7 +489,7 @@ gestorLogs = function()
     if cmd == "1" then
         lines = user_input(C_Y + "Lines (default 50): " + C_E)
         if lines == "" then lines = "50"
-        // Mostrar logs con números de línea
+        // Mostrar logs con numeros de linea
         result = wraith_stealth.viewLogsNumbered(globals.currentComputer, lines.to_int)
         for entry in result
             print C_B + entry["line"] + ": " + C_W + entry["content"] + C_E
@@ -630,18 +527,18 @@ gestorLogs = function()
         user_input "[ENTER]"
     else if cmd == "6" then
         // Primero mostrar logs numerados
-        lines = user_input(C_Y + "Líneas a mostrar (default 50): " + C_E)
+        lines = user_input(C_Y + "Lineas a mostrar (default 50): " + C_E)
         if lines == "" then lines = "50"
         result = wraith_stealth.viewLogsNumbered(globals.currentComputer, lines.to_int)
         for entry in result
             print C_B + entry["line"] + ": " + C_W + entry["content"] + C_E
         end for
         
-        // Pedir números de línea a borrar
-        input = user_input(C_R + "Números a borrar (separados por coma, ej: 1,5,10-15): " + C_E)
+        // Pedir numeros de linea a borrar
+        input = user_input(C_R + "Numeros a borrar (separados por coma, ej: 1,5,10-15): " + C_E)
         if input == "" then return
         
-        // Parsear números y rangos
+        // Parsear numeros y rangos
         toDelete = []
         parts = input.split(",")
         for part in parts
@@ -659,7 +556,7 @@ gestorLogs = function()
                     end if
                 end if
             else
-                // Número individual
+                // Numero individual
                 num = part.to_int
                 if num > 0 then toDelete.push(num)
             end if
@@ -669,13 +566,13 @@ gestorLogs = function()
             result = wraith_stealth.deleteLogLinesByNumbers(globals.currentComputer, toDelete)
             print C_G + result + C_E
         else
-            print C_Y + " No se especificaron líneas válidas" + C_E
+            print C_Y + " No se especificaron lineas validas" + C_E
         end if
         user_input "[ENTER]"
     end if
 end function
 
-// Función para decifrar hashes y guardar credenciales
+// Funcion para decifrar hashes y guardar credenciales
 gestorDecipher = function()
     print HUD_LINE
     print C_W + "HASH DECIPHER" + C_E
@@ -689,7 +586,7 @@ gestorDecipher = function()
     if result == "FAIL" then
         print C_R + " [!] No se pudo decifrar" + C_E
     else if result == "EMPTY" then
-        print C_R + " [!] Hash vacío" + C_E
+        print C_R + " [!] Hash vacio" + C_E
     else
         print C_G + " [+] Resultado: " + result + C_E
         
@@ -804,11 +701,11 @@ gestorCreds = function()
             if filteredCreds.keys.len == 0 then
                 print C_Y + " No hay credenciales para eliminar" + C_E
             else
-                idx = user_input(C_Y + "ID a eliminar (según tabla filtrada): " + C_E)
+                idx = user_input(C_Y + "ID a eliminar (segun tabla filtrada): " + C_E)
                 if idx != "" then
                     idxNum = idx.to_int
                     if idxNum < 1 or idxNum > filteredCreds.keys.len then
-                        print C_R + " ID inválida" + C_E
+                        print C_R + " ID invalida" + C_E
                     else
                         key = filteredCreds.keys[idxNum-1]
                         parts = key.split("_")
@@ -905,7 +802,7 @@ gestorScan = function()
     opt = user_input(C_G + ">> " + C_E)
     
     if opt == "1" then
-        // Escanear puertos de un host específico
+        // Escanear puertos de un host especifico
         idx = user_input(C_Y + "ID del host: " + C_E)
         if idx != "" then
             idxNum = idx.to_int
@@ -915,7 +812,7 @@ gestorScan = function()
                 result = wraith_net.scanPorts(ip)
                 print result
             else
-                print C_R + " ID inválida" + C_E
+                print C_R + " ID invalida" + C_E
             end if
         end if
         user_input "[ENTER]"
@@ -930,7 +827,7 @@ gestorScan = function()
                 updateRoute("Target -> " + ip)
                 print C_G + " Target establecido: " + ip + C_E
             else
-                print C_R + " ID inválida" + C_E
+                print C_R + " ID invalida" + C_E
             end if
         end if
         user_input "[ENTER]"
@@ -943,14 +840,14 @@ gestorXfer = function()
     print C_W + "FILE TRANSFER" + C_E
     print HUD_LINE
     
-    // Verificar sesión activa
+    // Verificar sesion activa
     if not globals.activeShell and not globals.currentComputer then
-        print C_R + " [!] No hay sesión activa (shell o computer)" + C_E
+        print C_R + " [!] No hay sesion activa (shell o computer)" + C_E
         user_input "[ENTER]"
         return
     end if
     
-    // Determinar tipo de sesión
+    // Determinar tipo de sesion
     targetType = ""
     if globals.activeShell and typeof(globals.activeShell) == "shell" then
         targetType = "shell"
@@ -958,7 +855,7 @@ gestorXfer = function()
         targetType = "computer"
     end if
     
-    print C_W + " Sesión activa: " + C_G + targetType + C_E
+    print C_W + " Sesion activa: " + C_G + targetType + C_E
     
     // Opciones
     print C_W + " [1] UPLOAD (subir archivo)  [2] DOWNLOAD (descargar)  [3] BACK" + C_E
@@ -967,7 +864,7 @@ gestorXfer = function()
     if opt == "1" then
         // Subir archivo
         if targetType != "computer" then
-            print C_R + " Upload requiere sesión de computer" + C_E
+            print C_R + " Upload requiere sesion de computer" + C_E
         else
             localPath = user_input(C_Y + "Archivo local (ruta completa): " + C_E)
             if localPath == "" then return
@@ -982,7 +879,7 @@ gestorXfer = function()
     else if opt == "2" then
         // Descargar archivo
         if targetType != "computer" then
-            print C_R + " Download requiere sesión de computer" + C_E
+            print C_R + " Download requiere sesion de computer" + C_E
         else
             remotePath = user_input(C_Y + "Archivo remoto (ej: /home/user/file.txt): " + C_E)
             if remotePath == "" then return
@@ -999,11 +896,11 @@ end function
 // Interfaz de shell remota
 remoteShell = function()
     if not globals.activeShell and not globals.currentComputer then
-        print C_R + " [!] No hay sesión activa" + C_E
+        print C_R + " [!] No hay sesion activa" + C_E
         return
     end if
     
-    // Determinar tipo de sesión
+    // Determinar tipo de sesion
     target = null
     targetType = ""
     if globals.activeShell and typeof(globals.activeShell) == "shell" then
@@ -1013,7 +910,7 @@ remoteShell = function()
         target = globals.currentComputer
         targetType = "computer"
     else
-        print C_R + " [!] Sesión no compatible" + C_E
+        print C_R + " [!] Sesion no compatible" + C_E
         return
     end if
     
@@ -1057,7 +954,7 @@ remoteShell = function()
             if parts.len < 2 then
                 currentDir = "/"
             else
-                // Simplificar navegación
+                // Simplificar navegacion
                 if parts[1] == ".." then
                     // Subir un nivel
                     segments = currentDir.split("/")
@@ -1122,7 +1019,7 @@ remoteShell = function()
                 if result then
                     print C_G + " SCP exitoso" + C_E
                 else
-                    print C_R + " SCP falló" + C_E
+                    print C_R + " SCP fallo" + C_E
                 end if
             end if
             
@@ -1195,7 +1092,7 @@ while true
     print nmapWraith
     print HUD_SUB
     
-    // Menú principal
+    // Menu principal
     print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER [7] CREDS [8] SCAN [9] XFER" + C_E
     cmd = user_input(C_G + "wraith>> " + C_E)
     

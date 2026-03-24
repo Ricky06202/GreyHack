@@ -2,7 +2,7 @@
 // WRAITH FS - Sistema de Archivos Virtual (VFS) para Wraith OS
 // ==========================================================
 
-// Función para listar archivos (wls)
+// Funcion para listar archivos (wls)
 wls = function(target, path = "/", showHidden = false)
     if not target then return "Error: No target specified"
     
@@ -40,7 +40,7 @@ wls = function(target, path = "/", showHidden = false)
     return result
 end function
 
-// Función para cambiar directorio (wcd)
+// Funcion para cambiar directorio (wcd)
 wcd = function(target, path)
     if not target then return "Error: No target specified"
     
@@ -62,7 +62,7 @@ wcd = function(target, path)
     return file.path
 end function
 
-// Función para eliminar archivo/directorio (wrm)
+// Funcion para eliminar archivo/directorio (wrm)
 wrm = function(target, path, recursive = false)
     if not target then return "Error: No target specified"
     
@@ -82,7 +82,7 @@ wrm = function(target, path, recursive = false)
     if not file.has_permission("w") then return "Error: No write permission"
     
     if file.is_folder and not recursive then
-        // Verificar si está vacío
+        // Verificar si esta vacio
         items = file.get_files + file.get_folders
         if items.len > 0 then return "Error: Directory not empty (use recursive)"
     end if
@@ -96,7 +96,7 @@ wrm = function(target, path, recursive = false)
     return "Error: Delete failed"
 end function
 
-// Función para leer archivo (wcat)
+// Funcion para leer archivo (wcat)
 wcat = function(target, path, lines = 0)
     if not target then return "Error: No target specified"
     
@@ -120,7 +120,7 @@ wcat = function(target, path, lines = 0)
     if not content then return ""
     
     if lines > 0 then
-        // Mostrar solo las últimas N líneas
+        // Mostrar solo las ultimas N lineas
         allLines = content.split(char(10))
         if allLines.len <= lines then return content
         return allLines[allLines.len - lines:].join(char(10))
@@ -129,7 +129,7 @@ wcat = function(target, path, lines = 0)
     return content
 end function
 
-// Función para escribir archivo (wwrite)
+// Funcion para escribir archivo (wwrite)
 wwrite = function(target, path, content, append = false)
     if not target then return "Error: No target specified"
     
@@ -169,7 +169,7 @@ wwrite = function(target, path, content, append = false)
     return "Written: " + path
 end function
 
-// Función para copiar archivo (wcopy)
+// Funcion para copiar archivo (wcopy)
 wcopy = function(target, sourcePath, destPath)
     if not target then return "Error: No target specified"
     
@@ -185,7 +185,7 @@ wcopy = function(target, sourcePath, destPath)
     source = comp.File(sourcePath)
     if not source then return "Error: Source not found"
     
-    // Usar el método copy del objeto file
+    // Usar el metodo copy del objeto file
     destDir = parent_path(destPath)
     destName = destPath.split("/")[-1]
     
@@ -198,7 +198,7 @@ wcopy = function(target, sourcePath, destPath)
     return "Error: Copy failed"
 end function
 
-// Exportar funciones como librería
+// Exportar funciones como libreria
 wraith_fs = {
     "wls": @wls,
     "wcd": @wcd,

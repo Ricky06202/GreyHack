@@ -2,7 +2,7 @@
 // WRAITH NET - Motor de Red para Wraith OS
 // ==========================================================
 
-// Función para obtener el router correcto
+// Funcion para obtener el router correcto
 getWraithRouter = function(targetIp = null)
     if targetIp == null then
         // Router local
@@ -13,7 +13,7 @@ getWraithRouter = function(targetIp = null)
     end if
 end function
 
-// Función para escanear puertos (Nmap mejorado)
+// Funcion para escanear puertos (Nmap mejorado)
 scanPorts = function(targetIp, portRange = null)
     if not targetIp then return "Error: No target IP"
     
@@ -65,7 +65,7 @@ scanPorts = function(targetIp, portRange = null)
     return format_columns(result)
 end function
 
-// Función para obtener información de un puerto específico
+// Funcion para obtener informacion de un puerto especifico
 getPortInfo = function(targetIp, portNumber)
     if not targetIp then return "Error: No target IP"
     
@@ -96,7 +96,7 @@ getPortInfo = function(targetIp, portNumber)
     return "Error: Port not found"
 end function
 
-// Función para escanear red local (descubrir hosts)
+// Funcion para escanear red local (descubrir hosts)
 scanLocalNetwork = function(subnet = null)
     shell = get_shell
     comp = shell.host_computer
@@ -120,7 +120,7 @@ scanLocalNetwork = function(subnet = null)
     return hosts
 end function
 
-// Función para obtener información de la red actual
+// Funcion para obtener informacion de la red actual
 getNetworkInfo = function()
     shell = get_shell
     comp = shell.host_computer
@@ -132,7 +132,7 @@ getNetworkInfo = function()
         "is_active": comp.is_network_active
     }
     
-    // Obtener información del router
+    // Obtener informacion del router
     router = getWraithRouter
     if router then
         info["router_ip"] = router.ip_address
@@ -142,18 +142,18 @@ getNetworkInfo = function()
     return info
 end function
 
-// Función para verificar si una IP es accesible
+// Funcion para verificar si una IP es accesible
 checkHost = function(ip)
     shell = get_shell
     return shell.ping(ip)
 end function
 
-// Función para pivotear a través de una shell
+// Funcion para pivotear a traves de una shell
 pivotTo = function(shell, targetIp)
     if not shell then return "Error: No shell provided"
     if typeof(shell) != "shell" then return "Error: Invalid shell object"
     
-    // Crear nueva conexión
+    // Crear nueva conexion
     metax = include_lib("/lib/metaxploit.so")
     if not metax then return "Error: metaxploit.so not found"
     
@@ -175,7 +175,7 @@ pivotTo = function(shell, targetIp)
     return "Error: Could not establish session"
 end function
 
-// Función para listar dispositivos en la red local con detalles
+// Funcion para listar dispositivos en la red local con detalles
 discoverNetworkDetailed = function()
     hosts = scanLocalNetwork
     result = []
@@ -206,7 +206,7 @@ discoverNetworkDetailed = function()
     return result
 end function
 
-// Exportar funciones como librería
+// Exportar funciones como libreria
 wraith_net = {
     "getWraithRouter": @getWraithRouter,
     "scanPorts": @scanPorts,
