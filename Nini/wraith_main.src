@@ -553,14 +553,17 @@ gestorLogs = function()
     print HUD_LINE
     print C_W + "LOG MANAGEMENT" + C_E
     print HUD_LINE
-    print C_W + "[1] VIEW LOGS [2] FILTER BY IP [3] DELETE BY IP [4] STATS [5] SEARCH" + C_E
+    print C_W + "[1] VIEW LOGS [2] FILTER BY IP [3] DELETE BY IP [4] STATS [5] SEARCH [6] DELETE BY LINE" + C_E
     cmd = user_input(C_G + "logs>> " + C_E)
     
     if cmd == "1" then
         lines = user_input(C_Y + "Lines (default 50): " + C_E)
         if lines == "" then lines = "50"
-        result = wraith_stealth.viewLogsFormatted(globals.currentComputer, lines.to_int)
-        print result
+        // Mostrar logs con números de línea
+        result = wraith_stealth.viewLogsNumbered(globals.currentComputer, lines.to_int)
+        for entry in result
+            print C_B + entry["line"] + ": " + C_W + entry["content"] + C_E
+        end for
         user_input "[ENTER]"
     else if cmd == "2" then
         ip = user_input(C_Y + "IP to filter: " + C_E)
@@ -591,6 +594,50 @@ gestorLogs = function()
         for r in results
             print C_B + "Line " + r["line"] + ": " + C_W + r["content"] + C_E
         end for
+        user_input "[ENTER]"
+    else if cmd == "6" then
+        // Primero mostrar logs numerados
+        lines = user_input(C_Y + "Líneas a mostrar (default 50): " + C_E)
+        if lines == "" then lines = "50"
+        result = wraith_stealth.viewLogsNumbered(globals.currentComputer, lines.to_int)
+        for entry in result
+            print C_B + entry["line"] + ": " + C_W + entry["content"] + C_E
+        end for
+        
+        // Pedir números de línea a borrar
+        input = user_input(C_R + "Números a borrar (separados por coma, ej: 1,5,10-15): " + C_E)
+        if input == "" then return
+        
+        // Parsear números y rangos
+        toDelete = []
+        parts = input.split(",")
+        for part in parts
+            part = part.trim
+            if part.indexOf("-") != null then
+                // Rango
+                rangeParts = part.split("-")
+                if rangeParts.len == 2 then
+                    start = rangeParts[0].to_int
+                    finish = rangeParts[1].to_int
+                    if start > 0 and finish >= start then
+                        for i in range(start, finish)
+                            toDelete.push(i)
+                        end for
+                    end if
+                end if
+            else
+                // Número individual
+                num = part.to_int
+                if num > 0 then toDelete.push(num)
+            end if
+        end for
+        
+        if toDelete.len > 0 then
+            result = wraith_stealth.deleteLogLinesByNumbers(globals.currentComputer, toDelete)
+            print C_G + result + C_E
+        else
+            print C_Y + " No se especificaron líneas válidas" + C_E
+        end if
         user_input "[ENTER]"
     end if
 end function

@@ -209,6 +209,69 @@ searchInLogs = function(computer, searchTerm)
     return results
 end function
 
+// Función para ver logs con números de línea
+viewLogsNumbered = function(computer, lines = 50, filter = null)
+    if not computer or typeof(computer) != "computer" then return []
+    
+    logContent = readSystemLog(computer, lines)
+    if typeof(logContent) == "string" and logContent.indexOf("Error") != null then
+        return []
+    end if
+    
+    linesArray = logContent.split(char(10))
+    result = []
+    
+    for i in range(0, linesArray.len - 1)
+        line = linesArray[i]
+        if filter then
+            if line.indexOf(filter) != null then
+                result.push({"line": i+1, "content": line})
+            end if
+        else
+            result.push({"line": i+1, "content": line})
+        end if
+    end for
+    
+    return result
+end function
+
+// Función para eliminar líneas por números (múltiples)
+deleteLogLinesByNumbers = function(computer, lineNumbers)
+    if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
+    if not lineNumbers or lineNumbers.len == 0 then return "No line numbers provided"
+    
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return "Error: Log file not found"
+    if not logFile.has_permission("w") then return "Error: No write permission"
+    
+    content = logFile.get_content
+    if not content then return "No content to delete"
+    
+    lines = content.split(char(10))
+    newLines = []
+    deletedCount = 0
+    
+    // Crear set de líneas a borrar (1-indexado)
+    toDelete = {}
+    for num in lineNumbers
+        toDelete[num] = true
+    end for
+    
+    for i in range(0, lines.len - 1)
+        if not toDelete.hasIndex(i+1) then
+            newLines.push(lines[i])
+        else
+            deletedCount = deletedCount + 1
+        end if
+    end for
+    
+    // Escribir contenido modificado
+    newContent = newLines.join(char(10))
+    logFile.set_content(newContent)
+    
+    return "Deleted " + deletedCount + " log entries"
+end function
+
 // Exportar funciones como librería
 wraith_stealth = {
     "readSystemLog": @readSystemLog,
@@ -217,5 +280,7 @@ wraith_stealth = {
     "cleanLogsByIP": @cleanLogsByIP,
     "getLogStats": @getLogStats,
     "viewLogsFormatted": @viewLogsFormatted,
-    "searchInLogs": @searchInLogs
+    "searchInLogs": @searchInLogs,
+    "viewLogsNumbered": @viewLogsNumbered,
+    "deleteLogLinesByNumbers": @deleteLogLinesByNumbers
 }
