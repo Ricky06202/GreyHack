@@ -82,9 +82,7 @@ wls = function(target, path = "/", showHidden = false)
     if not target then return "Error: No target specified"
     comp = null
     if typeof(target) == "computer" then comp = target
-    else
-        if typeof(target) == "shell" then comp = target.host_computer
-        end if
+    else if typeof(target) == "shell" then comp = target.host_computer
     else return "Error: Invalid target type"
     end if
     file = comp.File(path)
