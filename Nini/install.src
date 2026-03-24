@@ -9,6 +9,7 @@ print "========================"
 if not get_shell then exit("Este script debe ejecutarse en Grey Hack")
 
 comp = get_shell.host_computer
+shell = get_shell
 
 // 1. Crear carpeta /lib/wraith
 print "[1] Creando directorio /lib/wraith..."
@@ -56,12 +57,17 @@ end if
 
 // Intentar compilar con build
 print "   Usando build para compilar..."
-buildResult = comp.build(mainPath, "/bin/")
-if buildResult == 1 then
-    print "   wraith compilado exitosamente en /bin/wraith"
+buildCommand = "build " + mainPath + " /bin/"
+buildResult = shell.exec(buildCommand)
+// build comando no devuelve código de salida, verificar si se creó el ejecutable
+binPath = "/bin/wraith"
+binFile = comp.File(binPath)
+if binFile then
+    print "   wraith compilado exitosamente en " + binPath
 else
     print "   Compilación fallida o ya existe"
-    print "   Puedes compilar manualmente: build " + mainPath + " /bin/"
+    print "   Output: " + buildResult
+    print "   Puedes compilar manualmente: " + buildCommand
 end if
 
 // 4. Verificar instalación
