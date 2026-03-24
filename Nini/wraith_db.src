@@ -22,7 +22,7 @@ end function
 
 // Guardar datos en el vault
 saveVault = function(data)
-    vaultPath = getVaultPath
+    vaultPath = getVaultPath()
     file = get_shell.host_computer.File(vaultPath)
     if file then
         // Sobrescribir contenido
@@ -37,7 +37,7 @@ end function
 
 // Cargar datos del vault
 loadVault = function()
-    vaultPath = getVaultPath
+    vaultPath = getVaultPath()
     file = get_shell.host_computer.File(vaultPath)
     if not file then return {}
     content = file.get_content

@@ -19,7 +19,7 @@ end function
 
 // Cargar cache de exploits
 loadExploitsCache = function()
-    cachePath = getExploitsPath
+    cachePath = getExploitsPath()
     file = get_shell.host_computer.File(cachePath)
     if not file then return {}
     content = file.get_content
@@ -47,7 +47,7 @@ end function
 
 // Guardar cache de exploits
 saveExploitsCache = function(cache)
-    cachePath = getExploitsPath
+    cachePath = getExploitsPath()
     file = get_shell.host_computer.File(cachePath)
     
     content = ""
@@ -108,7 +108,7 @@ end function
 
 // Limpiar cache de exploits
 clearExploits = function()
-    cachePath = getExploitsPath
+    cachePath = getExploitsPath()
     file = get_shell.host_computer.File(cachePath)
     if file then file.set_content("")
     return true
