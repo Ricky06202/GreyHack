@@ -56,23 +56,16 @@ displayRandomHeader = function()
         return lines
     end function
     
-    // Estilo 3: Binary Rain
+    // Estilo 3: Cubos isométricos
     style3 = function()
         lines = []
-        for i in range(1, 8)
-            line = ""
-            for j in range(1, 40)
-                if rnd > 0.5 then
-                    line = line + neonGreen + "1" + reset
-                else
-                    line = line + neonGreen + "0" + reset
-                end if
-            end for
-            lines.push line
-        end for
-        // Insertar título en el medio
-        lines[3] = neonPink + "    * W R A I T H   O S *    " + reset
-        lines[4] = neonCyan + "      Grey Hack Modular Framework      " + reset
+        lines.push neonPurple + "     /\\    /\\    /\\    /\\    /\\    " + reset
+        lines.push neonPurple + "    /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
+        lines.push neonCyan + "   /    \\/    \\/    \\/    \\/    \\  " + reset
+        lines.push neonCyan + "   \\    /\\    /\\    /\\    /\\    /  " + reset
+        lines.push neonGreen + "    \\  /  \\  /  \\  /  \\  /  \\  /   " + reset
+        lines.push neonGreen + "     \\/    \\/    \\/    \\/    \\/    " + reset
+        lines.push neonPink + "  W R A I T H   O S                " + reset
         return lines
     end function
     
@@ -89,93 +82,84 @@ displayRandomHeader = function()
         return lines
     end function
     
-    // Estilo 5: Skull ASCII
+    // Estilo 5: Pirámides isométricas
     style5 = function()
         lines = []
-        lines.push neonRed + "       _______        " + reset
-        lines.push neonRed + "     /         \      " + reset
-        lines.push neonPink + "   /   _     _   \    " + reset
-        lines.push neonPink + "  |   (o)   (o)   |   " + reset
-        lines.push neonPurple + "  |      ___      |   " + reset
-        lines.push neonPurple + "  |     |   |     |   " + reset
-        lines.push neonCyan + "   \    \___/    /    " + reset
-        lines.push neonGreen + "     \_________/      " + reset
-        lines.push neonYellow + " WRAITH OS            " + reset
+        lines.push neonYellow + "           /\\          " + reset
+        lines.push neonYellow + "          /  \\         " + reset
+        lines.push neonOrange + "         /    \\        " + reset
+        lines.push neonOrange + "        /      \\       " + reset
+        lines.push neonRed + "       /________\\      " + reset
+        lines.push neonRed + "      /\\        /\\     " + reset
+        lines.push neonPink + "     /  \\      /  \\    " + reset
+        lines.push neonPink + "    /    \\    /    \\   " + reset
+        lines.push neonPurple + " W R A I T H   O S     " + reset
         return lines
     end function
     
-    // Estilo 6: Spikes
+    // Estilo 6: Edificios isométricos
     style6 = function()
         lines = []
-        lines.push neonOrange + "   /\\   /\\   /\\   /\\   /\\   /\\   " + reset
-        lines.push neonYellow + "  /  \\ /  \\ /  \\ /  \\ /  \\ /  \\  " + reset
-        lines.push neonGreen + " /    \\/    \\/    \\/    \\/    \\/   " + reset
-        lines.push neonCyan + "   W R A I T H   O S            " + reset
-        lines.push neonPurple + "   \\    /\\    /\\    /\\    /\\    /   " + reset
-        lines.push neonPink + "    \\  /  \\  /  \\  /  \\  /  \\  /    " + reset
-        lines.push neonRed + "     \\/    \\/    \\/    \\/    \\/     " + reset
+        lines.push neonCyan + "    /\\    /\\    /\\    /\\    /\\    " + reset
+        lines.push neonCyan + "   /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
+        lines.push neonGreen + "  /____\\/____\\/____\\/____\\/____\\  " + reset
+        lines.push neonGreen + "  |    ||    ||    ||    ||    |  " + reset
+        lines.push neonYellow + "  |    ||    ||    ||    ||    |  " + reset
+        lines.push neonYellow + "  |____||____||____||____||____|  " + reset
+        lines.push neonPink + "   W R A I T H   O S              " + reset
         return lines
     end function
     
-    // Estilo 7: Grid Lines
+    // Estilo 7: Escaleras isométricas
     style7 = function()
         lines = []
-        lines.push neonCyan + "+-+-+-+-+-+-+-+-+-+-+-+-+" + reset
-        lines.push neonGreen + "| | | | | | | | | | | | |" + reset
-        lines.push neonPurple + "+-+-+-+-+-+-+-+-+-+-+-+-+" + reset
-        lines.push neonPink + "W R A I T H   O S     " + reset
-        lines.push neonYellow + "+-+-+-+-+-+-+-+-+-+-+-+-+" + reset
-        lines.push neonOrange + "| | | | | | | | | | | | |" + reset
-        lines.push neonRed + "+-+-+-+-+-+-+-+-+-+-+-+-+" + reset
+        lines.push neonPurple + "      /\\      /\\      /\\      /\\   " + reset
+        lines.push neonPurple + "     /  \\    /  \\    /  \\    /  \\  " + reset
+        lines.push neonCyan + "    /____\\  /____\\  /____\\  /____\\ " + reset
+        lines.push neonCyan + "    \\    /  \\    /  \\    /  \\    / " + reset
+        lines.push neonGreen + "     \\  /    \\  /    \\  /    \\  /  " + reset
+        lines.push neonGreen + "      \\/      \\/      \\/      \\/   " + reset
+        lines.push neonPink + "  W R A I T H   O S                " + reset
         return lines
     end function
     
-    // Estilo 8: Waves
+    // Estilo 8: Diamantes isométricos
     style8 = function()
         lines = []
-        lines.push neonGreen + "  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ " + reset
-        lines.push neonCyan + " ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~" + reset
-        lines.push neonPurple + "W R A I T H   O S             " + reset
-        lines.push neonPink + " ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~" + reset
-        lines.push neonYellow + "  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ " + reset
+        lines.push neonYellow + "      /\\      /\\      /\\      /\\   " + reset
+        lines.push neonYellow + "     /  \\    /  \\    /  \\    /  \\  " + reset
+        lines.push neonOrange + "    /    \\  /    \\  /    \\  /    \\ " + reset
+        lines.push neonOrange + "    \\    /  \\    /  \\    /  \\    / " + reset
+        lines.push neonRed + "     \\  /    \\  /    \\  /    \\  /  " + reset
+        lines.push neonRed + "      \\/      \\/      \\/      \\/   " + reset
+        lines.push neonPurple + "   W R A I T H   O S               " + reset
         return lines
     end function
     
-    // Estilo 9: Concentric Boxes
+    // Estilo 9: Flechas isométricas
     style9 = function()
         lines = []
-        lines.push neonRed + "+---------------------------+" + reset
-        lines.push neonOrange + "| +-----------------------+ |" + reset
-        lines.push neonYellow + "| | +-------------------+ | |" + reset
-        lines.push neonGreen + "| | |   WRAITH OS     | | |" + reset
-        lines.push neonCyan + "| | +-------------------+ | |" + reset
-        lines.push neonPurple + "| +-----------------------+ |" + reset
-        lines.push neonPink + "+---------------------------+" + reset
+        lines.push neonGreen + "        /\\        /\\        /\\      " + reset
+        lines.push neonGreen + "       /  \\      /  \\      /  \\     " + reset
+        lines.push neonCyan + "      /    \\    /    \\    /    \\    " + reset
+        lines.push neonCyan + "     /      \\  /      \\  /      \\   " + reset
+        lines.push neonPurple + "    /________\\/________\\/________\\  " + reset
+        lines.push neonPurple + "    \\        /\\        /\\        /  " + reset
+        lines.push neonPink + "     \\      /  \\      /  \\      /   " + reset
+        lines.push neonPink + "  W R A I T H   O S                 " + reset
         return lines
     end function
     
-    // Estilo 10: Matrix Rain (solo ASCII)
+    // Estilo 10: Ondas isométricas
     style10 = function()
         lines = []
-        for i in range(1, 8)
-            line = ""
-            for j in range(1, 40)
-                char = rnd(10).to_int
-                if char < 3 then
-                    line = line + neonGreen + "#" + reset
-                else if char < 6 then
-                    line = line + neonGreen + "+" + reset
-                else if char < 8 then
-                    line = line + neonGreen + "." + reset
-                else
-                    line = line + " "
-                end if
-            end for
-            lines.push line
-        end for
-        // Título en el medio
-        lines[3] = neonPink + "  * W R A I T H   O S *  " + reset
-        lines[4] = neonCyan + "    Grey Hack Modular Framework    " + reset
+        lines.push neonPink + "    /\\    /\\    /\\    /\\    /\\    " + reset
+        lines.push neonPink + "   /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
+        lines.push neonPurple + "  /    \\/    \\/    \\/    \\/    \\  " + reset
+        lines.push neonPurple + "  \\    /\\    /\\    /\\    /\\    /  " + reset
+        lines.push neonCyan + "   \\  /  \\  /  \\  /  \\  /  \\  /   " + reset
+        lines.push neonCyan + "    \\/    \\/    \\/    \\/    \\/    " + reset
+        lines.push neonGreen + "  W R A I T H   O S                " + reset
         return lines
     end function
     
