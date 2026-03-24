@@ -27,50 +27,153 @@ displayRandomHeader = function()
     neonBlue = "<color=#0066FF>"
     reset = "</color>"
     
-    // Estilos predefinidos (solo texto, sin funciones anidadas)
-    styles = []
+    // Estilo 1: Mountains (el del usuario)
+    style1 = function()
+        lines = []
+        lines.push C_P + "      ___          ___          ___          ___      " + reset
+        lines.push C_P + "     /  /\        /  /\        /  /\        /  /\     " + reset
+        lines.push C_B + "    /  /::\      /  /:/_      /  /::\      /  /:/_    " + reset
+        lines.push C_B + "   /  /:/\:\    /  /:/ /\    /  /:/\:\    /  /:/ /\   " + reset
+        lines.push C_G + "  /  /:/~/:/   /  /:/ /:/   /  /:/~/:/   /  /:/ /:/   " + reset
+        lines.push C_G + " /__/:/ /:/   /__/:/ /:/   /__/:/ /:/   /__/:/ /:/    " + reset
+        lines.push C_Y + " \  \:\/:/    \  \:\/:/    \  \:\/:/    \  \:\/:/     " + reset
+        lines.push C_Y + "  \  \::/      \  \::/      \  \::/      \  \::/      " + reset
+        lines.push neonCyan + "            W R A I T H   O S                    " + reset
+        return lines
+    end function
     
-    // Estilo 1
-    styles.push([
-        C_P + "      ___          ___          ___          ___      " + reset,
-        C_P + "     /  /\        /  /\        /  /\        /  /\     " + reset,
-        C_B + "    /  /::\      /  /:/_      /  /::\      /  /:/_    " + reset,
-        C_B + "   /  /:/\:\    /  /:/ /\    /  /:/\:\    /  /:/ /\   " + reset,
-        C_G + "  /  /:/~/:/   /  /:/ /:/   /  /:/~/:/   /  /:/ /:/   " + reset,
-        C_G + " /__/:/ /:/   /__/:/ /:/   /__/:/ /:/   /__/:/ /:/    " + reset,
-        C_Y + " \  \:\/:/    \  \:\/:/    \  \:\/:/    \  \:\/:/     " + reset,
-        C_Y + "  \  \::/      \  \::/      \  \::/      \  \::/      " + reset,
-        neonCyan + "            W R A I T H   O S                    " + reset
-    ])
+    // Estilo 2: Circuit Board
+    style2 = function()
+        lines = []
+        lines.push neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
+        lines.push neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset
+        lines.push neonPurple + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
+        lines.push neonPink + "| | | | | | | | |  | | | | | | | | |" + reset
+        lines.push neonYellow + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
+        lines.push neonOrange + "    W R A I T H   O S            " + reset
+        lines.push neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
+        lines.push neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset
+        return lines
+    end function
     
-    // Estilo 2
-    styles.push([
-        neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset,
-        neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset,
-        neonPurple + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset,
-        neonPink + "| | | | | | | | |  | | | | | | | | |" + reset,
-        neonYellow + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset,
-        neonOrange + "    W R A I T H   O S            " + reset,
-        neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset,
-        neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset
-    ])
+    // Estilo 3: Cubos isometricos
+    style3 = function()
+        lines = []
+        lines.push neonPurple + "     /\\    /\\    /\\    /\\    /\\    " + reset
+        lines.push neonPurple + "    /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
+        lines.push neonCyan + "   /    \\/    \\/    \\/    \\/    \\  " + reset
+        lines.push neonCyan + "   \\    /\\    /\\    /\\    /\\    /  " + reset
+        lines.push neonGreen + "    \\  /  \\  /  \\  /  \\  /  \\  /   " + reset
+        lines.push neonGreen + "     \\/    \\/    \\/    \\/    \\/    " + reset
+        lines.push neonPink + "  W R A I T H   O S                " + reset
+        return lines
+    end function
     
-    // Estilo 3
-    styles.push([
-        neonPurple + "     /\\    /\\    /\\    /\\    /\\    " + reset,
-        neonPurple + "    /  \\  /  \\  /  \\  /  \\  /  \\   " + reset,
-        neonCyan + "   /    \\/    \\/    \\/    \\/    \\  " + reset,
-        neonCyan + "   \\    /\\    /\\    /\\    /\\    /  " + reset,
-        neonGreen + "    \\  /  \\  /  \\  /  \\  /  \\  /   " + reset,
-        neonGreen + "     \\/    \\/    \\/    \\/    \\/    " + reset,
-        neonPink + "  W R A I T H   O S                " + reset
-    ])
+    // Estilo 4: Hex Grid
+    style4 = function()
+        lines = []
+        lines.push neonPurple + "  / \ / \ / \ / \ / \ / \ / \ / \ " + reset
+        lines.push neonCyan + " |   |   |   |   |   |   |   |   |" + reset
+        lines.push neonGreen + "  \ / \ / \ / \ / \ / \ / \ / \ / " + reset
+        lines.push neonPink + "   W R A I T H   O S          " + reset
+        lines.push neonYellow + "  / \ / \ / \ / \ / \ / \ / \ / \ " + reset
+        lines.push neonOrange + " |   |   |   |   |   |   |   |   |" + reset
+        lines.push neonRed + "  \ / \ / \ / \ / \ / \ / \ / \ / " + reset
+        return lines
+    end function
+    
+    // Estilo 5: Piramides isometricas
+    style5 = function()
+        lines = []
+        lines.push neonYellow + "           /\\          " + reset
+        lines.push neonYellow + "          /  \\         " + reset
+        lines.push neonOrange + "         /    \\        " + reset
+        lines.push neonOrange + "        /      \\       " + reset
+        lines.push neonRed + "       /________\\      " + reset
+        lines.push neonRed + "      /\\        /\\     " + reset
+        lines.push neonPink + "     /  \\      /  \\    " + reset
+        lines.push neonPink + "    /    \\    /    \\   " + reset
+        lines.push neonPurple + " W R A I T H   O S     " + reset
+        return lines
+    end function
+    
+    // Estilo 6: Edificios isometricos
+    style6 = function()
+        lines = []
+        lines.push neonCyan + "    /\\    /\\    /\\    /\\    /\\    " + reset
+        lines.push neonCyan + "   /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
+        lines.push neonGreen + "  /____\\/____\\/____\\/____\\/____\\  " + reset
+        lines.push neonGreen + "  |    ||    ||    ||    ||    |  " + reset
+        lines.push neonYellow + "  |    ||    ||    ||    ||    |  " + reset
+        lines.push neonYellow + "  |____||____||____||____||____|  " + reset
+        lines.push neonPink + "   W R A I T H   O S              " + reset
+        return lines
+    end function
+    
+    // Estilo 7: Escaleras isometricas
+    style7 = function()
+        lines = []
+        lines.push neonPurple + "      /\\      /\\      /\\      /\\   " + reset
+        lines.push neonPurple + "     /  \\    /  \\    /  \\    /  \\  " + reset
+        lines.push neonCyan + "    /____\\  /____\\  /____\\  /____\\ " + reset
+        lines.push neonCyan + "    \\    /  \\    /  \\    /  \\    / " + reset
+        lines.push neonGreen + "     \\  /    \\  /    \\  /    \\  /  " + reset
+        lines.push neonGreen + "      \\/      \\/      \\/      \\/   " + reset
+        lines.push neonPink + "  W R A I T H   O S                " + reset
+        return lines
+    end function
+    
+    // Estilo 8: Diamantes isometricos
+    style8 = function()
+        lines = []
+        lines.push neonYellow + "      /\\      /\\      /\\      /\\   " + reset
+        lines.push neonYellow + "     /  \\    /  \\    /  \\    /  \\  " + reset
+        lines.push neonOrange + "    /    \\  /    \\  /    \\  /    \\ " + reset
+        lines.push neonOrange + "    \\    /  \\    /  \\    /  \\    / " + reset
+        lines.push neonRed + "     \\  /    \\  /    \\  /    \\  /  " + reset
+        lines.push neonRed + "      \\/      \\/      \\/      \\/   " + reset
+        lines.push neonPurple + "   W R A I T H   O S               " + reset
+        return lines
+    end function
+    
+    // Estilo 9: Flechas isometricas
+    style9 = function()
+        lines = []
+        lines.push neonGreen + "        /\\        /\\        /\\      " + reset
+        lines.push neonGreen + "       /  \\      /  \\      /  \\     " + reset
+        lines.push neonCyan + "      /    \\    /    \\    /    \\    " + reset
+        lines.push neonCyan + "     /      \\  /      \\  /      \\   " + reset
+        lines.push neonPurple + "    /________\\/________\\/________\\  " + reset
+        lines.push neonPurple + "    \\        /\\        /\\        /  " + reset
+        lines.push neonPink + "     \\      /  \\      /  \\      /   " + reset
+        lines.push neonPink + "  W R A I T H   O S                 " + reset
+        return lines
+    end function
+    
+    // Estilo 10: Ondas isometricas
+    style10 = function()
+        lines = []
+        lines.push neonPink + "    /\\    /\\    /\\    /\\    /\\    " + reset
+        lines.push neonPink + "   /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
+        lines.push neonPurple + "  /    \\/    \\/    \\/    \\/    \\  " + reset
+        lines.push neonPurple + "  \\    /\\    /\\    /\\    /\\    /  " + reset
+        lines.push neonCyan + "   \\  /  \\  /  \\  /  \\  /  \\  /   " + reset
+        lines.push neonCyan + "    \\/    \\/    \\/    \\/    \\/    " + reset
+        lines.push neonGreen + "  W R A I T H   O S                " + reset
+        return lines
+    end function
+    
+    // Lista de estilos
+    styles = [@style1, @style2, @style3, @style4, @style5, 
+              @style6, @style7, @style8, @style9, @style10]
     
     // Elegir estilo aleatorio
-    index = floor(rnd * styles.len)
-    selected = styles[index]
+    styleIndex = rnd(styles.len).floor
+    selectedStyle = styles[styleIndex]
     
-    for line in selected
+    // Imprimir lineas del estilo
+    lines = selectedStyle()
+    for line in lines
         print line
     end for
     
