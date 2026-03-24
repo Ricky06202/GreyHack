@@ -1,0 +1,13 @@
+// Test import_code functionality
+print "Testing import_code..."
+
+// Import the test module
+testModule = import_code("/lib/wraith/test_module.src")
+
+if typeof(testModule) == "map" then
+    print "Module imported successfully"
+    result = testModule.sayHello("Grey Hack")
+    print result
+else
+    print "Failed to import module"
+end if

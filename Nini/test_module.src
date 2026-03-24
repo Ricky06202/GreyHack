@@ -1,0 +1,8 @@
+// Test module for import_code
+sayHello = function(name)
+    return "Hello, " + name + "!"
+end function
+
+testModule = {
+    "sayHello": @sayHello
+}
