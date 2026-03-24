@@ -86,7 +86,7 @@ end function
 saveExploit = function(service, version, ip, area, vuln)
     if not service or not version or not ip or not area or not vuln then return false
     
-    cache = loadExploitsCache
+    cache = loadExploitsCache()
     key = service + "|" + version
     if not cache.hasIndex(key) then cache[key] = []
     
@@ -106,7 +106,7 @@ end function
 getExploits = function(service, version)
     if not service or not version then return []
     
-    cache = loadExploitsCache
+    cache = loadExploitsCache()
     key = service + "|" + version
     if cache.hasIndex(key) then return cache[key]
     return []
@@ -114,7 +114,7 @@ end function
 
 // Listar todos los exploits en cache
 listExploits = function()
-    return loadExploitsCache
+    return loadExploitsCache()
 end function
 
 // Limpiar cache de exploits
