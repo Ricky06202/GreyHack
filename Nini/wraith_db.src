@@ -1,8 +1,3 @@
-// ==========================================================
-// WRAITH DB - Sistema de Persistencia para Wraith OS
-// ==========================================================
-
-// Funcion para obtener la ruta del vault
 getVaultPath = function()
     comp = get_shell.host_computer
     varPath = "/var/wraith"
@@ -11,13 +6,10 @@ getVaultPath = function()
         comp.create_folder("/var", "wraith")
         varFile = comp.File(varPath)
     end if
-    
     if varFile and varFile.is_folder then return varPath + "/vault.db"
-    
-    // Fallback a home
     if comp.File("/home") then
         users = comp.File("/home").get_folders
-        if users.len > 0 then
+        if len(users) > 0 then
             homePath = users[0].path + "/.wraith"
             if not comp.File(homePath) then comp.create_folder(users[0].path, ".wraith")
             return homePath + "/vault.db"
@@ -25,8 +17,6 @@ getVaultPath = function()
     end if
     return current_path + "/vault.db"
 end function
-
-// Guardar datos en el vault
 saveVault = function(data)
     vaultPath = getVaultPath()
     file = get_shell.host_computer.File(vaultPath)
@@ -38,11 +28,17 @@ saveVault = function(data)
         get_shell.host_computer.touch(parentPath, fileName)
         file = get_shell.host_computer.File(vaultPath)
     end if
+    serialized = serialize(data)
+    print C_P + " [DEBUG] DB: Serialized content length: " + len(serialized) + C_E
+    if len(serialized) > 0 then
+        preview = serialized
+        if len(preview) > 100 then preview = preview[0:100] + "..."
+        print C_P + " [DEBUG] DB: Serialized preview: " + preview + C_E
+    end if
     if file then 
-        file.set_content(serialize(data))
+        file.set_content(serialized)
         print C_B + " [*] DB: Datos guardados en " + vaultPath + C_E
     else
-        // ... (rest of the logic remains same but I'll add the print)
         localPath = current_path + "/vault.db"
         file = get_shell.host_computer.File(localPath)
         if not file then
@@ -50,13 +46,11 @@ saveVault = function(data)
             file = get_shell.host_computer.File(localPath)
         end if
         if file then 
-            file.set_content(serialize(data))
+            file.set_content(serialized)
             print C_Y + " [*] DB: Datos guardados en FALLBACK: " + localPath + C_E
         end if
     end if
 end function
-
-// Cargar datos del vault
 loadVault = function()
     vaultPath = getVaultPath()
     file = get_shell.host_computer.File(vaultPath)
@@ -65,118 +59,114 @@ loadVault = function()
     if not content then return {}
     return deserialize(content)
 end function
-
-// Serializar datos a string
 serialize = function(data)
     if typeof(data) != "map" then return ""
     result = ""
     for key in data.indexes
-        value = data[key]
-        if typeof(value) == "map" then
-            subLines = []
-            for subKey in value.indexes
-                // Solo si subKey es un string (evitar iteracion sobre chars si accidentally llega un objeto raro)
-                if typeof(subKey) == "string" or typeof(subKey) == "number" then
-                    subLines.push(subKey + "::" + value[subKey])
-                end if
-            end for
-            result = result + key + "=" + subLines.join("||") + char(10)
-        else if typeof(value) == "string" or typeof(value) == "number" then
-            result = result + key + "=" + str(value) + char(10)
-        else if typeof(value) == "list" then
-            result = result + key + "=" + value.join(",") + char(10)
+        if not key or str(key).trim == "" then continue
+        val = data[key]
+        if typeof(val) == "map" then
+            sIp = "unknown"; if val.hasIndex("ip") then sIp = str(val["ip"])
+            sLp = "unknown"; if val.hasIndex("lan") then sLp = str(val["lan"])
+            sUsr = "unknown"; if val.hasIndex("user") then sUsr = str(val["user"])
+            sPas = "unknown"; if val.hasIndex("pass") then sPas = str(val["pass"])
+            sPrv = "user"; if val.hasIndex("priv") then sPrv = str(val["priv"])
+            line = "ip:" + sIp + ",lan:" + sLp + ",user:" + sUsr + ",pass:" + sPas + ",priv:" + sPrv
+            result = result + key + "=" + line + char(10)
+        else
+            result = result + key + "=" + str(val) + char(10)
         end if
     end for
     return result
 end function
-
-// Deserializar string a datos
-deserialize = function(str)
+deserialize = function(content)
+    if not content or str(content).trim == "" then return {}
     result = {}
-    if not str then return result
-    // Limpiar retornos de carro y normalizar saltos de linea
-    str = str.replace(char(13), "")
-    lines = str.split(char(10))
+    content = content.replace(char(13), "")
+    lines = content.split(char(10))
     for line in lines
-        if line == "" then continue
-        
+        line = str(line).trim
+        if not line or line == "" or line.indexOf("=") == -1 then continue
         eqPos = line.indexOf("=")
-        if eqPos == -1 then continue
-        
         key = line[0 : eqPos]
-        value = line[eqPos + 1 : ]
-        
-        if value.indexOf("::") != null then
-            // Es un mapa anidado
-            subMap = {}
-            entries = value.split("||")
-            for entry in entries
-                sepPos = entry.indexOf("::")
-                if sepPos != -1 then
-                    subKey = entry[0 : sepPos]
-                    subVal = entry[sepPos + 2 : ]
-                    subMap[subKey] = subVal
+        valStr = line[eqPos + 1 : ]
+        if not key or key == "" then continue
+        if valStr.indexOf("ip:") != null and valStr.indexOf("user:") != null then
+            resMap = {}
+            fields = valStr.split(",")
+            for field in fields
+                fParts = field.split(":")
+                if len(fParts) >= 2 then
+                    fKey = fParts[0].trim
+                    fVal = fParts[1:].join(":").trim
+                    resMap[fKey] = fVal
                 end if
             end for
-            result[key] = subMap
-        else if value.indexOf(",") != null then
-            result[key] = value.split(",")
+            result[key] = resMap
+        else if valStr.indexOf("|") != null then
+            parts = valStr.split("|")
+            if len(parts) >= 3 then
+                vIp = parts[0]; vUser = parts[1]; vPass = parts[2]
+                vPriv = "user"; if len(parts) >= 4 then vPriv = parts[3]
+                result[key] = {"ip": vIp, "lan": "unknown", "user": vUser, "pass": vPass, "priv": vPriv}
+            end if
         else
-            // Intentar convertir numeros
-            if value.to_int != 0 or value == "0" then
-                result[key] = value.to_int
-            else
-                result[key] = value
+            result[key] = valStr
+        end if
+    end for
+    return result
+end function
+saveCredentials = function(ip, user, pass, privilege, lanIp = null)
+    if not ip or ip == "" then ip = "unknown"
+    if not lanIp or lanIp == "" then lanIp = "unknown"
+    if typeof(user) != "string" or typeof(pass) != "string" then return
+    if len(user) <= 1 or len(pass) <= 1 then return
+    if user.indexOf("|") != null or pass.indexOf("|") != null then return
+    if user.indexOf("::") != null or pass.indexOf("::") != null then return
+    if user.indexOf("||") != null or pass.indexOf("||") != null then return
+    vault = loadVault()
+    key = (ip + "_" + lanIp + "_" + user + "_" + privilege).lower
+    if pass == "" or pass == "FAIL" or pass == "EMPTY" or pass.indexOf("[ENCRYPTED]") != null then return
+    vault[key] = {"ip": ip, "lan": lanIp, "user": user, "pass": pass, "priv": privilege}
+    saveVault(vault)
+end function
+getCredentials = function(ip, user, privilege = null)
+    vault = loadVault()
+    // Buscar todas las entradas que coincidan con IP y usuario (ignorando LAN en la busqueda inicial)
+    for key in vault.indexes
+        if typeof(vault[key]) != "map" then continue
+        v = vault[key]
+        if v.hasIndex("ip") and v.hasIndex("user") and v.hasIndex("priv") then
+            if v["ip"] == ip and v["user"].lower == user.lower then
+                if privilege == null or v["priv"] == privilege then return v
+            end if
+            // Tambien buscar si la IP guardada es la LAN
+            if v.hasIndex("lan") and v["lan"] == ip and v["user"].lower == user.lower then
+                if privilege == null or v["priv"] == privilege then return v
             end if
         end if
     end for
-    return result
-end function
-
-// Funcion para guardar credenciales
-saveCredentials = function(ip, user, pass, privilege)
-    if not ip or ip == "" then ip = "unknown"
-    vault = loadVault()
-    key = (ip + "_" + user + "_" + privilege).lower
-    
-    // Solo guardar si es un password real y no vacio
-    if typeof(pass) != "string" or pass == "" or pass == "FAIL" or pass == "EMPTY" or pass.indexOf("[ENCRYPTED]") != null then return
-    
-    vault[key] = {"ip": ip, "user": user, "pass": pass, "priv": privilege}
-    saveVault(vault)
-end function
-
-// Funcion para obtener credenciales
-getCredentials = function(ip, user)
-    vault = loadVault()
-    // Buscar cualquier tipo de credencial para este usuario e IP
-    bankKey = (ip + "_" + user + "_bank").lower
-    mailKey = (ip + "_" + user + "_mail").lower
-    if vault.hasIndex(bankKey) then return vault[bankKey]
-    if vault.hasIndex(mailKey) then return vault[mailKey]
-    
-    // Compatibilidad con registros viejos sin sufijo
-    oldKey = (ip + "_" + user).lower
-    if vault.hasIndex(oldKey) then return vault[oldKey]
-    
     return null
 end function
-
-// Funcion para listar todas las credenciales guardadas
 listCredentials = function()
     vault = loadVault()
     return vault
 end function
-
-// Funcion para eliminar credenciales
 deleteCredentials = function(ip, user)
     vault = loadVault()
     key = (ip + "_" + user).lower
     if vault.hasIndex(key) then vault.remove(key)
     saveVault(vault)
 end function
-
-// Exportar funciones como libreria
+clearVault = function()
+    file = get_shell.host_computer.File(getVaultPath())
+    if file then 
+        file.set_content("")
+        print C_R + " [!] DB: Vault limpiado (wipe realizado)" + C_E
+        return true
+    end if
+    return false
+end function
 wraith_db = {
     "getVaultPath": @getVaultPath,
     "saveVault": @saveVault,
@@ -185,5 +175,6 @@ wraith_db = {
     "getCredentials": @getCredentials,
     "listCredentials": @listCredentials,
     "deleteCredentials": @deleteCredentials,
-    "serialize": @serialize,
+    "clearVault": @clearVault,
+    "serialize": @serialize
 }

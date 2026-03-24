@@ -1,8 +1,3 @@
-// ==========================================================
-// WRAITH EXPLOITS - Cache de Vulnerabilidades para Wraith OS
-// ==========================================================
-
-// Ruta del archivo de cache
 getExploitsPath = function()
     comp = get_shell.host_computer
     varPath = "/var/wraith"
@@ -11,13 +6,10 @@ getExploitsPath = function()
         comp.create_folder("/var", "wraith")
         varFile = comp.File(varPath)
     end if
-    
     if varFile and varFile.is_folder then return varPath + "/vulns.cache"
-    
-    // Fallback a home
     if comp.File("/home") then
         users = comp.File("/home").get_folders
-        if users.len > 0 then
+        if len(users) > 0 then
             homePath = users[0].path + "/.wraith"
             if not comp.File(homePath) then comp.create_folder(users[0].path, ".wraith")
             return homePath + "/vulns.cache"
@@ -25,54 +17,62 @@ getExploitsPath = function()
     end if
     return current_path + "/vulns.cache"
 end function
-
-// Cargar cache de exploits
 loadExploitsCache = function()
     cachePath = getExploitsPath()
     file = get_shell.host_computer.File(cachePath)
     if not file then return {}
     content = file.get_content
-    if not content then return {}
-    
+    if not content or str(content).trim == "" then return {}
     cache = {}
-    // Limpiar retornos de carro y normalizar
     content = content.replace(char(13), "")
     lines = content.split(char(10))
     for line in lines
-        if line == "" then continue
-        parts = line.split("|")
-        if parts.len != 5 then continue
-        service = parts[0]
-        version = parts[1]
-        ip = parts[2]
-        area = parts[3]
-        vuln = parts[4]
-        
-        key = service + "|" + version
-        if not cache.hasIndex(key) then cache[key] = []
-        cache[key].push({"ip": ip, "area": area, "vuln": vuln})
+        line = str(line).trim
+        if not line or line == "" then continue
+        if line.indexOf("svc:") != null then
+            resMap = {}
+            fields = line.split(",")
+            for field in fields
+                fParts = field.split(":")
+                if len(fParts) >= 2 then
+                    fKey = fParts[0].trim
+                    fVal = fParts[1:].join(":").trim
+                    resMap[fKey] = fVal
+                end if
+            end for
+            if resMap.hasIndex("svc") and resMap.hasIndex("ver") then
+                key = resMap["svc"] + "|" + resMap["ver"]
+                if not cache.hasIndex(key) then cache[key] = []
+                cache[key].push({"ip": resMap["ip"], "area": resMap["area"], "vuln": resMap["vuln"]})
+            end if
+        else
+            parts = line.split("|")
+            if len(parts) == 5 then
+                service = parts[0]; version = parts[1]; ip = parts[2]; area = parts[3]; vuln = parts[4]
+                key = service + "|" + version
+                if not cache.hasIndex(key) then cache[key] = []
+                cache[key].push({"ip": ip, "area": area, "vuln": vuln})
+            end if
+        end if
     end for
-    
     return cache
 end function
-
-// Guardar cache de exploits
 saveExploitsCache = function(cache)
     cachePath = getExploitsPath()
     file = get_shell.host_computer.File(cachePath)
-    
     content = ""
     for key in cache.indexes
+        kStr = str(key)
+        sepPos = kStr.indexOf("|")
+        if sepPos == -1 or sepPos == 0 then continue
         exploits = cache[key]
+        service = kStr[:sepPos]
+        version = kStr[sepPos + 1:]
         for exp in exploits
-            service_version = key.split("|")
-            if service_version.len != 2 then continue
-            service = service_version[0]
-            version = service_version[1]
-            content = content + service + "|" + version + "|" + exp["ip"] + "|" + exp["area"] + "|" + exp["vuln"] + char(10)
+            line = "svc:" + service + ",ver:" + version + ",ip:" + exp["ip"] + ",area:" + exp["area"] + ",vuln:" + exp["vuln"]
+            content = content + line + char(10)
         end for
     end for
-    
     if not file then
         pathParts = cachePath.split("/")
         fileName = pathParts[-1]
@@ -83,9 +83,10 @@ saveExploitsCache = function(cache)
     end if
     if file then 
         file.set_content(content)
-        print C_B + " [*] CACHE: Vulnerabilidades guardadas en " + cachePath + C_E
+        linesCount = len(content.split(char(10))) - 1
+        if linesCount < 0 then linesCount = 0
+        print C_B + " [*] CACHE: " + linesCount + " vulnerabilidades guardadas en " + cachePath + C_E
     else
-        // Fallback robusto a ruta local
         localPath = current_path + "/vulns.cache"
         file = get_shell.host_computer.File(localPath)
         if not file then
@@ -98,57 +99,46 @@ saveExploitsCache = function(cache)
         end if
     end if
 end function
-
-// Guardar un exploit individual
 saveExploit = function(service, version, ip, area, vuln)
     if not service or not version or not ip or not area or not vuln then return false
-    
     cache = loadExploitsCache()
     key = service + "|" + version
     if not cache.hasIndex(key) then cache[key] = []
-    
-    // Verificar si ya existe (mismo service, version, ip, area, vuln)
     for exp in cache[key]
         if exp["ip"] == ip and exp["area"] == area and exp["vuln"] == vuln then
-            return false  // Ya existe
+            return false 
         end if
     end for
-    
     cache[key].push({"ip": ip, "area": area, "vuln": vuln})
     saveExploitsCache(cache)
     return true
 end function
-
-// Obtener exploits conocidos para un servicio y version
 getExploits = function(service, version)
     if not service or not version then return []
-    
     cache = loadExploitsCache()
     key = service + "|" + version
     if cache.hasIndex(key) then return cache[key]
     return []
 end function
-
-// Listar todos los exploits en cache
 listExploits = function()
     return loadExploitsCache()
 end function
-
-// Limpiar cache de exploits
 clearExploits = function()
     cachePath = getExploitsPath()
     file = get_shell.host_computer.File(cachePath)
-    if file then file.set_content("")
-    return true
+    if file then 
+        file.set_content("")
+        print C_R + " [!] CACHE: Cache de exploits limpiado" + C_E
+        return true
+    end if
+    return false
 end function
-
-// Exportar funciones como libreria
-wraith_exploits = {
+wraith_vulncache = {
     "getExploitsPath": @getExploitsPath,
     "loadExploitsCache": @loadExploitsCache,
     "saveExploitsCache": @saveExploitsCache,
     "saveExploit": @saveExploit,
     "getExploits": @getExploits,
     "listExploits": @listExploits,
-    "clearExploits": @clearExploits,
+    "clearExploits": @clearExploits
 }

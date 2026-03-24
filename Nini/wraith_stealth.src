@@ -1,67 +1,44 @@
-// ==========================================================
-// WRAITH STEALTH - Gestion de Logs para Wraith OS
-// ==========================================================
-
-// Funcion para leer logs del sistema
 readSystemLog = function(computer, lines = 0)
     if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
-    
     logFile = computer.File("/var/log/system.log")
     if not logFile then return "Error: Log file not found"
     if not logFile.has_permission("r") then return "Error: No read permission"
-    
     content = logFile.get_content
     if not content then return ""
-    
     if lines > 0 then
         allLines = content.split(char(10))
-        if allLines.len <= lines then return content
-        return allLines[allLines.len - lines:].join(char(10))
+        if len(allLines) <= lines then return content
+        return allLines[len(allLines) - lines:].join(char(10))
     end if
-    
     return content
 end function
-
-// Funcion para filtrar logs por IP
 filterLogsByIP = function(computer, ipAddress)
     if not computer or typeof(computer) != "computer" then return []
-    
     logFile = computer.File("/var/log/system.log")
     if not logFile then return []
     if not logFile.has_permission("r") then return []
-    
     content = logFile.get_content
     if not content then return []
-    
     lines = content.split(char(10))
     filtered = []
-    
     for line in lines
         if line.indexOf(ipAddress) != null then
             filtered.push(line)
         end if
     end for
-    
     return filtered
 end function
-
-// Funcion para eliminar lineas especificas de logs (quirurgico)
 deleteLogLines = function(computer, ipAddress = null, lineNumber = null, pattern = null)
     if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
-    
     logFile = computer.File("/var/log/system.log")
     if not logFile then return "Error: Log file not found"
     if not logFile.has_permission("w") then return "Error: No write permission"
-    
     content = logFile.get_content
     if not content then return "No content to delete"
-    
     lines = content.split(char(10))
     newLines = []
     deletedCount = 0
-    
     if ipAddress then
-        // Eliminar lineas que contengan la IP
         for line in lines
             if line.indexOf(ipAddress) == null then
                 newLines.push(line)
@@ -70,9 +47,8 @@ deleteLogLines = function(computer, ipAddress = null, lineNumber = null, pattern
             end if
         end for
     else if lineNumber then
-        // Eliminar linea especifica por numero
-        if lineNumber >= 1 and lineNumber <= lines.len then
-            for i in range(0, lines.len - 1)
+        if lineNumber >= 1 and lineNumber <= len(lines) then
+            for i in range(0, len(lines) - 1)
                 if i != (lineNumber - 1) then
                     newLines.push(lines[i])
                 else
@@ -83,7 +59,6 @@ deleteLogLines = function(computer, ipAddress = null, lineNumber = null, pattern
             return "Error: Line number out of range"
         end if
     else if pattern then
-        // Eliminar lineas que contengan patron
         for line in lines
             if line.indexOf(pattern) == null then
                 newLines.push(line)
@@ -94,44 +69,31 @@ deleteLogLines = function(computer, ipAddress = null, lineNumber = null, pattern
     else
         return "Error: No deletion criteria specified"
     end if
-    
-    // Escribir contenido modificado
     newContent = newLines.join(char(10))
     logFile.set_content(newContent)
-    
     return "Deleted " + deletedCount + " log entries"
 end function
-
-// Funcion para limpiar logs de una IP especifica
 cleanLogsByIP = function(computer, ipAddress)
     return deleteLogLines(computer, ipAddress)
 end function
-
-// Funcion para obtener estadisticas de logs
 getLogStats = function(computer)
     if not computer or typeof(computer) != "computer" then return {}
-    
     logFile = computer.File("/var/log/system.log")
     if not logFile then return {}
     if not logFile.has_permission("r") then return {}
-    
     content = logFile.get_content
     if not content then return {}
-    
     lines = content.split(char(10))
     stats = {
-        "total_lines": lines.len,
+        "total_lines": len(lines),
         "unique_ips": {},
         "common_services": {},
         "last_modified": logFile.date,
     }
-    
-    // Analizar lineas
     for line in lines
-        // Extraer IP
         parts = line.split(" ")
-        if parts.len >= 3 then
-            ip = parts[2] // Asumiendo formato: timestamp host service message
+        if len(parts) >= 3 then
+            ip = parts[2]
             if ip and ip.indexOf(".") != null then
                 if stats["unique_ips"].hasIndex(ip) then
                     stats["unique_ips"][ip] = stats["unique_ips"][ip] + 1
@@ -140,8 +102,6 @@ getLogStats = function(computer)
                 end if
             end if
         end if
-        
-        // Extraer servicio (simplificado)
         if line.indexOf("sshd") != null then
             service = "sshd"
         else if line.indexOf("httpd") != null then
@@ -151,77 +111,55 @@ getLogStats = function(computer)
         else
             service = "other"
         end if
-        
         if stats["common_services"].hasIndex(service) then
             stats["common_services"][service] = stats["common_services"][service] + 1
         else
             stats["common_services"][service] = 1
         end if
     end for
-    
     return stats
 end function
-
-// Funcion para visualizar logs con formato
 viewLogsFormatted = function(computer, lines = 50, filter = null)
     if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
-    
     logContent = readSystemLog(computer, lines)
     if typeof(logContent) == "string" and logContent.indexOf("Error") != null then
         return logContent
     end if
-    
     if not filter then return logContent
-    
-    // Aplicar filtro
     linesArray = logContent.split(char(10))
     filtered = []
-    
     for line in linesArray
         if line.indexOf(filter) != null then
             filtered.push(line)
         end if
     end for
-    
     return filtered.join(char(10))
 end function
-
-// Funcion para buscar en logs
 searchInLogs = function(computer, searchTerm)
     if not computer or typeof(computer) != "computer" then return []
-    
     logFile = computer.File("/var/log/system.log")
     if not logFile then return []
     if not logFile.has_permission("r") then return []
-    
     content = logFile.get_content
     if not content then return []
-    
     lines = content.split(char(10))
     results = []
-    
-    for i in range(0, lines.len - 1)
+    for i in range(0, len(lines) - 1)
         if lines[i].indexOf(searchTerm) != null then
             results.push({"line": i + 1, "content": lines[i]})
         end if
     end for
-    
     return results
 end function
-
-// Funcion para ver logs con numeros de linea
 viewLogsNumbered = function(computer, lines = 50, filter = null)
     if not computer or typeof(computer) != "computer" then return []
-    
     logContent = readSystemLog(computer, lines)
     if typeof(logContent) == "string" and logContent.indexOf("Error") != null then
         return []
     end if
-    
     linesArray = logContent.split(char(10))
     result = []
-    
-    for i in range(0, linesArray.len - 1)
+    for i in range(0, len(linesArray) - 1)
         line = linesArray[i]
         if filter then
             if line.indexOf(filter) != null then
@@ -231,48 +169,34 @@ viewLogsNumbered = function(computer, lines = 50, filter = null)
             result.push({"line": i+1, "content": line})
         end if
     end for
-    
     return result
 end function
-
-// Funcion para eliminar lineas por numeros (multiples)
 deleteLogLinesByNumbers = function(computer, lineNumbers)
     if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
-    if not lineNumbers or lineNumbers.len == 0 then return "No line numbers provided"
-    
+    if not lineNumbers or len(lineNumbers) == 0 then return "No line numbers provided"
     logFile = computer.File("/var/log/system.log")
     if not logFile then return "Error: Log file not found"
     if not logFile.has_permission("w") then return "Error: No write permission"
-    
     content = logFile.get_content
     if not content then return "No content to delete"
-    
     lines = content.split(char(10))
     newLines = []
     deletedCount = 0
-    
-    // Crear set de lineas a borrar (1-indexado)
     toDelete = {}
     for num in lineNumbers
         toDelete[num] = true
     end for
-    
-    for i in range(0, lines.len - 1)
+    for i in range(0, len(lines) - 1)
         if not toDelete.hasIndex(i+1) then
             newLines.push(lines[i])
         else
             deletedCount = deletedCount + 1
         end if
     end for
-    
-    // Escribir contenido modificado
     newContent = newLines.join(char(10))
     logFile.set_content(newContent)
-    
     return "Deleted " + deletedCount + " log entries"
 end function
-
-// Exportar funciones como libreria
 wraith_stealth = {
     "readSystemLog": @readSystemLog,
     "filterLogsByIP": @filterLogsByIP,

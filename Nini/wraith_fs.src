@@ -1,12 +1,5 @@
-// ==========================================================
-// WRAITH FS - Sistema de Archivos Virtual (VFS) para Wraith OS
-// ==========================================================
-
-// Funcion para listar archivos (wls)
 wls = function(target, path = "/", showHidden = false)
     if not target then return "Error: No target specified"
-    
-    // Determinar si target es computer o shell
     comp = null
     if typeof(target) == "computer" then
         comp = target
@@ -15,35 +8,23 @@ wls = function(target, path = "/", showHidden = false)
     else
         return "Error: Invalid target type"
     end if
-    
     file = comp.File(path)
     if not file then return "Error: Path not found"
-    
     if not file.is_folder then
         return path + " [FILE] " + file.permissions + " " + file.size + " bytes"
     end if
-    
-    // Listar contenido
     result = "Listing: " + path + "\n"
     items = file.get_files + file.get_folders
-    
     for item in items
-        // Saltar archivos ocultos si no se muestran
         if not showHidden and item.name[0] == "." then continue
-        
         type = "[FILE]"
         if item.is_folder then type = "[DIR]"
-        
-        result = result + item.permissions + " " + type + " " + item.name + " " + item.size + " bytes\n"
+        result = result + item.permissions + " " + type + " " + item.name + " " + str(item.size) + " bytes\n"
     end for
-    
     return result
 end function
-
-// Funcion para cambiar directorio (wcd)
 wcd = function(target, path)
     if not target then return "Error: No target specified"
-    
     comp = null
     if typeof(target) == "computer" then
         comp = target
@@ -52,20 +33,13 @@ wcd = function(target, path)
     else
         return "Error: Invalid target type"
     end if
-    
-    // En Grey Hack no hay concepto de directorio actual para computer
-    // Solo devolvemos la ruta absoluta
     file = comp.File(path)
     if not file then return "Error: Path not found"
     if not file.is_folder then return "Error: Not a directory"
-    
     return file.path
 end function
-
-// Funcion para eliminar archivo/directorio (wrm)
 wrm = function(target, path, recursive = false)
     if not target then return "Error: No target specified"
-    
     comp = null
     if typeof(target) == "computer" then
         comp = target
@@ -74,32 +48,21 @@ wrm = function(target, path, recursive = false)
     else
         return "Error: Invalid target type"
     end if
-    
     file = comp.File(path)
     if not file then return "Error: Path not found"
-    
-    // Verificar permisos
     if not file.has_permission("w") then return "Error: No write permission"
-    
     if file.is_folder and not recursive then
-        // Verificar si esta vacio
         items = file.get_files + file.get_folders
-        if items.len > 0 then return "Error: Directory not empty (use recursive)"
+        if len(items) > 0 then return "Error: Directory not empty (use recursive)"
     end if
-    
-    // Eliminar
     parent = file.parent
     if not parent then return "Error: Cannot delete root"
-    
     success = parent.delete(file.name)
     if success then return "Deleted: " + path
     return "Error: Delete failed"
 end function
-
-// Funcion para leer archivo (wcat)
 wcat = function(target, path, lines = 0)
     if not target then return "Error: No target specified"
-    
     comp = null
     if typeof(target) == "computer" then
         comp = target
@@ -108,31 +71,21 @@ wcat = function(target, path, lines = 0)
     else
         return "Error: Invalid target type"
     end if
-    
     file = comp.File(path)
     if not file then return "Error: File not found"
     if file.is_folder then return "Error: Is a directory"
-    
-    // Verificar permisos de lectura
     if not file.has_permission("r") then return "Error: No read permission"
-    
     content = file.get_content
     if not content then return ""
-    
     if lines > 0 then
-        // Mostrar solo las ultimas N lineas
         allLines = content.split(char(10))
-        if allLines.len <= lines then return content
-        return allLines[allLines.len - lines:].join(char(10))
+        if len(allLines) <= lines then return content
+        return allLines[len(allLines) - lines:].join(char(10))
     end if
-    
     return content
 end function
-
-// Funcion para escribir archivo (wwrite)
 wwrite = function(target, path, content, append = false)
     if not target then return "Error: No target specified"
-    
     comp = null
     if typeof(target) == "computer" then
         comp = target
@@ -141,23 +94,18 @@ wwrite = function(target, path, content, append = false)
     else
         return "Error: Invalid target type"
     end if
-    
     file = comp.File(path)
     if not file then
-        // Crear archivo si no existe
         parentPath = parent_path(path)
         fileName = path.split("/")[-1]
         parent = comp.File(parentPath)
         if not parent then return "Error: Parent directory not found"
         if not parent.has_permission("w") then return "Error: No write permission in parent"
-        
         comp.touch(parentPath, fileName)
         file = comp.File(path)
         if not file then return "Error: Could not create file"
     end if
-    
     if not file.has_permission("w") then return "Error: No write permission"
-    
     if append then
         current = file.get_content
         if not current then current = ""
@@ -165,14 +113,10 @@ wwrite = function(target, path, content, append = false)
     else
         file.set_content(content)
     end if
-    
     return "Written: " + path
 end function
-
-// Funcion para copiar archivo (wcopy)
 wcopy = function(target, sourcePath, destPath)
     if not target then return "Error: No target specified"
-    
     comp = null
     if typeof(target) == "computer" then
         comp = target
@@ -181,24 +125,17 @@ wcopy = function(target, sourcePath, destPath)
     else
         return "Error: Invalid target type"
     end if
-    
     source = comp.File(sourcePath)
     if not source then return "Error: Source not found"
-    
-    // Usar el metodo copy del objeto file
     destDir = parent_path(destPath)
     destName = destPath.split("/")[-1]
-    
     parent = comp.File(destDir)
     if not parent then return "Error: Destination directory not found"
     if not parent.has_permission("w") then return "Error: No write permission in destination"
-    
     success = source.copy(destDir, destName)
     if success then return "Copied: " + sourcePath + " to " + destPath
     return "Error: Copy failed"
 end function
-
-// Exportar funciones como libreria
 wraith_fs = {
     "wls": @wls,
     "wcd": @wcd,

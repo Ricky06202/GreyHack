@@ -1,7 +1,3 @@
-// ==========================================================
-// WRAITH NET - Motor de Red para Wraith OS
-// ==========================================================
-
 C_G = "<color=#00FF41>"
 C_R = "<color=#FF3131>"
 C_B = "<color=#00D4FF>"
@@ -11,40 +7,32 @@ C_W = "<color=#E0E0E0>"
 C_E = "</color>"
 C_O = "<color=#FF6600>"
 C_C = "<color=#00FFFF>"
-
-// Funcion para obtener el router correcto
 getWraithRouter = function(targetIp = null)
-    if targetIp == null then
-        // Router local
-        return get_router
-    else
-        // Router remoto
-        return get_router(targetIp)
-    end if
+    if targetIp == null then return get_router
+    if not is_lan_ip(targetIp) then return get_router(targetIp)
+    // Logica de Rebote (Bounce) para LAN
+    localRouter = get_router(targetIp)
+    if localRouter then return localRouter
+    // Si no es alcanzable localmente y estamos pivoteados, usar el router del pivote
+    pubIp = ""; comp = getCurrentComputer()
+    if comp then pubIp = comp.public_ip
+    if pubIp != "" and pubIp != "unknown" then return get_router(pubIp)
+    return get_router // Fallback
 end function
-
-// Funcion para escanear puertos (Nmap mejorado)
 scanPorts = function(targetIp, portRange = null)
     if not targetIp then return "Error: No target IP"
-    
-    // Verificar conectividad
-    shell = get_shell
-    if not shell.ping(targetIp) then return "Error: Host unreachable"
-    
+    comp = getCurrentComputer()
+    if not comp.ping(targetIp) then return "Error: Host unreachable"
     isLan = is_lan_ip(targetIp)
     router = getWraithRouter(targetIp)
     if not router then return "Error: Router not found"
-    
     ports = []
     if isLan then
         ports = router.device_ports(targetIp)
     else
         ports = router.used_ports
     end if
-    
-    if not ports or ports.len == 0 then return "No open ports found"
-    
-    // Filtrar por rango si se especifica
+    if not ports or len(ports) == 0 then return "No open ports found"
     if portRange then
         filtered = []
         for port in ports
@@ -54,58 +42,40 @@ scanPorts = function(targetIp, portRange = null)
         end for
         ports = filtered
     end if
-    
-    // Guardar puertos en lista para exploits
     portList = []
-    
-    // Construir tabla de resultados con IDs y colores
     sep2 = " " + C_W + "|" + C_E + " "
-    
-    // Encabezado
     result = C_B + "ID" + C_E + sep2 + C_P + "PORT" + C_E + sep2 + C_G + "STATE" + C_E + sep2 + C_Y + "SERVICE" + C_E + sep2 + C_O + "VERSION" + C_E + sep2 + C_C + "LAN_IP" + C_E + "\n"
-    
     portId = 1
     for port in ports
         info = router.port_info(port)
         parts = info.split(" ")
         service = parts[0]
         version = "---"
-        if parts.len > 1 then version = parts[1]
-        
+        if len(parts) > 1 then version = parts[1]
         status = "open"
         statusColor = C_G
         if port.is_closed and not isLan then 
             status = "closed"
             statusColor = C_R
         end if
-        
         lanIp = port.get_lan_ip
-        
-        // Guardar en lista
         portList.push({"id": portId, "port": port.port_number, "service": service, "version": version, "lan_ip": lanIp})
-        
         result = result + C_B + str(portId) + C_E + sep2 + C_P + str(port.port_number) + C_E + sep2 + statusColor + status + C_E + sep2 + C_Y + service + C_E + sep2 + C_O + version + C_E + sep2 + C_C + lanIp + C_E + "\n"
         portId = portId + 1
     end for
-    
     return {"output": format_columns(result), "ports": portList}
 end function
-
-// Funcion para obtener informacion de un puerto especifico
 getPortInfo = function(targetIp, portNumber)
     if not targetIp then return "Error: No target IP"
-    
     isLan = is_lan_ip(targetIp)
     router = getWraithRouter(targetIp)
     if not router then return "Error: Router not found"
-    
     ports = []
     if isLan then
         ports = router.device_ports(targetIp)
     else
         ports = router.used_ports
     end if
-    
     for port in ports
         if port.port_number == portNumber then
             info = router.port_info(port)
@@ -118,76 +88,51 @@ getPortInfo = function(targetIp, portNumber)
             }
         end if
     end for
-    
     return "Error: Port not found"
 end function
-
-// Funcion para escanear red local (descubrir hosts)
 scanLocalNetwork = function(subnet = null)
-    shell = get_shell
-    comp = shell.host_computer
+    comp = getCurrentComputer()
     localIp = comp.local_ip
-    
     if not subnet then
-        // Determinar subred basada en IP local
         parts = localIp.split(".")
         subnet = parts[0] + "." + parts[1] + "." + parts[2] + "."
     end if
-    
-    // Escanear rango de IPs comunes (1-254)
     hosts = []
     for i in range(1, 254)
         ip = subnet + i
-        if ip != localIp and shell.ping(ip) then
+        if ip != localIp and comp.ping(ip) then
             hosts.push(ip)
         end if
     end for
-    
     return hosts
 end function
-
-// Funcion para obtener informacion de la red actual
 getNetworkInfo = function()
     shell = get_shell
     comp = shell.host_computer
-    
     info = {
         "local_ip": comp.local_ip,
         "public_ip": comp.public_ip,
     }
-    
-    // Obtener informacion del router
     router = getWraithRouter()
     if router then
         info["router_ip"] = router.ip_address
-        info["router_ports"] = router.used_ports.len
+        info["router_ports"] = len(router.used_ports)
     end if
-    
     return info
 end function
-
-// Funcion para verificar si una IP es accesible
 checkHost = function(ip)
     shell = get_shell
     return shell.ping(ip)
 end function
-
-// Funcion para pivotear a traves de una shell
 pivotTo = function(shell, targetIp)
     if not shell then return "Error: No shell provided"
     if typeof(shell) != "shell" then return "Error: Invalid shell object"
-    
-    // Crear nueva conexion
     metax = include_lib("/lib/metaxploit.so")
     if not metax then return "Error: metaxploit.so not found"
-    
-    // Buscar puertos abiertos en el objetivo
     ports = scanPorts(targetIp)
     if typeof(ports) == "string" and ports.indexOf("Error") != null then
         return ports
     end if
-    
-    // Intentar conectar a puertos comunes
     commonPorts = [22, 80, 443, 3000, 8080]
     for port in commonPorts
         session = metax.net_use(targetIp, port)
@@ -195,42 +140,30 @@ pivotTo = function(shell, targetIp)
             return {"session": session, "port": port, "target": targetIp}
         end if
     end for
-    
     return "Error: Could not establish session"
 end function
-
-// Funcion para listar dispositivos en la red local con detalles
 discoverNetworkDetailed = function()
     hosts = scanLocalNetwork
     result = []
-    
     for host in hosts
         hostInfo = {
             "ip": host,
             "ports": [],
         }
-        
-        // Escanear puertos en cada host
         ports = scanPorts(host)
         if typeof(ports) == "string" then continue
-        
-        // Parsear resultado (simplificado)
         lines = ports.split("\n")
         for line in lines
             if line.indexOf("PORT") != null then continue
             parts = line.split(" ")
-            if parts.len >= 1 then
+            if len(parts) >= 1 then
                 hostInfo["ports"].push(parts[0].to_int)
             end if
         end for
-        
         result.push(hostInfo)
     end for
-    
     return result
 end function
-
-// Exportar funciones como libreria
 wraith_net = {
     "getWraithRouter": @getWraithRouter,
     "scanPorts": @scanPorts,

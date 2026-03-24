@@ -1,22 +1,9 @@
-// ==========================================================
-// WRAITH OS v4.0 - Framework Modular para GreyHack
-// ==========================================================
-
-// Colores para la interfaz
 C_G = "<color=#00FF41>"; C_R = "<color=#FF3131>"; C_B = "<color=#00D4FF>"
 C_Y = "<color=#F7FF00>"; C_P = "<color=#B537F2>"; C_W = "<color=#E0E0E0>"
 C_E = "</color>"
-
 HUD_LINE = C_P + "==================================================" + C_E
 HUD_SUB  = C_B + "--------------------------------------------------" + C_E
-
-// ==========================================================
-// SISTEMA DE ENCABEZADOS VARIADOS (10 estilos)
-// ==========================================================
-
-// Funcion para encabezado aleatorio
 displayRandomHeader = function()
-    // Colores neon
     neonGreen = "<color=#39FF14>"
     neonCyan = "<color=#00FFFF>"
     neonPurple = "<color=#FF00FF>"
@@ -26,8 +13,6 @@ displayRandomHeader = function()
     neonRed = "<color=#FF0000>"
     neonBlue = "<color=#0066FF>"
     reset = "</color>"
-    
-    // Estilo 1: Mountains (el del usuario)
     style1 = function()
         lines = []
         lines.push C_P + "      ___          ___          ___          ___      " + reset
@@ -41,8 +26,6 @@ displayRandomHeader = function()
         lines.push neonCyan + "            W R A I T H   O S                    " + reset
         return lines
     end function
-    
-    // Estilo 2: Circuit Board
     style2 = function()
         lines = []
         lines.push neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
@@ -55,8 +38,6 @@ displayRandomHeader = function()
         lines.push neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset
         return lines
     end function
-    
-    // Estilo 3: Cubos isometricos
     style3 = function()
         lines = []
         lines.push neonPurple + "     /\\    /\\    /\\    /\\    /\\    " + reset
@@ -68,8 +49,6 @@ displayRandomHeader = function()
         lines.push neonPink + "  W R A I T H   O S                " + reset
         return lines
     end function
-    
-    // Estilo 4: Hex Grid
     style4 = function()
         lines = []
         lines.push neonPurple + "  / \ / \ / \ / \ / \ / \ / \ / \ " + reset
@@ -81,8 +60,6 @@ displayRandomHeader = function()
         lines.push neonRed + "  \ / \ / \ / \ / \ / \ / \ / \ / " + reset
         return lines
     end function
-
-    // Estilo 5: Piramides isometricas
     style5 = function()
         lines = []
         lines.push neonYellow + "           /\\          " + reset
@@ -96,8 +73,6 @@ displayRandomHeader = function()
         lines.push neonPurple + " W R A I T H   O S     " + reset
         return lines
     end function
-    
-    // Estilo 6: Edificios isometricos
     style6 = function()
         lines = []
         lines.push neonCyan + "    /\\    /\\    /\\    /\\    /\\    " + reset
@@ -109,8 +84,6 @@ displayRandomHeader = function()
         lines.push neonPink + "   W R A I T H   O S              " + reset
         return lines
     end function
-    
-    // Estilo 7: Escaleras isometricas
     style7 = function()
         lines = []
         lines.push neonPurple + "      /\\      /\\      /\\      /\\   " + reset
@@ -122,8 +95,6 @@ displayRandomHeader = function()
         lines.push neonPink + "  W R A I T H   O S                " + reset
         return lines
     end function
-    
-    // Estilo 8: Diamantes isometricos
     style8 = function()
         lines = []
         lines.push neonYellow + "      /\\      /\\      /\\      /\\   " + reset
@@ -135,8 +106,6 @@ displayRandomHeader = function()
         lines.push neonPurple + "   W R A I T H   O S               " + reset
         return lines
     end function
-    
-    // Estilo 9: Flechas isometricas
     style9 = function()
         lines = []
         lines.push neonGreen + "        /\\        /\\        /\\      " + reset
@@ -149,8 +118,6 @@ displayRandomHeader = function()
         lines.push neonPink + "  W R A I T H   O S                 " + reset
         return lines
     end function
-    
-    // Estilo 10: Ondas isometricas
     style10 = function()
         lines = []
         lines.push neonPink + "    /\\    /\\    /\\    /\\    /\\    " + reset
@@ -162,36 +129,23 @@ displayRandomHeader = function()
         lines.push neonGreen + "  W R A I T H   O S                " + reset
         return lines
     end function
-    
-    // Lista de estilos
     styles = [@style1, @style2, @style3, @style4, @style5, 
               @style6, @style7, @style8, @style9, @style10]
-    
-    // Elegir estilo aleatorio
-    styleIndex = floor(rnd * styles.len)
+    styleIndex = floor(rnd * len(styles))
     selectedStyle = styles[styleIndex]
-    
-    // Imprimir lineas del estilo
     lines = selectedStyle()
     for line in lines
         print line
     end for
-    
-    // Informacion adicional debajo del header
     print neonPurple + "  [+] Grey Hack Modular Framework [+] " + reset
     print neonGreen + "  [+] Wraith OS - Hacking Toolkit [+] " + reset
 end function
-
-// Importar modulos (usando import_code)
-// Modulos organizados en subcarpeta /lib/wraith/
-import_code("/lib/wraith/wraith_db.src")
-import_code("/lib/wraith/wraith_fs.src")
-import_code("/lib/wraith/wraith_net.src")
-import_code("/lib/wraith/wraith_exploit.src")
-import_code("/lib/wraith/wraith_stealth.src")
-import_code("/lib/wraith/wraith_vulncache.src")
-
-// Variables globales
+import_code("./wraith_db.src")
+import_code("./wraith_fs.src")
+import_code("./wraith_net.src")
+import_code("./wraith_exploit.src")
+// wraith_stealth eliminado (obsoleto)
+import_code("./wraith_vulncache.src")
 globals.ipTarget = ""
 globals.sesiones = []
 globals.lastScan = []
@@ -199,47 +153,37 @@ globals.activeShell = get_shell
 globals.originDisplay = "LOCAL"
 globals.currentComputer = null
 globals.route = ["LOCAL"]
-
-// Funcion para limpiar pantalla
 limpiar = function
     clear_screen
 end function
-
-// Funcion para cargar librerias (compatibilidad)
 cargarLib = function(nombre)
     lib = include_lib("/lib/" + nombre)
     if not lib then lib = include_lib(current_path + "/" + nombre)
     if not lib then exit(C_R + "FATAL: " + nombre + " no encontrada." + C_E)
     return lib
 end function
-
 globals.metax = cargarLib("metaxploit.so")
 globals.crypto = cargarLib("crypto.so")
-
-// Funcion para verificar conexion
 verificarConexion = function(ip)
+    if not ip or ip == "" then return false
     if ip == "localhost" or ip == "127.0.0.1" then return true
-    return globals.activeShell.ping(ip)
+    comp = getCurrentComputer()
+    if not comp or typeof(comp) != "computer" then return false
+    return comp.ping(ip)
 end function
-
-// Funcion para actualizar HUD de ruta
 updateRoute = function(description)
     if globals.route.indexOf(description) == null then
         globals.route.push(description)
     end if
 end function
-
-// Funcion para mostrar HUD de ruta
 displayRoute = function
     routeStr = ""
-    for i in range(0, globals.route.len - 1)
+    for i in range(0, len(globals.route) - 1)
         if i > 0 then routeStr = routeStr + " -> "
         routeStr = routeStr + globals.route[i]
     end for
     print C_B + " RUTA: " + C_W + routeStr + C_E
 end function
-
-// Funcion para obtener objeto computer actual
 getCurrentComputer = function
     if globals.currentComputer then return globals.currentComputer
     if typeof(globals.activeShell) == "shell" then
@@ -249,73 +193,48 @@ getCurrentComputer = function
     end if
     return get_shell.host_computer
 end function
-
-// Funcion para actualizar computer actual
 updateCurrentComputer = function(newComputer)
     globals.currentComputer = newComputer
     if typeof(newComputer) == "computer" then
         updateRoute(newComputer.local_ip)
     end if
 end function
-
-
-
-// ==========================================================
-// MODULOS DE FUNCIONALIDAD
-// ==========================================================
-
-// Motor de red mejorado
 nmapWraith = function()
     globals.lastScan = []
     target = globals.ipTarget
     if not target then return C_R + " [!] No target IP set" + C_E
-    
-    hostActivo = globals.activeShell.host_computer
+    hostActivo = getCurrentComputer()
     if target == "127.0.0.1" or target == "localhost" then target = hostActivo.local_ip
     if not verificarConexion(target) then return C_R + " [!] HOST UNREACHABLE" + C_E
-    
-    // Usar modulo wraith_net
     scanResult = wraith_net.scanPorts(target)
     if typeof(scanResult) == "string" and scanResult.indexOf("Error") != null then
         return C_R + scanResult + C_E
     end if
-    
     result = scanResult["output"]
     portList = scanResult["ports"]
-    
-    // Guardar puertos para exploits
     for p in portList
         globals.lastScan.push(p["port"])
     end for
-    
     return result
 end function
-
-// Motor de exploit mejorado
 ejecutarAtaqueID = function(idInput)
     if idInput == "" then return
     pNum = 0
     if idInput != "0" then
         idx = idInput.to_int - 1
-        if idx < 0 or idx >= globals.lastScan.len then return
+        if idx < 0 or idx >= len(globals.lastScan) then return
         pNum = globals.lastScan[idx]
     else
         pNum = 0
     end if
-    
     print C_W + "Conectando a " + globals.ipTarget + ":" + pNum + "..." + C_E
-    
-    // Usar modulo wraith_exploit
     connection = wraith_exploit.connectToTarget(globals.ipTarget, pNum)
     if connection.hasIndex("error") then
         print C_R + connection["error"] + C_E
         return
     end if
-    
     lib = connection["lib"]
     libs = connection["libs"]
-    
-    // Detectar si es router
     lanTarget = ""
     if lib.lib_name == "kernel_router.so" then
         print C_P + " [!] ROUTER DETECTADO. ?USAR BOUNCE?" + C_E
@@ -325,33 +244,28 @@ ejecutarAtaqueID = function(idInput)
             updateRoute("Router -> " + lanTarget)
         end if
     end if
-    
-    // Obtener informacion del servicio para cache
     portInfo = wraith_net.getPortInfo(globals.ipTarget, pNum)
     service = ""
     version = ""
     if portInfo and typeof(portInfo) == "map" and portInfo.hasIndex("info") then
         infoParts = portInfo["info"].split(" ")
-        if infoParts.len >= 1 then service = infoParts[0]
-        if infoParts.len >= 2 then version = infoParts[1]
+        if len(infoParts) >= 1 then service = infoParts[0]
+        if len(infoParts) >= 2 then version = infoParts[1]
     end if
-    
-    // Escanear vulnerabilidades (con cache)
     info = {"service": service, "version": version, "ip": globals.ipTarget}
     result = wraith_exploit.scanVulnerabilities(lib, info)
     vulns = result["vulns"]
     cached = result["cached"]
-    
+    lName = result["lib_name"]; lVer = result["lib_version"]
     if cached then
-        print C_G + " [+] Usando vulnerabilidades cacheadas para " + service + " " + version + C_E
+        print C_G + " [+] Cache hit: " + lName + " " + lVer + C_E
+    else
+        print C_B + " [+] Escaneo completado: " + lName + " " + lVer + C_E
     end if
-    
-    if vulns.len == 0 then
+    if len(vulns) == 0 then
         print C_Y + " [!] No vulnerabilities found" + C_E
         return
     end if
-    
-    // Intentar exploits
     for vuln in vulns
         res = wraith_exploit.executeExploit(lib, vuln["area"], vuln["vuln"], lanTarget)
         if res then
@@ -359,34 +273,21 @@ ejecutarAtaqueID = function(idInput)
             if lanTarget != "" then infoSess = lanTarget + " (via " + globals.ipTarget + ")"
             globals.sesiones.push({"obj": res, "info": infoSess})
             print C_G + "[+] Acceso obtenido: " + typeof(res).upper + C_E
-            
-            // Extraccion automatica de intel (REQ-INTEL)
             if typeof(res) == "computer" then
                 intel = wraith_exploit.extractIntel(res, true, globals.ipTarget)
-                if intel["users"].len > 0 then
+                if len(intel["users"]) > 0 then
                     print C_P + " [INTEL] Usuarios encontrados: " + intel["users"].join(", ") + C_E
-                end if
-                if intel["banks"].len > 0 then
-                    print C_P + " [INTEL] Bancos encontrados: " + intel["banks"].len + C_E
-                end if
-                if intel["mails"].len > 0 then
-                    print C_P + " [INTEL] Correos encontrados: " + intel["mails"].len + C_E
                 end if
             end if
         end if
     end for
-    
-    user_input "[ENTER]"
 end function
-
-// Funcion para explorar archivos recursivamente
 exploreFileRecursively = function(fileObj, depth = 0)
     if not fileObj then return
     indent = ""
     for i in range(1, depth)
         indent = indent + "  "
     end for
-    
     if fileObj.is_folder then
         print indent + C_B + "[DIR] " + fileObj.name + C_E
         items = fileObj.get_files + fileObj.get_folders
@@ -394,7 +295,6 @@ exploreFileRecursively = function(fileObj, depth = 0)
             exploreFileRecursively(item, depth + 1)
         end for
     else
-        // Mostrar tipo segun extension
         ext = ""
         if fileObj.name.indexOf(".") != null then
             parts = fileObj.name.split(".")
@@ -404,15 +304,12 @@ exploreFileRecursively = function(fileObj, depth = 0)
         if ext == "txt" or ext == "log" or ext == "md" then color = C_G
         if ext == "src" or ext == "js" or ext == "py" or ext == "c" then color = C_Y
         if ext == "png" or ext == "jpg" or ext == "gif" then color = C_P
-        
         print indent + color + "  " + fileObj.name + " (" + fileObj.size + " bytes)" + C_E
-        
-        // Mostrar contenido si es pequeno y texto
         if not fileObj.is_binary and fileObj.size < 1000 then
             content = fileObj.get_content
             if content then
                 lines = content.split(char(10))
-                if lines.len <= 3 then
+                if len(lines) <= 3 then
                     for line in lines
                         print indent + "    " + line
                     end for
@@ -421,42 +318,33 @@ exploreFileRecursively = function(fileObj, depth = 0)
         end if
     end if
 end function
-
-// Gestor de sesiones
 gestorSesiones = function()
     limpiar; print HUD_LINE
-    if globals.sesiones.len == 0 then
+    if len(globals.sesiones) == 0 then
         print C_R + " NO SESSIONS"
-        user_input "[ENTER]"
+        user_input("[ENTER]")
         return
     end if
-    
-    // Crear tabla con colores en headers y datos (sin colores en separadores)
     header = C_Y + "ID" + C_E + " | " + C_W + "TYPE" + C_E + " | " + C_G + "TARGET" + C_E
     cuerpo = ""
-    for i in range(0, globals.sesiones.len - 1)
+    for i in range(0, len(globals.sesiones) - 1)
         s = globals.sesiones[i]
         cuerpo = cuerpo + "\n" + C_Y + (i+1) + C_E + " | " + C_W + typeof(s.obj).upper + C_E + " | " + C_G + s.info + C_E
     end for
-    
-    // Usar format_columns directamente (header y cuerpo ya tienen colores consistentes)
     table = format_columns(header + "\n" + cuerpo)
     print table
     print HUD_LINE
-    
     idxS = user_input(C_Y + "ID: " + C_E)
     if idxS == "" or idxS == "q" then return
     idx = idxS.to_int - 1
-    if idx < 0 or idx >= globals.sesiones.len then return
+    if idx < 0 or idx >= len(globals.sesiones) then return
     s = globals.sesiones[idx]
-    
     obj = s.obj
     typ = typeof(obj)
-    
     if typ == "shell" then
         print C_B + " [1] INTERACT  [2] PIVOT  [3] REMOTE SHELL (default)" + C_E
         opt = user_input(">> ")
-        if opt == "" then opt = "3"  // Default a REMOTE SHELL
+        if opt == "" then opt = "3" 
         if opt == "1" then
             obj.start_terminal
         else if opt == "2" then
@@ -464,27 +352,24 @@ gestorSesiones = function()
             globals.originDisplay = obj.host_computer.local_ip
             updateRoute("Pivot -> " + obj.host_computer.local_ip)
         else if opt == "3" then
-            // Establecer como sesion activa y abrir remote shell
             globals.activeShell = obj
             globals.currentComputer = obj.host_computer
             remoteShell
         end if
-        
     else if typ == "computer" then
-        // Extraer intel automatico
         print C_P + " [INTEL] Extrayendo informacion..." + C_E
-        intel = wraith_exploit.extractIntel(obj, false, obj.host_computer.local_ip)
-        if intel["users"].len > 0 then
+        intel = wraith_exploit.extractIntel(obj, false, obj.local_ip)
+        if len(intel["users"]) > 0 then
             print C_G + " Usuarios: " + intel["users"].join(", ") + C_E
         end if
-        if intel["banks"].len > 0 then
-            print C_Y + " Bancos encontrados: " + intel["banks"].len + C_E
+        if len(intel["banks"]) > 0 then
+            print C_Y + " Bancos encontrados: " + len(intel["banks"]) + C_E
             for user in intel["banks"].indexes
                 print "   " + user + ": " + intel["banks"][user]
             end for
         end if
-        if intel["mails"].len > 0 then
-            print C_B + " Correos encontrados: " + intel["mails"].len + C_E
+        if len(intel["mails"]) > 0 then
+            print C_B + " Correos encontrados: " + len(intel["mails"]) + C_E
             for user in intel["mails"].indexes
                 print "   " + user + ": " + intel["mails"][user]
             end for
@@ -493,12 +378,9 @@ gestorSesiones = function()
             print C_P + " /etc/passwd:" + C_E
             print intel["passwd"]
         end if
-        
-        // Opciones para computer
         print C_W + " [1] EXPLORAR ARCHIVOS  [2] REMOTE SHELL  [3] PRIVESC  [4] BACK" + C_E
         opt = user_input(">> ")
         if opt == "1" then
-            // Explorar recursivamente
             print C_W + " Exploracion recursiva de /home:" + C_E
             home = obj.File("/home")
             if home then
@@ -506,27 +388,24 @@ gestorSesiones = function()
             else
                 print C_R + " No se puede acceder a /home" + C_E
             end if
-            user_input "[ENTER]"
+            user_input("[ENTER]")
         else if opt == "2" then
             globals.currentComputer = obj
             remoteShell
         else if opt == "3" then
-            // Escalada de privilegios (PRIVESC)
             print C_P + " Escaneando vulnerabilidades locales..." + C_E
             vulns = wraith_exploit.scanLocalVulnerabilities(obj)
-            if vulns.len == 0 then
+            if len(vulns) == 0 then
                 print C_Y + " No se encontraron vulnerabilidades locales" + C_E
             else
-                print C_G + " Vulnerabilidades encontradas: " + vulns.len + C_E
+                print C_G + " Vulnerabilidades encontradas: " + len(vulns) + C_E
                 for v in vulns
                     print C_B + " " + v["path"] + " (" + v["type"] + ") - " + v["severity"] + C_E
                 end for
             end if
-            user_input "[ENTER]"
+            user_input("[ENTER]")
         end if
-        
     else if typ == "file" then
-        // Es un objeto File
         print C_W + " Archivo: " + obj.path + C_E
         print " Permisos: " + obj.permissions + " Tamano: " + obj.size + " bytes"
         if obj.is_folder then
@@ -549,8 +428,8 @@ gestorSesiones = function()
                 if content then
                     lines = content.split(char(10))
                     start = 0
-                    if lines.len > 20 then start = lines.len - 20
-                    for i in range(start, lines.len - 1)
+                    if len(lines) > 20 then start = len(lines) - 20
+                    for i in range(start, len(lines) - 1)
                         print (i+1) + ": " + lines[i]
                     end for
                 end if
@@ -558,119 +437,17 @@ gestorSesiones = function()
                 print C_Y + " Archivo binario" + C_E
             end if
         end if
-        user_input "[ENTER]"
-        
+        user_input("[ENTER]")
     else if typ == "number" or typ == "string" then
         print C_W + " Valor (" + typ + "): " + C_E
         print obj
-        user_input "[ENTER]"
-        
+        user_input("[ENTER]")
     else
         print C_R + " Tipo de sesion no manejado: " + typ + C_E
-        user_input "[ENTER]"
+        user_input("[ENTER]")
     end if
 end function
-
-// Funcion para gestion de logs (REQ-STEALTH)
-gestorLogs = function()
-    if not globals.currentComputer then
-        print C_R + " [!] No active computer session" + C_E
-        return
-    end if
-    
-    print HUD_LINE
-    print C_W + "LOG MANAGEMENT" + C_E
-    print HUD_LINE
-    print C_W + "[1] VIEW LOGS [2] FILTER BY IP [3] DELETE BY IP [4] STATS [5] SEARCH [6] DELETE BY LINE" + C_E
-    cmd = user_input(C_G + "logs>> " + C_E)
-    
-    if cmd == "1" then
-        lines = user_input(C_Y + "Lines (default 50): " + C_E)
-        if lines == "" then lines = "50"
-        // Mostrar logs con numeros de linea
-        result = wraith_stealth.viewLogsNumbered(globals.currentComputer, lines.to_int)
-        for entry in result
-            print C_B + entry["line"] + ": " + C_W + entry["content"] + C_E
-        end for
-        user_input "[ENTER]"
-    else if cmd == "2" then
-        ip = user_input(C_Y + "IP to filter: " + C_E)
-        if ip == "" then return
-        result = wraith_stealth.filterLogsByIP(globals.currentComputer, ip)
-        for line in result
-            print line
-        end for
-        user_input "[ENTER]"
-    else if cmd == "3" then
-        ip = user_input(C_Y + "IP to delete: " + C_E)
-        if ip == "" then return
-        result = wraith_stealth.cleanLogsByIP(globals.currentComputer, ip)
-        print C_G + result + C_E
-        user_input "[ENTER]"
-    else if cmd == "4" then
-        stats = wraith_stealth.getLogStats(globals.currentComputer)
-        print C_W + "Log Statistics:" + C_E
-        print "Total lines: " + stats["total_lines"]
-        print "Unique IPs: " + stats["unique_ips"].len
-        print "Last modified: " + stats["last_modified"]
-        user_input "[ENTER]"
-    else if cmd == "5" then
-        term = user_input(C_Y + "Search term: " + C_E)
-        if term == "" then return
-        results = wraith_stealth.searchInLogs(globals.currentComputer, term)
-        print "Found " + results.len + " matches"
-        for r in results
-            print C_B + "Line " + r["line"] + ": " + C_W + r["content"] + C_E
-        end for
-        user_input "[ENTER]"
-    else if cmd == "6" then
-        // Primero mostrar logs numerados
-        lines = user_input(C_Y + "Lineas a mostrar (default 50): " + C_E)
-        if lines == "" then lines = "50"
-        result = wraith_stealth.viewLogsNumbered(globals.currentComputer, lines.to_int)
-        for entry in result
-            print C_B + entry["line"] + ": " + C_W + entry["content"] + C_E
-        end for
-        
-        // Pedir numeros de linea a borrar
-        input = user_input(C_R + "Numeros a borrar (separados por coma, ej: 1,5,10-15): " + C_E)
-        if input == "" then return
-        
-        // Parsear numeros y rangos
-        toDelete = []
-        parts = input.split(",")
-        for part in parts
-            part = part.trim
-            if part.indexOf("-") != null then
-                // Rango
-                rangeParts = part.split("-")
-                if rangeParts.len == 2 then
-                    start = rangeParts[0].to_int
-                    finish = rangeParts[1].to_int
-                    if start > 0 and finish >= start then
-                        for i in range(start, finish)
-                            toDelete.push(i)
-                        end for
-                    end if
-                end if
-            else
-                // Numero individual
-                num = part.to_int
-                if num > 0 then toDelete.push(num)
-            end if
-        end for
-        
-        if toDelete.len > 0 then
-            result = wraith_stealth.deleteLogLinesByNumbers(globals.currentComputer, toDelete)
-            print C_G + result + C_E
-        else
-            print C_Y + " No se especificaron lineas validas" + C_E
-        end if
-        user_input "[ENTER]"
-    end if
-end function
-
-// Funcion para decifrar hashes y guardar credenciales
+// gestorLogs ha sido eliminado a favor de LogViewer.exe nativo
 gestorDecipher = function()
     print HUD_LINE
     print C_W + "HASH DECIPHER" + C_E
@@ -679,9 +456,7 @@ gestorDecipher = function()
     hashInput = user_input(C_G + ">> " + C_E)
     user = ""
     parts = hashInput.split(":")
-    if parts.len >= 2 then user = parts[0]
-    
-    // Verificar si ya tenemos la credencial descifrada
+    if len(parts) >= 2 then user = parts[0]
     if globals.currentComputer then
         ip = globals.currentComputer.public_ip
         if not ip or ip == "" then ip = globals.currentComputer.local_ip
@@ -689,13 +464,11 @@ gestorDecipher = function()
             existing = wraith_db.getCredentials(ip, user)
             if existing and existing.pass != "FAIL" and existing.pass.indexOf("[ENCRYPTED]") == null then
                 print C_G + " [+] Credencial ya descifrada encontrada: " + C_W + existing.pass + C_E
-                user_input "[ENTER]"
+                user_input("[ENTER]")
                 return
             end if
         end if
     end if
-    
-    // Decifrar hash
     result = wraith_exploit.crackHash(hashInput)
     if result == "FAIL" then
         print C_R + " [!] No se pudo decifrar" + C_E
@@ -703,46 +476,36 @@ gestorDecipher = function()
         print C_R + " [!] Hash vacio" + C_E
     else
         print C_G + " [+] Resultado: " + result + C_E
-        
-        // Guardar en base de datos si hay computer activa
         if globals.currentComputer then
-            ip = globals.currentComputer.public_ip
-            if not ip or ip == "" then ip = globals.currentComputer.local_ip
+            pubIp = globals.currentComputer.public_ip
+            lanIp = globals.currentComputer.local_ip
+            ip = pubIp
+            if not ip or ip == "" then ip = lanIp
             user = ""
-            // Intentar extraer usuario del formato
             parts = hashInput.split(":")
-            if parts.len >= 2 then user = parts[0]
+            if len(parts) >= 2 then user = parts[0]
             if user == "" then user = "unknown"
-            
-            // Guardar credenciales
-            wraith_db.saveCredentials(ip, user, result, "user")
-            print C_P + " [+] Credenciales guardadas para " + ip + C_E
+            wraith_db.saveCredentials(ip, user, result, "user", lanIp)
+            print C_P + " [+] Credenciales guardadas para " + ip + " (LAN: " + lanIp + ")" + C_E
         else
             print C_Y + " [!] No hay computer activa para asociar IP" + C_E
         end if
     end if
-    user_input "[ENTER]"
+    user_input("[ENTER]")
 end function
-
-// Gestor de credenciales guardadas
 gestorCreds = function()
     print HUD_LINE
     print C_W + "CREDENTIALS MANAGER" + C_E
     print HUD_LINE
-    
-    // Obtener todas las credenciales
     allCreds = wraith_db.listCredentials
-    if allCreds.indexes.len == 0 then
+    if len(allCreds.indexes) == 0 then
         print C_Y + " No hay credenciales guardadas" + C_E
-        user_input "[ENTER]"
+        user_input("[ENTER]")
         return
     end if
-    
-    // Variables para filtrado
     filteredCreds = allCreds
     filterType = ""
     filterValue = ""
-    
     while true
         limpiar
         print HUD_LINE
@@ -751,47 +514,38 @@ gestorCreds = function()
             print C_B + " Filtrado por " + filterType + ": " + C_G + filterValue + C_E
         end if
         print HUD_LINE
-        
-        // Mostrar en tabla
-        if filteredCreds.indexes.len == 0 then
+        if len(filteredCreds.indexes) == 0 then
             print C_Y + " No hay credenciales que coincidan con el filtro" + C_E
         else
-            header = C_Y + "ID" + C_E + " | " + C_W + "IP" + C_E + " | " + C_G + "USER" + C_E + " | " + C_B + "PASS" + C_E + " | " + C_P + "PRIV" + C_E
+            header = C_Y + "ID" + C_E + " | " + C_W + "IP" + C_E + " | " + C_B + "LAN" + C_E + " | " + C_G + "USER" + C_E + " | " + C_B + "PASS" + C_E + " | " + C_P + "PRIV" + C_E
             cuerpo = ""
             id_count = 1
             for key in filteredCreds.indexes
                 cred = filteredCreds[key]
-                // Soporte para registros viejos (string) y nuevos (map)
-                ipStr = "unknown"; userStr = "unknown"; passStr = "unknown"; privStr = "unknown"
+                ipStr = "unknown"; lanStr = "unknown"; userStr = "unknown"; passStr = "unknown"; privStr = "unknown"
                 if typeof(cred) == "map" then
                     if cred.hasIndex("ip") then ipStr = cred["ip"]
+                    if cred.hasIndex("lan") then lanStr = cred["lan"]
                     if cred.hasIndex("user") then userStr = cred["user"]
                     if cred.hasIndex("pass") then passStr = cred["pass"]
                     if cred.hasIndex("priv") then privStr = cred["priv"]
                 else if typeof(cred) == "string" then
-                    // Formato viejo: ip_user=pass:priv
                     passStr = cred
                     keyParts = key.split("_")
-                    if keyParts.len >= 2 then
+                    if len(keyParts) >= 2 then
                         ipStr = keyParts[0]
                         userStr = keyParts[1]
                     end if
                 end if
-                
-                cuerpo = cuerpo + "\n" + C_Y + id_count + C_E + " | " + C_W + ipStr + C_E + " | " + C_G + userStr + C_E + " | " + C_B + passStr + C_E + " | " + C_P + privStr + C_E
+                cuerpo = cuerpo + "\n" + C_Y + id_count + C_E + " | " + C_W + ipStr + C_E + " | " + C_B + lanStr + C_E + " | " + C_G + userStr + C_E + " | " + C_B + passStr + C_E + " | " + C_P + privStr + C_E
                 id_count = id_count + 1
             end for
-            
             table = format_columns(header + "\n" + cuerpo)
             print table
         end if
-        
-        // Opciones
         print C_W + " [1] FILTRAR  [2] ELIMINAR  [3] EXPORTAR  [4] LIMPIAR FILTRO  [5] BACK" + C_E
         opt = user_input(C_G + ">> " + C_E)
-        
         if opt == "1" then
-            // Filtrar
             print C_W + " Filtrar por:" + C_E
             print " [1] IP  [2] Usuario  [3] TODOS"
             filterOpt = user_input(">> ")
@@ -799,12 +553,15 @@ gestorCreds = function()
                 filterValue = user_input(C_Y + "IP a buscar: " + C_E)
                 if filterValue != "" then
                     filterType = "IP"
-                    // Filtrar por IP
                     filteredCreds = {}
                     for key in allCreds.indexes
                         cred = allCreds[key]
-                        if cred["ip"].indexOf(filterValue) != null then
-                            filteredCreds[key] = cred
+                        if typeof(cred) == "map" then
+                            if (cred.hasIndex("ip") and cred["ip"].indexOf(filterValue) != null) or (cred.hasIndex("lan") and cred["lan"].indexOf(filterValue) != null) then
+                                filteredCreds[key] = cred
+                            end if
+                        else
+                            if key.indexOf(filterValue) != null then filteredCreds[key] = cred
                         end if
                     end for
                 end if
@@ -812,7 +569,6 @@ gestorCreds = function()
                 filterValue = user_input(C_Y + "Usuario a buscar: " + C_E)
                 if filterValue != "" then
                     filterType = "USER"
-                    // Filtrar por usuario
                     filteredCreds = {}
                     for key in allCreds.indexes
                         cred = allCreds[key]
@@ -826,29 +582,25 @@ gestorCreds = function()
                 filterValue = ""
                 filteredCreds = allCreds
             end if
-            
         else if opt == "2" then
-            // Eliminar credencial (usar filteredCreds)
-            if filteredCreds.indexes.len == 0 then
+            if len(filteredCreds.indexes) == 0 then
                 print C_Y + " No hay credenciales para eliminar" + C_E
             else
                 idx = user_input(C_Y + "ID a eliminar (segun tabla filtrada): " + C_E)
                 if idx != "" then
                     idxNum = idx.to_int
-                    if idxNum < 1 or idxNum > filteredCreds.indexes.len then
+                    if idxNum < 1 or idxNum > len(filteredCreds.indexes) then
                         print C_R + " ID invalida" + C_E
                     else
                         key = filteredCreds.indexes[idxNum-1]
                         parts = key.split("_")
-                        if parts.len >= 2 then
+                        if len(parts) >= 2 then
                             ip = parts[0]
                             user = parts[1]
                             wraith_db.deleteCredentials(ip, user)
                             print C_G + " Credencial eliminada" + C_E
-                            // Actualizar listas
                             allCreds = wraith_db.listCredentials
                             if filterType != "" then
-                                // Re aplicar filtro
                                 if filterType == "IP" then
                                     filteredCreds = {}
                                     for k in allCreds.indexes
@@ -869,10 +621,8 @@ gestorCreds = function()
                     end if
                 end if
             end if
-            user_input "[ENTER]"
-            
+            user_input("[ENTER]")
         else if opt == "3" then
-            // Exportar a archivo (filteredCreds)
             exportPath = current_path + "/wraith_creds.txt"
             file = get_shell.host_computer.File(exportPath)
             content = ""
@@ -887,57 +637,43 @@ gestorCreds = function()
                 file = get_shell.host_computer.File(exportPath)
                 if file then file.set_content(content)
             end if
-            print C_G + " Exportado " + filteredCreds.indexes.len + " credenciales a: " + exportPath + C_E
-            user_input "[ENTER]"
-            
+            print C_G + " Exportado " + len(filteredCreds.indexes) + " credenciales a: " + exportPath + C_E
+            user_input("[ENTER]")
         else if opt == "4" then
-            // Limpiar filtro
             filterType = ""
             filterValue = ""
             filteredCreds = allCreds
-            
         else if opt == "5" then
             return
         end if
     end while
 end function
-
-// Escaneo de red local
 gestorScan = function()
     print HUD_LINE
     print C_W + "NETWORK SCANNER" + C_E
     print HUD_LINE
-    
-    // Escanear red local
     print C_W + " Escaneando red local..." + C_E
     hosts = wraith_net.scanLocalNetwork
-    if hosts.len == 0 then
+    if len(hosts) == 0 then
         print C_Y + " No se encontraron hosts activos" + C_E
-        user_input "[ENTER]"
+        user_input("[ENTER]")
         return
     end if
-    
-    // Mostrar hosts encontrados
     header = C_Y + "ID" + C_E + " | " + C_W + "IP" + C_E + " | " + C_G + "STATUS" + C_E
     cuerpo = ""
-    for i in range(0, hosts.len - 1)
+    for i in range(0, len(hosts) - 1)
         ip = hosts[i]
         cuerpo = cuerpo + "\n" + C_Y + (i+1) + C_E + " | " + C_W + ip + C_E + " | " + C_G + "ACTIVO" + C_E
     end for
-    
     table = format_columns(header + "\n" + cuerpo)
     print table
-    
-    // Opciones
     print C_W + " [1] ESCANEAR PUERTOS DE UN HOST  [2] AGREGAR A OBJETIVOS  [3] BACK" + C_E
     opt = user_input(C_G + ">> " + C_E)
-    
     if opt == "1" then
-        // Escanear puertos de un host especifico
         idx = user_input(C_Y + "ID del host: " + C_E)
         if idx != "" then
             idxNum = idx.to_int
-            if idxNum >= 1 and idxNum <= hosts.len then
+            if idxNum >= 1 and idxNum <= len(hosts) then
                 ip = hosts[idxNum-1]
                 print C_W + " Escaneando puertos de " + ip + "..." + C_E
                 result = wraith_net.scanPorts(ip)
@@ -946,13 +682,12 @@ gestorScan = function()
                 print C_R + " ID invalida" + C_E
             end if
         end if
-        user_input "[ENTER]"
+        user_input("[ENTER]")
     else if opt == "2" then
-        // Agregar a objetivos
         idx = user_input(C_Y + "ID del host para target: " + C_E)
         if idx != "" then
             idxNum = idx.to_int
-            if idxNum >= 1 and idxNum <= hosts.len then
+            if idxNum >= 1 and idxNum <= len(hosts) then
                 ip = hosts[idxNum-1]
                 globals.ipTarget = ip
                 updateRoute("Target -> " + ip)
@@ -961,39 +696,28 @@ gestorScan = function()
                 print C_R + " ID invalida" + C_E
             end if
         end if
-        user_input "[ENTER]"
+        user_input("[ENTER]")
     end if
 end function
-
-// Transferencia de archivos (XFER)
 gestorXfer = function()
     print HUD_LINE
     print C_W + "FILE TRANSFER" + C_E
     print HUD_LINE
-    
-    // Verificar sesion activa
     if not globals.activeShell and not globals.currentComputer then
         print C_R + " [!] No hay sesion activa (shell o computer)" + C_E
-        user_input "[ENTER]"
+        user_input("[ENTER]")
         return
     end if
-    
-    // Determinar tipo de sesion
     targetType = ""
     if globals.activeShell and typeof(globals.activeShell) == "shell" then
         targetType = "shell"
     else if globals.currentComputer then
         targetType = "computer"
     end if
-    
     print C_W + " Sesion activa: " + C_G + targetType + C_E
-    
-    // Opciones
     print C_W + " [1] UPLOAD (subir archivo)  [2] DOWNLOAD (descargar)  [3] BACK" + C_E
     opt = user_input(C_G + ">> " + C_E)
-    
     if opt == "1" then
-        // Subir archivo
         if targetType != "computer" then
             print C_R + " Upload requiere sesion de computer" + C_E
         else
@@ -1001,14 +725,11 @@ gestorXfer = function()
             if localPath == "" then return
             remotePath = user_input(C_Y + "Destino remoto (ej: /home/user/file.txt): " + C_E)
             if remotePath == "" then return
-            
             result = wraith_exploit.uploadFile(get_shell, localPath, globals.currentComputer, remotePath)
             print result
         end if
-        user_input "[ENTER]"
-        
+        user_input("[ENTER]")
     else if opt == "2" then
-        // Descargar archivo
         if targetType != "computer" then
             print C_R + " Download requiere sesion de computer" + C_E
         else
@@ -1016,22 +737,17 @@ gestorXfer = function()
             if remotePath == "" then return
             localPath = user_input(C_Y + "Destino local (ruta completa): " + C_E)
             if localPath == "" then return
-            
             result = wraith_exploit.downloadFile(globals.currentComputer, remotePath, get_shell, localPath)
             print result
         end if
-        user_input "[ENTER]"
+        user_input("[ENTER]")
     end if
 end function
-
-// Interfaz de shell remota
 remoteShell = function()
     if not globals.activeShell and not globals.currentComputer then
         print C_R + " [!] No hay sesion activa" + C_E
         return
     end if
-    
-    // Determinar tipo de sesion
     target = null
     targetType = ""
     if globals.activeShell and typeof(globals.activeShell) == "shell" then
@@ -1044,21 +760,16 @@ remoteShell = function()
         print C_R + " [!] Sesion no compatible" + C_E
         return
     end if
-    
     print C_B + "=== REMOTE SHELL (" + targetType + ") ===" + C_E
     print C_W + "Comandos: ls, cd, cat, pwd, passwd, scp, download, upload, help, exit" + C_E
-    
     currentDir = "/"
-    
     while true
-        print C_G + "wraith:" + currentDir + "$ " + C_E
-        cmd = user_input("")
+        prompt = C_G + "wraith:" + currentDir + "$ " + C_E
+        cmd = user_input(prompt).trim
+        if not cmd or cmd == "" then continue
         if cmd == "exit" or cmd == "quit" then break
-        
-        // Parsear comando
         parts = cmd.split(" ")
-        command = parts[0]
-        
+        command = parts[0].lower
         if command == "help" then
             print C_W + "Comandos disponibles:" + C_E
             print " ls [path]        - Listar archivos"
@@ -1069,45 +780,59 @@ remoteShell = function()
             print " scp [src] [dest] - Copiar archivo (requiere shell)"
             print " download [path]  - Descargar archivo a local"
             print " upload [local] [remote] - Subir archivo"
+            print " run [path] [params] - Ejecutar programa en el target"
+            print " decipher [file]  - Descifrar archivo de hashes"
             print " exit             - Salir"
-            
-        else if command == "ls" then
+            continue
+        end if
+        if command == "ls" then
             path = currentDir
-            if parts.len > 1 then path = parts[1]
-            if targetType == "computer" then
+            if len(parts) > 1 then path = parts[1]
+            if path[0] != "/" then
+                if currentDir == "/" then
+                    path = "/" + path
+                else
+                    path = currentDir + "/" + path
+                end if
+            end if
+            if targetType == "computer" or targetType == "shell" then
                 result = wraith_fs.wls(target, path)
                 print result
             else
-                print C_Y + " ls no soportado para shell. Usa terminal real." + C_E
+                print C_Y + " ls no soportado para este tipo de sesion." + C_E
             end if
-            
-        else if command == "cd" then
-            if parts.len < 2 then
+            continue
+        end if
+        if command == "cd" then
+            if len(parts) < 2 then
                 currentDir = "/"
             else
-                // Simplificar navegacion
-                if parts[1] == ".." then
-                    // Subir un nivel
+                dest = parts[1]
+                if dest == ".." then
                     segments = currentDir.split("/")
-                    if segments.len > 1 then
+                    if len(segments) > 1 then
                         segments.pop
                         currentDir = segments.join("/")
                         if currentDir == "" then currentDir = "/"
                     end if
-                else if parts[1][0] == "/" then
-                    currentDir = parts[1]
+                else if dest == "." then
                 else
-                    if currentDir == "/" then
-                        currentDir = "/" + parts[1]
+                    if dest[0] != "/" then
+                        if currentDir == "/" then dest = "/" + dest else dest = currentDir + "/" + dest
+                    end if
+                    result = wraith_fs.wcd(target, dest)
+                    if result.indexOf("Error") == null then
+                        currentDir = result
                     else
-                        currentDir = currentDir + "/" + parts[1]
+                        print C_R + " " + result + C_E
                     end if
                 end if
                 print C_B + " Directorio: " + currentDir + C_E
             end if
-            
-        else if command == "cat" then
-            if parts.len < 2 then
+            continue
+        end if
+        if command == "cat" then
+            if len(parts) < 2 then
                 print C_R + " Uso: cat [archivo]" + C_E
             else
                 filePath = parts[1]
@@ -1118,49 +843,51 @@ remoteShell = function()
                         filePath = currentDir + "/" + filePath
                     end if
                 end if
-                if targetType == "computer" then
+                if targetType == "computer" or targetType == "shell" then
                     result = wraith_fs.wcat(target, filePath)
                     print result
                 else
-                    print C_Y + " cat no soportado para shell. Usa terminal real." + C_E
+                    print C_Y + " cat no soportado" + C_E
                 end if
             end if
-            
-        else if command == "pwd" then
+            continue
+        end if
+        if command == "pwd" then
             print currentDir
-            
-        else if command == "passwd" then
-            if targetType == "computer" then
+            continue
+        end if
+        if command == "passwd" then
+            if targetType == "computer" or targetType == "shell" then
                 result = wraith_fs.wcat(target, "/etc/passwd")
                 print result
             else
-                print C_Y + " passwd no soportado para shell" + C_E
+                print C_Y + " passwd no soportado" + C_E
             end if
-            
-        else if command == "scp" then
+            continue
+        end if
+        if command == "scp" then
             if targetType != "shell" then
                 print C_R + " scp requiere shell" + C_E
-            else if parts.len < 3 then
+            else if len(parts) < 3 then
                 print C_R + " Uso: scp [origen] [destino]" + C_E
             else
-                // Usar scp del shell
                 src = parts[1]
                 dest = parts[2]
-                result = target.scp(src, dest, get_shell, 0) // download
+                result = target.scp(src, dest, get_shell, 0)
                 if result then
                     print C_G + " SCP exitoso" + C_E
                 else
                     print C_R + " SCP fallo" + C_E
                 end if
             end if
-            
-        else if command == "download" then
-            if targetType != "computer" then
-                print C_R + " download requiere computer" + C_E
-            else if parts.len < 2 then
+            continue
+        end if
+        if command == "download" then
+            if targetType != "computer" and targetType != "shell" then
+                print C_R + " download requiere computer/shell" + C_E
+            else if len(parts) < 2 then
                 print C_R + " Uso: download [archivo_remoto]" + C_E
             else
-                // Descargar a directorio local actual
                 src = parts[1]
                 if src[0] != "/" then
                     if currentDir == "/" then
@@ -1173,12 +900,13 @@ remoteShell = function()
                 result = wraith_exploit.downloadFile(target, src, get_shell, dest)
                 print result
             end if
-            
-        else if command == "upload" then
-            if targetType != "computer" then
-                print C_R + " upload requiere computer" + C_E
-            else if parts.len < 3 then
-                print C_R + " Uso: upload [archivo_local] [destino_remoto]" + C_E
+            continue
+        end if
+        if command == "upload" then
+            if targetType != "computer" and targetType != "shell" then
+                print C_R + " upload requiere computer/shell" + C_E
+            else if len(parts) < 3 then
+                print C_R + " Uso: upload [local] [destino_remoto]" + C_E
             else
                 local = parts[1]
                 remote = parts[2]
@@ -1192,53 +920,119 @@ remoteShell = function()
                 result = wraith_exploit.uploadFile(get_shell, local, target, remote)
                 print result
             end if
-            
-        else
-            print C_R + " Comando no reconocido. Escribe 'help' para ayuda." + C_E
+            continue
         end if
+        if command == "run" or command == "launch" then
+            if targetType != "shell" then
+                print C_R + " Error: Se requiere una sesion de SHELL para ejecutar programas." + C_E
+            else if len(parts) < 2 then
+                print C_R + " Uso: run [path] [params]" + C_E
+            else
+                path = parts[1]
+                params = ""
+                if len(parts) > 2 then params = parts[2:].join(" ")
+                if path[0] != "/" then
+                    if currentDir == "/" then
+                        path = "/" + path
+                    else
+                        path = currentDir + "/" + path
+                    end if
+                end if
+                result = target.launch(path, params)
+                if result then
+                    print C_G + " [+] Programa iniciado: " + path + " " + params + C_E
+                else
+                    print C_R + " [!] Error al iniciar programa (permisos o no existe)" + C_E
+                end if
+            end if
+            continue
+        end if
+        if command == "decipher" then
+            if len(parts) < 2 then
+                print C_R + " Uso: decipher [archivo]" + C_E
+            else
+                filePath = parts[1]
+                if filePath[0] != "/" then
+                    if currentDir == "/" then
+                        filePath = "/" + filePath
+                    else
+                        filePath = currentDir + "/" + filePath
+                    end if
+                end if
+                content = wraith_fs.wcat(target, filePath)
+                if content.indexOf("Error") != null then
+                    print C_R + " " + content + C_E
+                else
+                    pubIp = globals.ipTarget
+                    lanIp = "unknown"
+                    if targetType == "computer" then
+                        lanIp = target.local_ip
+                    else if targetType == "shell" then
+                        lanIp = target.host_computer.local_ip
+                    end if
+                    lines = content.split(char(10))
+                    print C_B + " [+] Procesando " + len(lines) + " potenciales hashes..." + C_E
+                    deciprogress = 0
+                    for line in lines
+                        line = line.trim
+                        if not line or line == "" then continue
+                        user = "unknown"; hash = line
+                        if line.indexOf(":") != null then
+                            uParts = line.split(":")
+                            if len(uParts) >= 2 then
+                                user = uParts[0]; hash = uParts[1]
+                            end if
+                        end if
+                        res = wraith_exploit.decipherHash(hash)
+                        if res then
+                            print C_G + " [OK] " + user + " -> " + res + C_E
+                            // Guardado persistente dual (Public IP y LAN IP)
+                            wraith_db.saveCredentials(pubIp, user, res, "remote", lanIp)
+                            deciprogress = deciprogress + 1
+                        else
+                            print C_R + " [FAIL] " + user + " (" + hash[0:8] + "...)" + C_E
+                        end if
+                    end for
+                    print C_B + " [+] Finalizado. " + deciprogress + " credenciales almacenadas." + C_E
+                end if
+            end if
+            continue
+        end if
+        print C_R + " Comando no reconocido. Escribe 'help' para ayuda." + C_E
     end while
 end function
-
-// ==========================================================
-// INTERFAZ PRINCIPAL
-// ==========================================================
-
 while true
     limpiar
     displayRandomHeader
     print HUD_LINE
-    
-    // Mostrar HUD de ruta
     displayRoute
-    
-    // Estado del host
     status_host = C_R + "(OFFLINE)" + C_E
     if globals.ipTarget and verificarConexion(globals.ipTarget) then status_host = C_G + "(ONLINE)" + C_E
-    
     print " ORIGIN: " + C_B + globals.originDisplay + C_E + " | TARGET: " + C_Y + globals.ipTarget + C_E + " " + status_host
-    print " SESSIONS: " + C_G + globals.sesiones.len + C_E
+    print " SESSIONS: " + C_G + len(globals.sesiones) + C_E
     print HUD_LINE
-    
-    // Mostrar escaneo de red
     print nmapWraith
     print HUD_SUB
-    
-    // Menu principal
     print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER [7] CREDS [8] SCAN [9] XFER" + C_E
     cmd = user_input(C_G + "wraith>> " + C_E)
-    
     if cmd == "1" then
         idS = user_input("ID: ")
         ejecutarAtaqueID(idS)
     else if cmd == "2" then
         gestorSesiones
     else if cmd == "3" then
-        gestorLogs
+        if globals.activeShell then
+            globals.activeShell.launch("/usr/bin/LogViewer.exe")
+            print C_G + " [+] LogViewer.exe lanzado en shell activa." + C_E
+        else if globals.currentComputer then
+            globals.currentComputer.launch("/usr/bin/LogViewer.exe")
+            print C_G + " [+] LogViewer.exe lanzado en equipo actual." + C_E
+        end if
+        continue
     else if cmd == "4" then
-        // Abrir shell real o interfaz remota?
         print C_B + " [1] REAL TERMINAL  [2] REMOTE SHELL (default)" + C_E
         opt = user_input(">> ")
-        if opt == "" then opt = "2"  // Default a REMOTE SHELL
+        if opt == "" then opt = "2" 
         if opt == "1" then
             if globals.activeShell then
                 globals.activeShell.start_terminal
