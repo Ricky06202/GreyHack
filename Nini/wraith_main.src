@@ -365,6 +365,49 @@ ejecutarAtaqueID = function(idInput)
     user_input "[ENTER]"
 end function
 
+// Función para explorar archivos recursivamente
+exploreFileRecursively = function(fileObj, depth = 0)
+    if not fileObj then return
+    indent = ""
+    for i in range(1, depth)
+        indent = indent + "  "
+    end for
+    
+    if fileObj.is_folder then
+        print indent + C_B + "[DIR] " + fileObj.name + C_E
+        items = fileObj.get_files + fileObj.get_folders
+        for item in items
+            exploreFileRecursively(item, depth + 1)
+        end for
+    else
+        // Mostrar tipo según extensión
+        ext = ""
+        if fileObj.name.indexOf(".") != null then
+            parts = fileObj.name.split(".")
+            ext = parts[-1].lower
+        end if
+        color = C_W
+        if ext == "txt" or ext == "log" or ext == "md" then color = C_G
+        if ext == "src" or ext == "js" or ext == "py" or ext == "c" then color = C_Y
+        if ext == "png" or ext == "jpg" or ext == "gif" then color = C_P
+        
+        print indent + color + "  " + fileObj.name + " (" + fileObj.size + " bytes)" + C_E
+        
+        // Mostrar contenido si es pequeño y texto
+        if not fileObj.is_binary and fileObj.size < 1000 then
+            content = fileObj.get_content
+            if content then
+                lines = content.split(char(10))
+                if lines.len <= 3 then
+                    for line in lines
+                        print indent + "    " + line
+                    end for
+                end if
+            end if
+        end if
+    end if
+end function
+
 // Gestor de sesiones
 gestorSesiones = function()
     limpiar; print HUD_LINE
@@ -393,21 +436,109 @@ gestorSesiones = function()
     if idx < 0 or idx >= globals.sesiones.len then return
     s = globals.sesiones[idx]
     
-    if typeof(s.obj) == "shell" then
-        print C_B + " [1] INTERACT  [2] PIVOT  [3] BACK" + C_E
+    obj = s.obj
+    typ = typeof(obj)
+    
+    if typ == "shell" then
+        print C_B + " [1] INTERACT  [2] PIVOT  [3] REMOTE SHELL" + C_E
         opt = user_input(">> ")
         if opt == "1" then
-            s.obj.start_terminal
+            obj.start_terminal
         else if opt == "2" then
-            globals.activeShell = s.obj
-            globals.originDisplay = s.obj.host_computer.local_ip
-            updateRoute("Pivot -> " + s.obj.host_computer.local_ip)
+            globals.activeShell = obj
+            globals.originDisplay = obj.host_computer.local_ip
+            updateRoute("Pivot -> " + obj.host_computer.local_ip)
+        else if opt == "3" then
+            // Establecer como sesión activa y abrir remote shell
+            globals.activeShell = obj
+            globals.currentComputer = obj.host_computer
+            remoteShell
         end if
-    else if typeof(s.obj) == "computer" then
-        print C_Y + " [!] Explorando archivos del objeto COMPUTER..." + C_E
-        // Usar módulo wraith_fs
-        result = wraith_fs.wls(s.obj, "/home")
-        print result
+        
+    else if typ == "computer" then
+        // Extraer intel automático
+        print C_P + " [INTEL] Extrayendo información..." + C_E
+        intel = wraith_exploit.extractIntel(obj, false)
+        if intel["users"].len > 0 then
+            print C_G + " Usuarios: " + intel["users"].join(", ") + C_E
+        end if
+        if intel["banks"].len > 0 then
+            print C_Y + " Bancos encontrados: " + intel["banks"].len + C_E
+            for user in intel["banks"].indexes
+                print "   " + user + ": " + intel["banks"][user]
+            end for
+        end if
+        if intel["mails"].len > 0 then
+            print C_B + " Correos encontrados: " + intel["mails"].len + C_E
+            for user in intel["mails"].indexes
+                print "   " + user + ": " + intel["mails"][user]
+            end for
+        end if
+        if intel["passwd"] then
+            print C_P + " /etc/passwd:" + C_E
+            print intel["passwd"]
+        end if
+        
+        // Opciones para computer
+        print C_W + " [1] EXPLORAR ARCHIVOS  [2] REMOTE SHELL  [3] BACK" + C_E
+        opt = user_input(">> ")
+        if opt == "1" then
+            // Explorar recursivamente
+            print C_W + " Exploración recursiva de /home:" + C_E
+            home = obj.File("/home")
+            if home then
+                exploreFileRecursively(home, 0)
+            else
+                print C_R + " No se puede acceder a /home" + C_E
+            end if
+            user_input "[ENTER]"
+        else if opt == "2" then
+            globals.currentComputer = obj
+            remoteShell
+        end if
+        
+    else if typ == "file" then
+        // Es un objeto File
+        print C_W + " Archivo: " + obj.path + C_E
+        print " Permisos: " + obj.permissions + " Tamaño: " + obj.size + " bytes"
+        if obj.is_folder then
+            print C_B + " Es un directorio" + C_E
+            print C_W + " [1] LISTAR CONTENIDO  [2] EXPLORAR RECURSIVO" + C_E
+            opt = user_input(">> ")
+            if opt == "1" then
+                files = obj.get_files + obj.get_folders
+                for f in files
+                    print f.permissions + " " + f.name + " (" + f.size + " bytes)"
+                end for
+            else if opt == "2" then
+                exploreFileRecursively(obj, 0)
+            end if
+        else
+            print C_B + " Es un archivo" + C_E
+            if not obj.is_binary then
+                print C_W + " Contenido (últimas 20 líneas):" + C_E
+                content = obj.get_content
+                if content then
+                    lines = content.split(char(10))
+                    start = 0
+                    if lines.len > 20 then start = lines.len - 20
+                    for i in range(start, lines.len - 1)
+                        print (i+1) + ": " + lines[i]
+                    end for
+                end if
+            else
+                print C_Y + " Archivo binario" + C_E
+            end if
+        end if
+        user_input "[ENTER]"
+        
+    else if typ == "number" or typ == "string" then
+        print C_W + " Valor (" + typ + "): " + C_E
+        print obj
+        user_input "[ENTER]"
+        
+    else
+        print C_R + " Tipo de sesión no manejado: " + typ + C_E
         user_input "[ENTER]"
     end if
 end function
@@ -464,6 +595,219 @@ gestorLogs = function()
     end if
 end function
 
+// Función para decifrar hashes y guardar credenciales
+gestorDecipher = function()
+    print HUD_LINE
+    print C_W + "HASH DECIPHER" + C_E
+    print HUD_LINE
+    print C_W + "Ingresa hash (formato usuario:hash o solo hash):" + C_E
+    hashInput = user_input(C_G + ">> " + C_E)
+    if hashInput == "" then return
+    
+    // Decifrar hash
+    result = wraith_exploit.crackHash(hashInput)
+    if result == "FAIL" then
+        print C_R + " [!] No se pudo decifrar" + C_E
+    else if result == "EMPTY" then
+        print C_R + " [!] Hash vacío" + C_E
+    else
+        print C_G + " [+] Resultado: " + result + C_E
+        
+        // Guardar en base de datos si hay computer activa
+        if globals.currentComputer then
+            ip = globals.currentComputer.public_ip
+            if not ip or ip == "" then ip = globals.currentComputer.local_ip
+            user = ""
+            // Intentar extraer usuario del formato
+            parts = hashInput.split(":")
+            if parts.len >= 2 then user = parts[0]
+            if user == "" then user = "unknown"
+            
+            // Guardar credenciales
+            wraith_db.saveCredentials(ip, user, result, "user")
+            print C_P + " [+] Credenciales guardadas para " + ip + C_E
+        else
+            print C_Y + " [!] No hay computer activa para asociar IP" + C_E
+        end if
+    end if
+    user_input "[ENTER]"
+end function
+
+// Interfaz de shell remota
+remoteShell = function()
+    if not globals.activeShell and not globals.currentComputer then
+        print C_R + " [!] No hay sesión activa" + C_E
+        return
+    end if
+    
+    // Determinar tipo de sesión
+    target = null
+    targetType = ""
+    if globals.activeShell and typeof(globals.activeShell) == "shell" then
+        target = globals.activeShell
+        targetType = "shell"
+    else if globals.currentComputer then
+        target = globals.currentComputer
+        targetType = "computer"
+    else
+        print C_R + " [!] Sesión no compatible" + C_E
+        return
+    end if
+    
+    print C_B + "=== REMOTE SHELL (" + targetType + ") ===" + C_E
+    print C_W + "Comandos: ls, cd, cat, pwd, passwd, scp, download, upload, help, exit" + C_E
+    
+    currentDir = "/"
+    
+    while true
+        print C_G + "wraith:" + currentDir + "$ " + C_E
+        cmd = user_input("")
+        if cmd == "exit" or cmd == "quit" then break
+        
+        // Parsear comando
+        parts = cmd.split(" ")
+        command = parts[0]
+        
+        if command == "help" then
+            print C_W + "Comandos disponibles:" + C_E
+            print " ls [path]        - Listar archivos"
+            print " cd [path]        - Cambiar directorio"
+            print " cat [file]       - Mostrar contenido"
+            print " pwd              - Directorio actual"
+            print " passwd           - Mostrar /etc/passwd"
+            print " scp [src] [dest] - Copiar archivo (requiere shell)"
+            print " download [path]  - Descargar archivo a local"
+            print " upload [local] [remote] - Subir archivo"
+            print " exit             - Salir"
+            
+        else if command == "ls" then
+            path = currentDir
+            if parts.len > 1 then path = parts[1]
+            if targetType == "computer" then
+                result = wraith_fs.wls(target, path)
+                print result
+            else
+                print C_Y + " ls no soportado para shell. Usa terminal real." + C_E
+            end if
+            
+        else if command == "cd" then
+            if parts.len < 2 then
+                currentDir = "/"
+            else
+                // Simplificar navegación
+                if parts[1] == ".." then
+                    // Subir un nivel
+                    segments = currentDir.split("/")
+                    if segments.len > 1 then
+                        segments.pop
+                        currentDir = segments.join("/")
+                        if currentDir == "" then currentDir = "/"
+                    end if
+                else if parts[1][0] == "/" then
+                    currentDir = parts[1]
+                else
+                    if currentDir == "/" then
+                        currentDir = "/" + parts[1]
+                    else
+                        currentDir = currentDir + "/" + parts[1]
+                    end if
+                end if
+                print C_B + " Directorio: " + currentDir + C_E
+            end if
+            
+        else if command == "cat" then
+            if parts.len < 2 then
+                print C_R + " Uso: cat [archivo]" + C_E
+            else
+                filePath = parts[1]
+                if filePath[0] != "/" then
+                    if currentDir == "/" then
+                        filePath = "/" + filePath
+                    else
+                        filePath = currentDir + "/" + filePath
+                    end if
+                end if
+                if targetType == "computer" then
+                    result = wraith_fs.wcat(target, filePath)
+                    print result
+                else
+                    print C_Y + " cat no soportado para shell. Usa terminal real." + C_E
+                end if
+            end if
+            
+        else if command == "pwd" then
+            print currentDir
+            
+        else if command == "passwd" then
+            if targetType == "computer" then
+                result = wraith_fs.wcat(target, "/etc/passwd")
+                print result
+            else
+                print C_Y + " passwd no soportado para shell" + C_E
+            end if
+            
+        else if command == "scp" then
+            if targetType != "shell" then
+                print C_R + " scp requiere shell" + C_E
+            else if parts.len < 3 then
+                print C_R + " Uso: scp [origen] [destino]" + C_E
+            else
+                // Usar scp del shell
+                src = parts[1]
+                dest = parts[2]
+                result = target.scp(src, dest, get_shell, 0) // download
+                if result then
+                    print C_G + " SCP exitoso" + C_E
+                else
+                    print C_R + " SCP falló" + C_E
+                end if
+            end if
+            
+        else if command == "download" then
+            if targetType != "computer" then
+                print C_R + " download requiere computer" + C_E
+            else if parts.len < 2 then
+                print C_R + " Uso: download [archivo_remoto]" + C_E
+            else
+                // Descargar a directorio local actual
+                src = parts[1]
+                if src[0] != "/" then
+                    if currentDir == "/" then
+                        src = "/" + src
+                    else
+                        src = currentDir + "/" + src
+                    end if
+                end if
+                dest = current_path + "/" + src.split("/")[-1]
+                result = wraith_exploit.downloadFile(target, src, get_shell, dest)
+                print result
+            end if
+            
+        else if command == "upload" then
+            if targetType != "computer" then
+                print C_R + " upload requiere computer" + C_E
+            else if parts.len < 3 then
+                print C_R + " Uso: upload [archivo_local] [destino_remoto]" + C_E
+            else
+                local = parts[1]
+                remote = parts[2]
+                if remote[0] != "/" then
+                    if currentDir == "/" then
+                        remote = "/" + remote
+                    else
+                        remote = currentDir + "/" + remote
+                    end if
+                end if
+                result = wraith_exploit.uploadFile(get_shell, local, target, remote)
+                print result
+            end if
+            
+        else
+            print C_R + " Comando no reconocido. Escribe 'help' para ayuda." + C_E
+        end if
+    end while
+end function
+
 // ==========================================================
 // INTERFAZ PRINCIPAL
 // ==========================================================
@@ -489,7 +833,7 @@ while true
     print HUD_SUB
     
     // Menú principal
-    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] EXIT" + C_E
+    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER" + C_E
     cmd = user_input(C_G + "wraith>> " + C_E)
     
     if cmd == "1" then
@@ -500,7 +844,18 @@ while true
     else if cmd == "3" then
         gestorLogs
     else if cmd == "4" then
-        globals.activeShell.start_terminal
+        // Abrir shell real o interfaz remota?
+        print C_B + " [1] REAL TERMINAL  [2] REMOTE SHELL" + C_E
+        opt = user_input(">> ")
+        if opt == "1" then
+            if globals.activeShell then
+                globals.activeShell.start_terminal
+            else
+                print C_R + " No active shell" + C_E
+            end if
+        else if opt == "2" then
+            remoteShell
+        end if
     else if cmd == "5" then
         nt = user_input("IP: ")
         if nt != "" then
@@ -508,6 +863,6 @@ while true
             updateRoute("Target -> " + nt)
         end if
     else if cmd == "6" then
-        exit
+        gestorDecipher
     end if
 end while
