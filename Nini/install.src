@@ -57,17 +57,18 @@ end if
 
 // Intentar compilar con build
 print "   Usando build para compilar..."
-buildCommand = "build " + mainPath + " /bin/"
-buildResult = shell.exec(buildCommand)
-// build comando no devuelve código de salida, verificar si se creó el ejecutable
+buildResult = shell.build(mainPath, "/bin/")
+// build devuelve cadena vacía si éxito, o mensaje de error
 binPath = "/bin/wraith"
 binFile = comp.File(binPath)
-if binFile then
+if buildResult == "" and binFile then
     print "   wraith compilado exitosamente en " + binPath
 else
-    print "   Compilación fallida o ya existe"
-    print "   Output: " + buildResult
-    print "   Puedes compilar manualmente: " + buildCommand
+    print "   Compilación fallida"
+    if buildResult != "" then
+        print "   Error: " + buildResult
+    end if
+    print "   Puedes compilar manualmente: build " + mainPath + " /bin/"
 end if
 
 // 4. Verificar instalación
