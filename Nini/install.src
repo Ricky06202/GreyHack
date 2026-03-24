@@ -12,7 +12,7 @@ comp = get_shell.host_computer
 
 // 1. Crear carpeta /lib/wraith
 print "[1] Creando directorio /lib/wraith..."
-result = comp.create_dir("/lib", "wraith")
+result = comp.create_folder("/lib", "wraith")
 if result == 1 then
     print "   Directorio creado exitosamente"
 else if result == 0 then
