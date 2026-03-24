@@ -4,20 +4,26 @@
 
 // Ruta del archivo de cache
 getExploitsPath = function()
-    shell = get_shell
-    comp = shell.host_computer
-    varFolder = comp.File("/var/wraith")
-    if not varFolder then
-        newFolder = comp.create_folder("/var", "wraith")
-        if newFolder then varFolder = comp.File("/var/wraith")
+    comp = get_shell.host_computer
+    varPath = "/var/wraith"
+    varFile = comp.File(varPath)
+    if not varFile then
+        comp.create_folder("/var", "wraith")
+        varFile = comp.File(varPath)
     end if
-    if varFolder then return "/var/wraith/wraith_exploits"
+    
+    if varFile and varFile.is_folder then return varPath + "/vulns.cache"
+    
+    // Fallback a home
     if comp.File("/home") then
         users = comp.File("/home").get_folders
-        if users.len > 0 then return users[0].path + "/.wraith_exploits"
+        if users.len > 0 then
+            homePath = users[0].path + "/.wraith"
+            if not comp.File(homePath) then comp.create_folder(users[0].path, ".wraith")
+            return homePath + "/vulns.cache"
+        end if
     end if
-    return current_path + "/.wraith_exploits"
-    return current_path + "/.wraith_exploits"
+    return current_path + "/vulns.cache"
 end function
 
 // Cargar cache de exploits
@@ -65,13 +71,15 @@ saveExploitsCache = function(cache)
         end for
     end for
     
-    if file then
-        file.set_content(content)
-    else
-        get_shell.host_computer.touch(current_path, ".wraith_exploits")
+    if not file then
+        pathParts = cachePath.split("/")
+        fileName = pathParts[-1]
+        parentPath = pathParts[0:-1].join("/")
+        if parentPath == "" then parentPath = "/"
+        get_shell.host_computer.touch(parentPath, fileName)
         file = get_shell.host_computer.File(cachePath)
-        if file then file.set_content(content)
     end if
+    if file then file.set_content(content)
 end function
 
 // Guardar un exploit individual

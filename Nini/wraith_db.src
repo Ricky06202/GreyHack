@@ -4,32 +4,41 @@
 
 // Funcion para obtener la ruta del vault
 getVaultPath = function()
-    shell = get_shell
-    comp = shell.host_computer
-    varFolder = comp.File("/var/wraith")
-    if not varFolder then
-        newFolder = comp.create_folder("/var", "wraith")
-        if newFolder then varFolder = comp.File("/var/wraith")
+    comp = get_shell.host_computer
+    varPath = "/var/wraith"
+    varFile = comp.File(varPath)
+    if not varFile then
+        comp.create_folder("/var", "wraith")
+        varFile = comp.File(varPath)
     end if
-    if varFolder then return "/var/wraith/wraith_vault"
+    
+    if varFile and varFile.is_folder then return varPath + "/vault.db"
+    
+    // Fallback a home
     if comp.File("/home") then
         users = comp.File("/home").get_folders
-        if users.len > 0 then return users[0].path + "/.wraith_vault"
+        if users.len > 0 then
+            homePath = users[0].path + "/.wraith"
+            if not comp.File(homePath) then comp.create_folder(users[0].path, ".wraith")
+            return homePath + "/vault.db"
+        end if
     end if
-    return current_path + "/.wraith_vault"
+    return current_path + "/vault.db"
 end function
 
 // Guardar datos en el vault
 saveVault = function(data)
     vaultPath = getVaultPath()
     file = get_shell.host_computer.File(vaultPath)
-    if file then
-        file.set_content(serialize(data))
-    else
-        get_shell.host_computer.touch(current_path, ".wraith_vault")
+    if not file then
+        pathParts = vaultPath.split("/")
+        fileName = pathParts[-1]
+        parentPath = pathParts[0:-1].join("/")
+        if parentPath == "" then parentPath = "/"
+        get_shell.host_computer.touch(parentPath, fileName)
         file = get_shell.host_computer.File(vaultPath)
-        if file then file.set_content(serialize(data))
     end if
+    if file then file.set_content(serialize(data))
 end function
 
 // Cargar datos del vault
