@@ -500,7 +500,7 @@ gestorSesiones = function()
         end if
         
         // Opciones para computer
-        print C_W + " [1] EXPLORAR ARCHIVOS  [2] REMOTE SHELL  [3] BACK" + C_E
+        print C_W + " [1] EXPLORAR ARCHIVOS  [2] REMOTE SHELL  [3] PRIVESC  [4] BACK" + C_E
         opt = user_input(">> ")
         if opt == "1" then
             // Explorar recursivamente
@@ -515,6 +515,19 @@ gestorSesiones = function()
         else if opt == "2" then
             globals.currentComputer = obj
             remoteShell
+        else if opt == "3" then
+            // Escalada de privilegios (PRIVESC)
+            print C_P + " Escaneando vulnerabilidades locales..." + C_E
+            vulns = wraith_exploit.scanLocalVulnerabilities(obj)
+            if vulns.len == 0 then
+                print C_Y + " No se encontraron vulnerabilidades locales" + C_E
+            else
+                print C_G + " Vulnerabilidades encontradas: " + vulns.len + C_E
+                for v in vulns
+                    print C_B + " " + v["path"] + " (" + v["type"] + ") - " + v["severity"] + C_E
+                end for
+            end if
+            user_input "[ENTER]"
         end if
         
     else if typ == "file" then
@@ -861,6 +874,128 @@ gestorCreds = function()
     end while
 end function
 
+// Escaneo de red local
+gestorScan = function()
+    print HUD_LINE
+    print C_W + "NETWORK SCANNER" + C_E
+    print HUD_LINE
+    
+    // Escanear red local
+    print C_W + " Escaneando red local..." + C_E
+    hosts = wraith_net.scanLocalNetwork
+    if hosts.len == 0 then
+        print C_Y + " No se encontraron hosts activos" + C_E
+        user_input "[ENTER]"
+        return
+    end if
+    
+    // Mostrar hosts encontrados
+    header = C_Y + "ID" + C_E + " | " + C_W + "IP" + C_E + " | " + C_G + "STATUS" + C_E
+    cuerpo = ""
+    for i in range(0, hosts.len - 1)
+        ip = hosts[i]
+        cuerpo = cuerpo + "\n" + C_Y + (i+1) + C_E + " | " + C_W + ip + C_E + " | " + C_G + "ACTIVO" + C_E
+    end for
+    
+    table = format_columns(header + "\n" + cuerpo)
+    print table
+    
+    // Opciones
+    print C_W + " [1] ESCANEAR PUERTOS DE UN HOST  [2] AGREGAR A OBJETIVOS  [3] BACK" + C_E
+    opt = user_input(C_G + ">> " + C_E)
+    
+    if opt == "1" then
+        // Escanear puertos de un host específico
+        idx = user_input(C_Y + "ID del host: " + C_E)
+        if idx != "" then
+            idxNum = idx.to_int
+            if idxNum >= 1 and idxNum <= hosts.len then
+                ip = hosts[idxNum-1]
+                print C_W + " Escaneando puertos de " + ip + "..." + C_E
+                result = wraith_net.scanPorts(ip)
+                print result
+            else
+                print C_R + " ID inválida" + C_E
+            end if
+        end if
+        user_input "[ENTER]"
+    else if opt == "2" then
+        // Agregar a objetivos
+        idx = user_input(C_Y + "ID del host para target: " + C_E)
+        if idx != "" then
+            idxNum = idx.to_int
+            if idxNum >= 1 and idxNum <= hosts.len then
+                ip = hosts[idxNum-1]
+                globals.ipTarget = ip
+                updateRoute("Target -> " + ip)
+                print C_G + " Target establecido: " + ip + C_E
+            else
+                print C_R + " ID inválida" + C_E
+            end if
+        end if
+        user_input "[ENTER]"
+    end if
+end function
+
+// Transferencia de archivos (XFER)
+gestorXfer = function()
+    print HUD_LINE
+    print C_W + "FILE TRANSFER" + C_E
+    print HUD_LINE
+    
+    // Verificar sesión activa
+    if not globals.activeShell and not globals.currentComputer then
+        print C_R + " [!] No hay sesión activa (shell o computer)" + C_E
+        user_input "[ENTER]"
+        return
+    end if
+    
+    // Determinar tipo de sesión
+    targetType = ""
+    if globals.activeShell and typeof(globals.activeShell) == "shell" then
+        targetType = "shell"
+    else if globals.currentComputer then
+        targetType = "computer"
+    end if
+    
+    print C_W + " Sesión activa: " + C_G + targetType + C_E
+    
+    // Opciones
+    print C_W + " [1] UPLOAD (subir archivo)  [2] DOWNLOAD (descargar)  [3] BACK" + C_E
+    opt = user_input(C_G + ">> " + C_E)
+    
+    if opt == "1" then
+        // Subir archivo
+        if targetType != "computer" then
+            print C_R + " Upload requiere sesión de computer" + C_E
+        else
+            localPath = user_input(C_Y + "Archivo local (ruta completa): " + C_E)
+            if localPath == "" then return
+            remotePath = user_input(C_Y + "Destino remoto (ej: /home/user/file.txt): " + C_E)
+            if remotePath == "" then return
+            
+            result = wraith_exploit.uploadFile(get_shell, localPath, globals.currentComputer, remotePath)
+            print result
+        end if
+        user_input "[ENTER]"
+        
+    else if opt == "2" then
+        // Descargar archivo
+        if targetType != "computer" then
+            print C_R + " Download requiere sesión de computer" + C_E
+        else
+            remotePath = user_input(C_Y + "Archivo remoto (ej: /home/user/file.txt): " + C_E)
+            if remotePath == "" then return
+            localPath = user_input(C_Y + "Destino local (ruta completa): " + C_E)
+            if localPath == "" then return
+            
+            result = wraith_exploit.downloadFile(globals.currentComputer, remotePath, get_shell, localPath)
+            print result
+        end if
+        user_input "[ENTER]"
+    end if
+end function
+
 // Interfaz de shell remota
 remoteShell = function()
     if not globals.activeShell and not globals.currentComputer then
@@ -1061,7 +1196,7 @@ while true
     print HUD_SUB
     
     // Menú principal
-    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER [7] CREDS" + C_E
+    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER [7] CREDS [8] SCAN [9] XFER" + C_E
     cmd = user_input(C_G + "wraith>> " + C_E)
     
     if cmd == "1" then
@@ -1095,5 +1230,9 @@ while true
         gestorDecipher
     else if cmd == "7" then
         gestorCreds
+    else if cmd == "8" then
+        gestorScan
+    else if cmd == "9" then
+        gestorXfer
     end if
 end while
