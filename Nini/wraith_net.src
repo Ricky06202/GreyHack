@@ -154,8 +154,6 @@ getNetworkInfo = function()
     info = {
         "local_ip": comp.local_ip,
         "public_ip": comp.public_ip,
-        "gateway": comp.network_gateway,
-        "is_active": comp.is_network_active,
     }
     
     // Obtener informacion del router
