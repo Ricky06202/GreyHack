@@ -45,23 +45,23 @@ for moduleName in modules
 end for
 
 // 3. Compilar ejecutable principal
-print "[3] Compilando wraith_main.src..."
-mainPath = current_path + "/wraith_main.src"
+print "[3] Compilando wraith.src..."
+mainPath = current_path + "/wraith.src"
 mainFile = comp.File(mainPath)
 
 if not mainFile then
-    print "   ERROR: No se encontró wraith_main.src"
+    print "   ERROR: No se encontró wraith.src"
     exit("Instalación fallida")
 end if
 
 // Intentar compilar con build
 print "   Usando build para compilar..."
-buildResult = comp.build(mainPath, "/bin/wraith")
+buildResult = comp.build(mainPath, "/bin/")
 if buildResult == 1 then
     print "   wraith compilado exitosamente en /bin/wraith"
 else
     print "   Compilación fallida o ya existe"
-    print "   Puedes compilar manualmente: build " + mainPath + " /bin/wraith"
+    print "   Puedes compilar manualmente: build " + mainPath + " /bin/"
 end if
 
 // 4. Verificar instalación
