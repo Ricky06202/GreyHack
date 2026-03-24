@@ -440,8 +440,9 @@ gestorSesiones = function()
     typ = typeof(obj)
     
     if typ == "shell" then
-        print C_B + " [1] INTERACT  [2] PIVOT  [3] REMOTE SHELL" + C_E
+        print C_B + " [1] INTERACT  [2] PIVOT  [3] REMOTE SHELL (default)" + C_E
         opt = user_input(">> ")
+        if opt == "" then opt = "3"  // Default a REMOTE SHELL
         if opt == "1" then
             obj.start_terminal
         else if opt == "2" then
@@ -892,8 +893,9 @@ while true
         gestorLogs
     else if cmd == "4" then
         // Abrir shell real o interfaz remota?
-        print C_B + " [1] REAL TERMINAL  [2] REMOTE SHELL" + C_E
+        print C_B + " [1] REAL TERMINAL  [2] REMOTE SHELL (default)" + C_E
         opt = user_input(">> ")
+        if opt == "" then opt = "2"  // Default a REMOTE SHELL
         if opt == "1" then
             if globals.activeShell then
                 globals.activeShell.start_terminal
