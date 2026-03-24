@@ -103,9 +103,9 @@ displayRandomHeader = function()
         lines.push neonCyan + "    /\\    /\\    /\\    /\\    /\\    " + reset
         lines.push neonCyan + "   /  \\  /  \\  /  \\  /  \\  /  \\   " + reset
         lines.push neonGreen + "  /____\\/____\\/____\\/____\\/____\\  " + reset
-        lines.push neonGreen + "  |    ||    ||    ||    ||    |  " + reset
-        lines.push neonYellow + "  |    ||    ||    ||    ||    |  " + reset
-        lines.push neonYellow + "  |____||____||____||____||____|  " + reset
+        lines.push neonGreen + "  |    | |    | |    | |    | |    |  " + reset
+        lines.push neonYellow + "  |    | |    | |    | |    | |    |  " + reset
+        lines.push neonYellow + "  |____| |____| |____| |____| |____|  " + reset
         lines.push neonPink + "   W R A I T H   O S              " + reset
         return lines
     end function
