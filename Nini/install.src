@@ -31,12 +31,6 @@ for moduleName in modules
     sourceFile = comp.File(sourcePath)
     
     if not sourceFile then
-        // Intentar en subdirectorio modules/
-        sourcePath = current_path + "/modules/" + moduleName
-        sourceFile = comp.File(sourcePath)
-    end if
-    
-    if not sourceFile then
         print "   ERROR: No se encontró " + moduleName
         continue
     end if

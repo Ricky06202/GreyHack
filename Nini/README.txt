@@ -4,7 +4,11 @@ Wraith OS v4.0 - Framework Modular para GreyHack
 Archivos:
 - wraith_main.src: Ejecutable principal
 - install.src: Instalador automático
-- wraith_*.src: Módulos del sistema
+- wraith_db.src: Sistema de persistencia
+- wraith_fs.src: Sistema de archivos virtual
+- wraith_net.src: Motor de red
+- wraith_exploit.src: Motor de intrusión
+- wraith_stealth.src: Gestión de logs
 - README.txt: Esta documentación
 
 Instalación automática (recomendado):
