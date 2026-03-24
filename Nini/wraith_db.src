@@ -88,7 +88,7 @@ end function
 
 // Funcion para guardar credenciales
 saveCredentials = function(ip, user, pass, privilege)
-    vault = loadVault
+    vault = loadVault()
     key = ip + "_" + user
     vault[key] = {"ip": ip, "user": user, "pass": pass, "priv": privilege}
     saveVault(vault)
@@ -96,7 +96,7 @@ end function
 
 // Funcion para obtener credenciales
 getCredentials = function(ip, user)
-    vault = loadVault
+    vault = loadVault()
     key = ip + "_" + user
     if vault.hasIndex(key) then return vault[key]
     return null
@@ -104,7 +104,7 @@ end function
 
 // Funcion para listar todas las credenciales guardadas
 listCredentials = function()
-    vault = loadVault
+    vault = loadVault()
     return vault
 end function
 
