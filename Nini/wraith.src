@@ -362,7 +362,7 @@ ejecutarAtaqueID = function(idInput)
             
             // Extraccion automatica de intel (REQ-INTEL)
             if typeof(res) == "computer" then
-                intel = wraith_exploit.extractIntel(res, true)
+                intel = wraith_exploit.extractIntel(res, true, globals.ipTarget)
                 if intel["users"].len > 0 then
                     print C_P + " [INTEL] Usuarios encontrados: " + intel["users"].join(", ") + C_E
                 end if
@@ -473,7 +473,7 @@ gestorSesiones = function()
     else if typ == "computer" then
         // Extraer intel automatico
         print C_P + " [INTEL] Extrayendo informacion..." + C_E
-        intel = wraith_exploit.extractIntel(obj, false)
+        intel = wraith_exploit.extractIntel(obj, false, obj.host_computer.local_ip)
         if intel["users"].len > 0 then
             print C_G + " Usuarios: " + intel["users"].join(", ") + C_E
         end if
