@@ -6,13 +6,12 @@
 getExploitsPath = function()
     shell = get_shell
     comp = shell.host_computer
-    home = comp.File("/home")
-    if home then
-        users = home.get_folders
-        if users.len > 0 then
-            return users[0].path + "/.wraith_exploits"
-        end if
+    varFolder = comp.File("/var/wraith")
+    if not varFolder then
+        root = comp.File("/")
+        if root then varFolder = root.create_folder("wraith")
     end if
+    if varFolder then return varFolder.path + "/wraith_exploits"
     return current_path + "/.wraith_exploits"
 end function
 

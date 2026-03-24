@@ -4,19 +4,15 @@
 
 // Funcion para obtener la ruta del vault
 getVaultPath = function()
-    // Usar directorio actual o /home si es posible
+    // Guardar en /var/wraith/
     shell = get_shell
     comp = shell.host_computer
-    home = comp.File("/home")
-    if home then
-        // Buscar el directorio del usuario actual
-        users = home.get_folders
-        if users.len > 0 then
-            currentUser = users[0].name
-            return users[0].path + "/.wraith_vault"
-        end if
+    varFolder = comp.File("/var/wraith")
+    if not varFolder then
+        root = comp.File("/")
+        if root then varFolder = root.create_folder("wraith")
     end if
-    // Fallback: directorio actual
+    if varFolder then return varFolder.path + "/wraith_vault"
     return current_path + "/.wraith_vault"
 end function
 
