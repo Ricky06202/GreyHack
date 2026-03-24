@@ -189,6 +189,7 @@ wraith_fs = import_code("/lib/wraith/wraith_fs.src")
 wraith_net = import_code("/lib/wraith/wraith_net.src")
 wraith_exploit = import_code("/lib/wraith/wraith_exploit.src")
 wraith_stealth = import_code("/lib/wraith/wraith_stealth.src")
+wraith_exploits = import_code("/lib/wraith/wraith_exploits.src")
 
 // Variables globales
 globals.ipTarget = ""
@@ -330,8 +331,19 @@ ejecutarAtaqueID = function(idInput)
         end if
     end if
     
-    // Escanear vulnerabilidades
-    vulns = wraith_exploit.scanVulnerabilities(lib)
+    // Obtener información del servicio para cache
+    portInfo = wraith_net.getPortInfo(globals.ipTarget, pNum)
+    service = ""
+    version = ""
+    if portInfo and typeof(portInfo) == "map" and portInfo.hasIndex("info") then
+        infoParts = portInfo["info"].split(" ")
+        if infoParts.len >= 1 then service = infoParts[0]
+        if infoParts.len >= 2 then version = infoParts[1]
+    end if
+    
+    // Escanear vulnerabilidades (con cache)
+    info = {"service": service, "version": version, "ip": globals.ipTarget}
+    vulns = wraith_exploit.scanVulnerabilities(lib, info)
     if vulns.len == 0 then
         print C_Y + " [!] No vulnerabilities found" + C_E
         return
