@@ -28,3 +28,5 @@ Características:
 - Extracción de Bank.txt y Mail.txt
 - Gestión de logs quirúrgica
 - Multi-hop Bouncing para pivoting
+- Interfaz neón estilo hacker (solo ASCII)
+- Colores hexadecimales compatibles

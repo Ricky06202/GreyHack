@@ -10,6 +10,194 @@ C_E = "</color>"
 HUD_LINE = C_P + "==================================================" + C_E
 HUD_SUB  = C_B + "--------------------------------------------------" + C_E
 
+// ==========================================================
+// SISTEMA DE ENCABEZADOS VARIADOS (10 estilos)
+// ==========================================================
+
+// Función para encabezado aleatorio
+displayRandomHeader = function()
+    // Colores neón
+    neonGreen = "<color=#39FF14>"
+    neonCyan = "<color=#00FFFF>"
+    neonPurple = "<color=#FF00FF>"
+    neonPink = "<color=#FF1493>"
+    neonYellow = "<color=#FFFF00>"
+    neonOrange = "<color=#FF6600>"
+    neonRed = "<color=#FF0000>"
+    neonBlue = "<color=#0066FF>"
+    reset = "</color>"
+    
+    // Estilo 1: Mountains (el del usuario)
+    style1 = function()
+        lines = []
+        lines.push C_P + "      ___          ___          ___          ___      " + reset
+        lines.push C_P + "     /  /\        /  /\        /  /\        /  /\     " + reset
+        lines.push C_B + "    /  /::\      /  /:/_      /  /::\      /  /:/_    " + reset
+        lines.push C_B + "   /  /:/\:\    /  /:/ /\    /  /:/\:\    /  /:/ /\   " + reset
+        lines.push C_G + "  /  /:/~/:/   /  /:/ /:/   /  /:/~/:/   /  /:/ /:/   " + reset
+        lines.push C_G + " /__/:/ /:/   /__/:/ /:/   /__/:/ /:/   /__/:/ /:/    " + reset
+        lines.push C_Y + " \  \:\/:/    \  \:\/:/    \  \:\/:/    \  \:\/:/     " + reset
+        lines.push C_Y + "  \  \::/      \  \::/      \  \::/      \  \::/      " + reset
+        lines.push neonCyan + "            W R A I T H   O S                    " + reset
+        return lines
+    end function
+    
+    // Estilo 2: Circuit Board
+    style2 = function()
+        lines = []
+        lines.push neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
+        lines.push neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset
+        lines.push neonPurple + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
+        lines.push neonPink + "| | | | | | | | |  | | | | | | | | |" + reset
+        lines.push neonYellow + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
+        lines.push neonOrange + "    W R A I T H   O S            " + reset
+        lines.push neonCyan + "+-+-+-+-+-+-+-+-+  +-+-+-+-+-+-+-+-+" + reset
+        lines.push neonGreen + "| | | | | | | | |  | | | | | | | | |" + reset
+        return lines
+    end function
+    
+    // Estilo 3: Binary Rain
+    style3 = function()
+        lines = []
+        for i in range(1, 8)
+            line = ""
+            for j in range(1, 40)
+                if rnd > 0.5 then
+                    line = line + neonGreen + "1" + reset
+                else
+                    line = line + neonGreen + "0" + reset
+                end if
+            end for
+            lines.push line
+        end for
+        // Insertar título en el medio
+        lines[3] = neonPink + "    * W R A I T H   O S *    " + reset
+        lines[4] = neonCyan + "      Grey Hack Modular Framework      " + reset
+        return lines
+    end function
+    
+    // Estilo 4: Hex Grid
+    style4 = function()
+        lines = []
+        lines.push neonPurple + "  / \ / \ / \ / \ / \ / \ / \ / \ " + reset
+        lines.push neonCyan + " |   |   |   |   |   |   |   |   |" + reset
+        lines.push neonGreen + "  \ / \ / \ / \ / \ / \ / \ / \ / " + reset
+        lines.push neonPink + "   W R A I T H   O S          " + reset
+        lines.push neonYellow + "  / \ / \ / \ / \ / \ / \ / \ / \ " + reset
+        lines.push neonOrange + " |   |   |   |   |   |   |   |   |" + reset
+        lines.push neonRed + "  \ / \ / \ / \ / \ / \ / \ / \ / " + reset
+        return lines
+    end function
+    
+    // Estilo 5: Skull ASCII
+    style5 = function()
+        lines = []
+        lines.push neonRed + "       _______        " + reset
+        lines.push neonRed + "     /         \      " + reset
+        lines.push neonPink + "   /   _     _   \    " + reset
+        lines.push neonPink + "  |   (o)   (o)   |   " + reset
+        lines.push neonPurple + "  |      ___      |   " + reset
+        lines.push neonPurple + "  |     |   |     |   " + reset
+        lines.push neonCyan + "   \    \___/    /    " + reset
+        lines.push neonGreen + "     \_________/      " + reset
+        lines.push neonYellow + " WRAITH OS            " + reset
+        return lines
+    end function
+    
+    // Estilo 6: Spikes
+    style6 = function()
+        lines = []
+        lines.push neonOrange + "   /\\   /\\   /\\   /\\   /\\   /\\   " + reset
+        lines.push neonYellow + "  /  \\ /  \\ /  \\ /  \\ /  \\ /  \\  " + reset
+        lines.push neonGreen + " /    \\/    \\/    \\/    \\/    \\/   " + reset
+        lines.push neonCyan + "   W R A I T H   O S            " + reset
+        lines.push neonPurple + "   \\    /\\    /\\    /\\    /\\    /   " + reset
+        lines.push neonPink + "    \\  /  \\  /  \\  /  \\  /  \\  /    " + reset
+        lines.push neonRed + "     \\/    \\/    \\/    \\/    \\/     " + reset
+        return lines
+    end function
+    
+    // Estilo 7: Grid Lines
+    style7 = function()
+        lines = []
+        lines.push neonCyan + "+-+-+-+-+-+-+-+-+-+-+-+-+" + reset
+        lines.push neonGreen + "| | | | | | | | | | | | |" + reset
+        lines.push neonPurple + "+-+-+-+-+-+-+-+-+-+-+-+-+" + reset
+        lines.push neonPink + "W R A I T H   O S     " + reset
+        lines.push neonYellow + "+-+-+-+-+-+-+-+-+-+-+-+-+" + reset
+        lines.push neonOrange + "| | | | | | | | | | | | |" + reset
+        lines.push neonRed + "+-+-+-+-+-+-+-+-+-+-+-+-+" + reset
+        return lines
+    end function
+    
+    // Estilo 8: Waves
+    style8 = function()
+        lines = []
+        lines.push neonGreen + "  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ " + reset
+        lines.push neonCyan + " ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~" + reset
+        lines.push neonPurple + "W R A I T H   O S             " + reset
+        lines.push neonPink + " ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~" + reset
+        lines.push neonYellow + "  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ " + reset
+        return lines
+    end function
+    
+    // Estilo 9: Concentric Boxes
+    style9 = function()
+        lines = []
+        lines.push neonRed + "+---------------------------+" + reset
+        lines.push neonOrange + "| +-----------------------+ |" + reset
+        lines.push neonYellow + "| | +-------------------+ | |" + reset
+        lines.push neonGreen + "| | |   WRAITH OS     | | |" + reset
+        lines.push neonCyan + "| | +-------------------+ | |" + reset
+        lines.push neonPurple + "| +-----------------------+ |" + reset
+        lines.push neonPink + "+---------------------------+" + reset
+        return lines
+    end function
+    
+    // Estilo 10: Matrix Rain (solo ASCII)
+    style10 = function()
+        lines = []
+        for i in range(1, 8)
+            line = ""
+            for j in range(1, 40)
+                char = rnd(10).to_int
+                if char < 3 then
+                    line = line + neonGreen + "#" + reset
+                else if char < 6 then
+                    line = line + neonGreen + "+" + reset
+                else if char < 8 then
+                    line = line + neonGreen + "." + reset
+                else
+                    line = line + " "
+                end if
+            end for
+            lines.push line
+        end for
+        // Título en el medio
+        lines[3] = neonPink + "  * W R A I T H   O S *  " + reset
+        lines[4] = neonCyan + "    Grey Hack Modular Framework    " + reset
+        return lines
+    end function
+    
+    // Lista de estilos
+    styles = [@style1, @style2, @style3, @style4, @style5, 
+              @style6, @style7, @style8, @style9, @style10]
+    
+    // Elegir estilo aleatorio
+    styleIndex = rnd(styles.len).floor
+    selectedStyle = styles[styleIndex]
+    
+    // Imprimir líneas del estilo
+    lines = selectedStyle()
+    for line in lines
+        print line
+    end for
+    
+    // Información adicional debajo del header
+    print neonPurple + "  [+] Grey Hack Modular Framework [+] " + reset
+    print neonGreen + "  [+] Wraith OS - Hacking Toolkit [+] " + reset
+end function
+
 // Importar módulos (usando import_code)
 // Módulos organizados en subcarpeta /lib/wraith/
 wraith_db = import_code("/lib/wraith/wraith_db.src")
@@ -323,7 +511,7 @@ end function
 
 while true
     limpiar
-    print C_P + "      W R A I T H   O S   v 4 . 0" + C_E
+    displayRandomHeader
     print HUD_LINE
     
     // Mostrar HUD de ruta
