@@ -275,22 +275,17 @@ nmapWraith = function()
     if not verificarConexion(target) then return C_R + " [!] HOST UNREACHABLE" + C_E
     
     // Usar modulo wraith_net
-    result = wraith_net.scanPorts(target)
-    if typeof(result) == "string" and result.indexOf("Error") != null then
-        return C_R + result + C_E
+    scanResult = wraith_net.scanPorts(target)
+    if typeof(scanResult) == "string" and scanResult.indexOf("Error") != null then
+        return C_R + scanResult + C_E
     end if
     
-    // Parsear resultado y guardar puertos para exploits
-    lines = result.split("\n")
-    for line in lines
-        if line.indexOf("PORT") != null then continue
-        parts = line.split(" ")
-        if parts.len >= 2 then
-            portNum = parts[1]
-            if typeof(portNum) == "number" then
-                globals.lastScan.push(portNum.to_int)
-            end if
-        end if
+    result = scanResult["output"]
+    portList = scanResult["ports"]
+    
+    // Guardar puertos para exploits
+    for p in portList
+        globals.lastScan.push(p["port"])
     end for
     
     return result
