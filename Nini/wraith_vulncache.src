@@ -8,10 +8,9 @@ getExploitsPath = function()
     comp = shell.host_computer
     home = comp.File("/home")
     if home then
-        currentUser = comp.active_user
-        userFolder = comp.File("/home/" + currentUser)
-        if userFolder then
-            return userFolder.path + "/.wraith_exploits"
+        users = home.get_folders
+        if users.len > 0 then
+            return users[0].path + "/.wraith_exploits"
         end if
     end if
     return current_path + "/.wraith_exploits"

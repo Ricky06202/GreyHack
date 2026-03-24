@@ -10,10 +10,10 @@ getVaultPath = function()
     home = comp.File("/home")
     if home then
         // Buscar el directorio del usuario actual
-        currentUser = comp.active_user
-        userFolder = comp.File("/home/" + currentUser)
-        if userFolder then
-            return userFolder.path + "/.wraith_vault"
+        users = home.get_folders
+        if users.len > 0 then
+            currentUser = users[0].name
+            return users[0].path + "/.wraith_vault"
         end if
     end if
     // Fallback: directorio actual
