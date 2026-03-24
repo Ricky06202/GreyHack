@@ -352,8 +352,10 @@ end function
 executeExploit = function(lib, area, vuln, lanIp = null)
     res = null
     if lib and area and vuln then
-        if lanIp then res = lib.overflow(area, vuln, lanIp)
-        else res = lib.overflow(area, vuln)
+        if lanIp then 
+            res = lib.overflow(area, vuln, lanIp)
+        else 
+            res = lib.overflow(area, vuln)
         end if
     end if
     return res

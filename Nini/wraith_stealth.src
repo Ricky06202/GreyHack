@@ -123,7 +123,7 @@ getLogStats = function(computer)
         "total_lines": lines.len,
         "unique_ips": {},
         "common_services": {},
-        "last_modified": logFile.date
+        "last_modified": logFile.date,
     }
     
     // Analizar lineas

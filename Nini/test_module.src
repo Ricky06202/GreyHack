@@ -1,6 +1,0 @@
-// Test module for import_code - simple version
-testHello = function(name)
-    return "Hello from module, " + name + "!"
-end function
-
-testVariable = "I am a variable from module"

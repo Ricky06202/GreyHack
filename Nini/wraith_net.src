@@ -88,7 +88,7 @@ getPortInfo = function(targetIp, portNumber)
                 "info": info,
                 "lan_ip": port.get_lan_ip,
                 "is_closed": port.is_closed,
-                "is_lan": isLan
+                "is_lan": isLan,
             }
         end if
     end for
@@ -129,7 +129,7 @@ getNetworkInfo = function()
         "local_ip": comp.local_ip,
         "public_ip": comp.public_ip,
         "gateway": comp.network_gateway,
-        "is_active": comp.is_network_active
+        "is_active": comp.is_network_active,
     }
     
     // Obtener informacion del router
@@ -183,7 +183,7 @@ discoverNetworkDetailed = function()
     for host in hosts
         hostInfo = {
             "ip": host,
-            "ports": []
+            "ports": [],
         }
         
         // Escanear puertos en cada host
