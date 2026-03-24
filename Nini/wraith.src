@@ -236,7 +236,7 @@ displayRoute = function
         if i > 0 then routeStr = routeStr + " -> "
         routeStr = routeStr + globals.route[i]
     end for
-    print C_B + "RUTA: " + C_W + routeStr + C_E
+    print C_B + " RUTA: " + C_W + routeStr + C_E
 end function
 
 // Funcion para obtener objeto computer actual
