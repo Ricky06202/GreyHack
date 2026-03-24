@@ -1,0 +1,128 @@
+// ==========================================================
+// WRAITH DB - Sistema de Persistencia para Wraith OS
+// ==========================================================
+
+// Función para obtener la ruta del vault
+getVaultPath = function()
+    // Usar directorio actual o /home si es posible
+    shell = get_shell
+    comp = shell.host_computer
+    home = comp.File("/home")
+    if home then
+        // Buscar el directorio del usuario actual
+        currentUser = comp.active_user
+        userFolder = comp.File("/home/" + currentUser)
+        if userFolder then
+            return userFolder.path + "/.wraith_vault"
+        end if
+    end if
+    // Fallback: directorio actual
+    return current_path + "/.wraith_vault"
+end function
+
+// Guardar datos en el vault
+saveVault = function(data)
+    vaultPath = getVaultPath
+    file = get_shell.host_computer.File(vaultPath)
+    if file then
+        // Sobrescribir contenido
+        file.set_content(serialize(data))
+    else
+        // Crear archivo
+        get_shell.host_computer.touch(current_path, ".wraith_vault")
+        file = get_shell.host_computer.File(vaultPath)
+        if file then file.set_content(serialize(data))
+    end if
+end function
+
+// Cargar datos del vault
+loadVault = function()
+    vaultPath = getVaultPath
+    file = get_shell.host_computer.File(vaultPath)
+    if not file then return {}
+    content = file.get_content
+    if not content then return {}
+    return deserialize(content)
+end function
+
+// Serializar datos a string (formato simple: clave=valor;lineas)
+serialize = function(data)
+    if typeof(data) != "map" then return ""
+    result = ""
+    for key in data.indexes
+        value = data[key]
+        if typeof(value) == "string" then
+            result = result + key + "=" + value + ";"
+        else if typeof(value) == "number" then
+            result = result + key + "=" + value + ";"
+        else if typeof(value) == "list" then
+            result = result + key + "=" + join(value, ",") + ";"
+        end if
+    end for
+    return result
+end function
+
+// Deserializar string a datos
+deserialize = function(str)
+    result = {}
+    if not str then return result
+    pairs = str.split(";")
+    for pair in pairs
+        if pair == "" then continue
+        parts = pair.split("=")
+        if parts.len != 2 then continue
+        key = parts[0]
+        value = parts[1]
+        // Intentar convertir números
+        if is_valid_number(value) then
+            result[key] = value.to_int
+        else if value.indexOf(",") != null then
+            // Es una lista
+            result[key] = value.split(",")
+        else
+            result[key] = value
+        end if
+    end for
+    return result
+end function
+
+// Función para guardar credenciales
+saveCredentials = function(ip, user, pass, privilege)
+    vault = loadVault
+    key = ip + "_" + user
+    vault[key] = {"ip": ip, "user": user, "pass": pass, "priv": privilege}
+    saveVault(vault)
+end function
+
+// Función para obtener credenciales
+getCredentials = function(ip, user)
+    vault = loadVault
+    key = ip + "_" + user
+    if vault.hasIndex(key) then return vault[key]
+    return null
+end function
+
+// Función para listar todas las credenciales guardadas
+listCredentials = function()
+    vault = loadVault
+    return vault
+end function
+
+// Función para eliminar credenciales
+deleteCredentials = function(ip, user)
+    vault = loadVault
+    key = ip + "_" + user
+    if vault.hasIndex(key) then vault.remove(key)
+    saveVault(vault)
+end function
+
+// Exportar funciones como librería
+wraith_db = {
+    "getVaultPath": @getVaultPath,
+    "saveVault": @saveVault,
+    "loadVault": @loadVault,
+    "saveCredentials": @saveCredentials,
+    "getCredentials": @getCredentials,
+    "listCredentials": @listCredentials,
+    "deleteCredentials": @deleteCredentials
+}

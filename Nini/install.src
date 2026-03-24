@@ -1,0 +1,98 @@
+// ==========================================================
+// Wraith OS v4.0 - Instalador para GreyHack
+// ==========================================================
+
+print "Wraith OS v4.0 Installer"
+print "========================"
+
+// Verificar si estamos en Grey Hack
+if not get_shell then exit("Este script debe ejecutarse en Grey Hack")
+
+comp = get_shell.host_computer
+
+// 1. Crear carpeta /lib/wraith
+print "[1] Creando directorio /lib/wraith..."
+result = comp.create_directory("/lib", "wraith")
+if result == 1 then
+    print "   Directorio creado exitosamente"
+else if result == 0 then
+    print "   Directorio ya existe o error al crear"
+else
+    print "   Error: " + result
+end if
+
+// 2. Copiar archivos .src a /lib/wraith
+print "[2] Copiando archivos de módulos..."
+modules = ["wraith_db.src", "wraith_fs.src", "wraith_net.src", "wraith_exploit.src", "wraith_stealth.src"]
+
+for moduleName in modules
+    // Buscar en directorio actual y en modules/
+    sourcePath = current_path + "/" + moduleName
+    sourceFile = comp.File(sourcePath)
+    
+    if not sourceFile then
+        // Intentar en subdirectorio modules/
+        sourcePath = current_path + "/modules/" + moduleName
+        sourceFile = comp.File(sourcePath)
+    end if
+    
+    if not sourceFile then
+        print "   ERROR: No se encontró " + moduleName
+        continue
+    end if
+    
+    // Copiar archivo
+    success = sourceFile.copy("/lib/wraith", moduleName)
+    if success then
+        print "   " + moduleName + " → /lib/wraith/"
+    else
+        print "   ERROR: No se pudo copiar " + moduleName
+    end if
+end for
+
+// 3. Compilar ejecutable principal
+print "[3] Compilando wraith_main.src..."
+mainPath = current_path + "/wraith_main.src"
+mainFile = comp.File(mainPath)
+
+if not mainFile then
+    print "   ERROR: No se encontró wraith_main.src"
+    exit("Instalación fallida")
+end if
+
+// Intentar compilar con build
+print "   Usando build para compilar..."
+buildResult = comp.build(mainPath, "/bin/wraith")
+if buildResult == 1 then
+    print "   wraith compilado exitosamente en /bin/wraith"
+else
+    print "   Compilación fallida o ya existe"
+    print "   Puedes compilar manualmente: build " + mainPath + " /bin/wraith"
+end if
+
+// 4. Verificar instalación
+print "[4] Verificando instalación..."
+wraithBin = comp.File("/bin/wraith")
+wraithFolder = comp.File("/lib/wraith")
+
+if wraithBin then
+    print "   ✓ Ejecutable: /bin/wraith"
+else
+    print "   ✗ Ejecutable no encontrado"
+end if
+
+if wraithFolder then
+    print "   ✓ Módulos: /lib/wraith/"
+    // Listar archivos
+    files = wraithFolder.get_files
+    for file in files
+        print "     - " + file.name
+    end for
+else
+    print "   ✗ Directorio de módulos no encontrado"
+end if
+
+print ""
+print "Instalación completada!"
+print "Uso: wraith [target_ip]"
+print "Ejemplo: wraith 192.168.1.100"

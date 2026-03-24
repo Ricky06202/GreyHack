@@ -1,0 +1,366 @@
+// ==========================================================
+// WRAITH OS v4.0 - Framework Modular para GreyHack
+// ==========================================================
+
+// Colores para la interfaz
+C_G = "<color=#00FF41>"; C_R = "<color=#FF3131>"; C_B = "<color=#00D4FF>"
+C_Y = "<color=#F7FF00>"; C_P = "<color=#B537F2>"; C_W = "<color=#E0E0E0>"
+C_E = "</color>"
+
+HUD_LINE = C_P + "==================================================" + C_E
+HUD_SUB  = C_B + "--------------------------------------------------" + C_E
+
+// Importar módulos (usando import_code)
+// Módulos organizados en subcarpeta /lib/wraith/
+wraith_db = import_code("/lib/wraith/wraith_db.src")
+wraith_fs = import_code("/lib/wraith/wraith_fs.src")
+wraith_net = import_code("/lib/wraith/wraith_net.src")
+wraith_exploit = import_code("/lib/wraith/wraith_exploit.src")
+wraith_stealth = import_code("/lib/wraith/wraith_stealth.src")
+
+// Variables globales
+globals.ipTarget = ""
+globals.sesiones = []
+globals.lastScan = []
+globals.activeShell = get_shell
+globals.originDisplay = "LOCAL"
+globals.currentComputer = null
+globals.route = ["LOCAL"]
+
+// Función para limpiar pantalla
+limpiar = function
+    clear_screen
+end function
+
+// Función para cargar librerías (compatibilidad)
+cargarLib = function(nombre)
+    lib = include_lib("/lib/" + nombre)
+    if not lib then lib = include_lib(current_path + "/" + nombre)
+    if not lib then exit(C_R + "FATAL: " + nombre + " no encontrada." + C_E)
+    return lib
+end function
+
+globals.metax = cargarLib("metaxploit.so")
+globals.crypto = cargarLib("crypto.so")
+
+// Función para verificar conexión
+verificarConexion = function(ip)
+    if ip == "localhost" or ip == "127.0.0.1" then return true
+    return globals.activeShell.ping(ip)
+end function
+
+// Función para actualizar HUD de ruta
+updateRoute = function(description)
+    if globals.route.indexOf(description) == null then
+        globals.route.push(description)
+    end if
+end function
+
+// Función para mostrar HUD de ruta
+displayRoute = function
+    routeStr = ""
+    for i in range(0, globals.route.len - 1)
+        if i > 0 then routeStr = routeStr + " -> "
+        routeStr = routeStr + globals.route[i]
+    end for
+    print C_B + "RUTA: " + C_W + routeStr + C_E
+end function
+
+// Función para obtener objeto computer actual
+getCurrentComputer = function
+    if globals.currentComputer then return globals.currentComputer
+    if typeof(globals.activeShell) == "shell" then
+        return globals.activeShell.host_computer
+    else if typeof(globals.activeShell) == "computer" then
+        return globals.activeShell
+    end if
+    return get_shell.host_computer
+end function
+
+// Función para actualizar computer actual
+updateCurrentComputer = function(newComputer)
+    globals.currentComputer = newComputer
+    if typeof(newComputer) == "computer" then
+        updateRoute(newComputer.local_ip)
+    end if
+end function
+
+// Función para mostrar tablas limpias (sin colores en separadores)
+displayTable = function(header, rows)
+    // Crear tabla sin colores en separadores
+    // Usar format_columns sin colores en los separadores
+    // Primero, eliminar etiquetas de color de los separadores "|"
+    // Asumimos que rows ya tiene colores en datos, pero no en "|"
+    table = format_columns(header + "\n" + rows)
+    // Reemplazar cualquier color en los separadores "|"
+    // Los separadores son "|", asegurarse de que no tengan etiquetas de color
+    // Simplemente imprimimos la tabla
+    print table
+end function
+
+// Función para formatear fila de tabla sin colores en separadores
+formatTableRow = function(columns, colors = null)
+    // columns: lista de valores
+    // colors: lista de colores para cada columna (opcional)
+    row = ""
+    for i in range(0, columns.len - 1)
+        if i > 0 then row = row + " | "
+        if colors and colors.hasIndex(i) then
+            row = row + colors[i] + columns[i] + C_E
+        else
+            row = row + columns[i]
+        end if
+    end for
+    return row
+end function
+
+// ==========================================================
+// MÓDULOS DE FUNCIONALIDAD
+// ==========================================================
+
+// Motor de red mejorado
+nmapWraith = function()
+    globals.lastScan = []
+    target = globals.ipTarget
+    if not target then return C_R + " [!] No target IP set" + C_E
+    
+    hostActivo = globals.activeShell.host_computer
+    if target == "127.0.0.1" or target == "localhost" then target = hostActivo.local_ip
+    if not verificarConexion(target) then return C_R + " [!] HOST UNREACHABLE" + C_E
+    
+    // Usar módulo wraith_net
+    result = wraith_net.scanPorts(target)
+    if typeof(result) == "string" and result.indexOf("Error") != null then
+        return C_R + result + C_E
+    end if
+    
+    // Parsear resultado y guardar puertos para exploits
+    lines = result.split("\n")
+    for line in lines
+        if line.indexOf("PORT") != null then continue
+        parts = line.split(" ")
+        if parts.len >= 1 then
+            portNum = parts[0]
+            if is_valid_number(portNum) then
+                globals.lastScan.push(portNum.to_int)
+            end if
+        end if
+    end for
+    
+    return result
+end function
+
+// Motor de exploit mejorado
+ejecutarAtaqueID = function(idInput)
+    if idInput == "" then return
+    pNum = 0
+    if idInput != "0" then
+        idx = idInput.to_int - 1
+        if idx < 0 or idx >= globals.lastScan.len then return
+        pNum = globals.lastScan[idx]
+    else
+        pNum = 0
+    end if
+    
+    print C_W + "Conectando a " + globals.ipTarget + ":" + pNum + "..." + C_E
+    
+    // Usar módulo wraith_exploit
+    connection = wraith_exploit.connectToTarget(globals.ipTarget, pNum)
+    if connection.hasIndex("error") then
+        print C_R + connection["error"] + C_E
+        return
+    end if
+    
+    lib = connection["lib"]
+    libs = connection["libs"]
+    
+    // Detectar si es router
+    lanTarget = ""
+    if lib.lib_name == "kernel_router.so" then
+        print C_P + " [!] ROUTER DETECTADO. ¿USAR BOUNCE?" + C_E
+        print " [1] NO (Atacar Router)  [2] SÍ (Saltar a IP Interna)"
+        if user_input(">> ") == "2" then
+            lanTarget = user_input(C_Y + "IP Interna: " + C_E)
+            updateRoute("Router -> " + lanTarget)
+        end if
+    end if
+    
+    // Escanear vulnerabilidades
+    vulns = wraith_exploit.scanVulnerabilities(lib)
+    if vulns.len == 0 then
+        print C_Y + " [!] No vulnerabilities found" + C_E
+        return
+    end if
+    
+    // Intentar exploits
+    for vuln in vulns
+        res = wraith_exploit.executeExploit(lib, vuln["area"], vuln["vuln"], lanTarget)
+        if res then
+            infoSess = globals.ipTarget + ":" + pNum
+            if lanTarget != "" then infoSess = lanTarget + " (via " + globals.ipTarget + ")"
+            globals.sesiones.push({"obj": res, "info": infoSess})
+            print C_G + "[+] Acceso obtenido: " + typeof(res).upper + C_E
+            
+            // Extracción automática de intel (REQ-INTEL)
+            if typeof(res) == "computer" then
+                intel = wraith_exploit.extractIntel(res, true)
+                if intel["users"].len > 0 then
+                    print C_P + " [INTEL] Usuarios encontrados: " + intel["users"].join(", ") + C_E
+                end if
+                if intel["banks"].len > 0 then
+                    print C_P + " [INTEL] Bancos encontrados: " + intel["banks"].len + C_E
+                end if
+                if intel["mails"].len > 0 then
+                    print C_P + " [INTEL] Correos encontrados: " + intel["mails"].len + C_E
+                end if
+            end if
+        end if
+    end for
+    
+    user_input "[ENTER]"
+end function
+
+// Gestor de sesiones
+gestorSesiones = function()
+    limpiar; print HUD_LINE
+    if globals.sesiones.len == 0 then
+        print C_R + " NO SESSIONS"
+        user_input "[ENTER]"
+        return
+    end if
+    
+    // Crear tabla sin colores en separadores
+    header = "ID | TYPE | TARGET"
+    cuerpo = ""
+    for i in range(0, globals.sesiones.len - 1)
+        s = globals.sesiones[i]
+        cuerpo = cuerpo + "\n" + C_Y + (i+1) + C_E + " | " + C_W + typeof(s.obj).upper + C_E + " | " + C_G + s.info + C_E
+    end for
+    
+    print displayTable(header, cuerpo)
+    print HUD_LINE
+    
+    idxS = user_input(C_Y + "ID: " + C_E)
+    if idxS == "" or idxS == "q" then return
+    idx = idxS.to_int - 1
+    if idx < 0 or idx >= globals.sesiones.len then return
+    s = globals.sesiones[idx]
+    
+    if typeof(s.obj) == "shell" then
+        print C_B + " [1] INTERACT  [2] PIVOT  [3] BACK" + C_E
+        opt = user_input(">> ")
+        if opt == "1" then
+            s.obj.start_terminal
+        else if opt == "2" then
+            globals.activeShell = s.obj
+            globals.originDisplay = s.obj.host_computer.local_ip
+            updateRoute("Pivot -> " + s.obj.host_computer.local_ip)
+        end if
+    else if typeof(s.obj) == "computer" then
+        print C_Y + " [!] Explorando archivos del objeto COMPUTER..." + C_E
+        // Usar módulo wraith_fs
+        result = wraith_fs.wls(s.obj, "/home")
+        print result
+        user_input "[ENTER]"
+    end if
+end function
+
+// Función para gestión de logs (REQ-STEALTH)
+gestorLogs = function()
+    if not globals.currentComputer then
+        print C_R + " [!] No active computer session" + C_E
+        return
+    end if
+    
+    print HUD_LINE
+    print C_W + "LOG MANAGEMENT" + C_E
+    print HUD_LINE
+    print C_W + "[1] VIEW LOGS [2] FILTER BY IP [3] DELETE BY IP [4] STATS [5] SEARCH" + C_E
+    cmd = user_input(C_G + "logs>> " + C_E)
+    
+    if cmd == "1" then
+        lines = user_input(C_Y + "Lines (default 50): " + C_E)
+        if lines == "" then lines = "50"
+        result = wraith_stealth.viewLogsFormatted(globals.currentComputer, lines.to_int)
+        print result
+        user_input "[ENTER]"
+    else if cmd == "2" then
+        ip = user_input(C_Y + "IP to filter: " + C_E)
+        if ip == "" then return
+        result = wraith_stealth.filterLogsByIP(globals.currentComputer, ip)
+        for line in result
+            print line
+        end for
+        user_input "[ENTER]"
+    else if cmd == "3" then
+        ip = user_input(C_Y + "IP to delete: " + C_E)
+        if ip == "" then return
+        result = wraith_stealth.cleanLogsByIP(globals.currentComputer, ip)
+        print C_G + result + C_E
+        user_input "[ENTER]"
+    else if cmd == "4" then
+        stats = wraith_stealth.getLogStats(globals.currentComputer)
+        print C_W + "Log Statistics:" + C_E
+        print "Total lines: " + stats["total_lines"]
+        print "Unique IPs: " + stats["unique_ips"].len
+        print "Last modified: " + stats["last_modified"]
+        user_input "[ENTER]"
+    else if cmd == "5" then
+        term = user_input(C_Y + "Search term: " + C_E)
+        if term == "" then return
+        results = wraith_stealth.searchInLogs(globals.currentComputer, term)
+        print "Found " + results.len + " matches"
+        for r in results
+            print C_B + "Line " + r["line"] + ": " + C_W + r["content"] + C_E
+        end for
+        user_input "[ENTER]"
+    end if
+end function
+
+// ==========================================================
+// INTERFAZ PRINCIPAL
+// ==========================================================
+
+while true
+    limpiar
+    print C_P + "      W R A I T H   O S   v 4 . 0" + C_E
+    print HUD_LINE
+    
+    // Mostrar HUD de ruta
+    displayRoute
+    
+    // Estado del host
+    status_host = C_R + "(OFFLINE)" + C_E
+    if globals.ipTarget and verificarConexion(globals.ipTarget) then status_host = C_G + "(ONLINE)" + C_E
+    
+    print " ORIGIN: " + C_B + globals.originDisplay + C_E + " | TARGET: " + C_Y + globals.ipTarget + C_E + " " + status_host
+    print " SESSIONS: " + C_G + globals.sesiones.len + C_E
+    print HUD_LINE
+    
+    // Mostrar escaneo de red
+    print nmapWraith
+    print HUD_SUB
+    
+    // Menú principal
+    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] EXIT" + C_E
+    cmd = user_input(C_G + "wraith>> " + C_E)
+    
+    if cmd == "1" then
+        idS = user_input("ID: ")
+        ejecutarAtaqueID(idS)
+    else if cmd == "2" then
+        gestorSesiones
+    else if cmd == "3" then
+        gestorLogs
+    else if cmd == "4" then
+        globals.activeShell.start_terminal
+    else if cmd == "5" then
+        nt = user_input("IP: ")
+        if nt != "" then
+            globals.ipTarget = nt
+            updateRoute("Target -> " + nt)
+        end if
+    else if cmd == "6" then
+        exit
+    end if
+end while
