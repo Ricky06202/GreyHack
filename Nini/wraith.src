@@ -677,7 +677,23 @@ gestorDecipher = function()
     print HUD_LINE
     print C_W + "Ingresa hash (formato usuario:hash o solo hash):" + C_E
     hashInput = user_input(C_G + ">> " + C_E)
-    if hashInput == "" then return
+    user = ""
+    parts = hashInput.split(":")
+    if parts.len >= 2 then user = parts[0]
+    
+    // Verificar si ya tenemos la credencial descifrada
+    if globals.currentComputer then
+        ip = globals.currentComputer.public_ip
+        if not ip or ip == "" then ip = globals.currentComputer.local_ip
+        if user != "" then
+            existing = wraith_db.getCredentials(ip, user)
+            if existing and existing.pass != "FAIL" and existing.pass.indexOf("[ENCRYPTED]") == null then
+                print C_G + " [+] Credencial ya descifrada encontrada: " + C_W + existing.pass + C_E
+                user_input "[ENTER]"
+                return
+            end if
+        end if
+    end if
     
     // Decifrar hash
     result = wraith_exploit.crackHash(hashInput)
