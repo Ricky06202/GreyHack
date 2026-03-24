@@ -1,31 +1,15 @@
-// Test import_code functionality
+// Test import_code functionality - simple version
 print "Testing import_code..."
 
-// First, check if file exists
-comp = get_shell.host_computer
-testFile = comp.File("/lib/wraith/test_module.src")
-if not testFile then
-    print "ERROR: test_module.src not found in /lib/wraith/"
-    print "Current path: " + current_path
-    // Try to find the file in current directory
-    localFile = comp.File(current_path + "/test_module.src")
-    if localFile then
-        print "Found in current directory, trying relative import"
-        testModule = import_code("./test_module.src")
-    end if
-else
-    // Import the test module
-    testModule = import_code("/lib/wraith/test_module.src")
-end if
+// Import the test module
+import_code("/lib/wraith/test_module.src")
 
-if typeof(testModule) == "map" then
+// Now testHello and testVariable should be in scope
+if typeof(testHello) == "function" then
     print "Module imported successfully"
-    if testModule.hasIndex("sayHello") then
-        result = testModule.sayHello("Grey Hack")
-        print result
-    else
-        print "Module does not have sayHello function"
-    end if
+    result = testHello("Grey Hack")
+    print result
+    print "Variable from module: " + testVariable
 else
-    print "Failed to import module, type: " + typeof(testModule)
+    print "Failed to import module"
 end if

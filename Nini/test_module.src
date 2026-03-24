@@ -1,8 +1,6 @@
-// Test module for import_code
-sayHello = function(name)
-    return "Hello, " + name + "!"
+// Test module for import_code - simple version
+testHello = function(name)
+    return "Hello from module, " + name + "!"
 end function
 
-testModule = {
-    "sayHello": @sayHello
-}
+testVariable = "I am a variable from module"
