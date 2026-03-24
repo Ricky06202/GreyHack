@@ -189,7 +189,7 @@ wraith_fs = import_code("/lib/wraith/wraith_fs.src")
 wraith_net = import_code("/lib/wraith/wraith_net.src")
 wraith_exploit = import_code("/lib/wraith/wraith_exploit.src")
 wraith_stealth = import_code("/lib/wraith/wraith_stealth.src")
-wraith_exploits = import_code("/lib/wraith/wraith_exploits.src")
+wraith_vulncache = import_code("/lib/wraith/wraith_vulncache.src")
 
 // Variables globales
 globals.ipTarget = ""
