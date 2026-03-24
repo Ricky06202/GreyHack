@@ -61,7 +61,6 @@ scanPorts = function(targetIp, portRange = null)
     
     // Encabezado
     result = C_B + "ID" + C_E + sep2 + C_P + " PORT " + C_E + sep2 + C_G + " STATE " + C_E + sep2 + C_Y + " SERVICE " + C_E + sep2 + C_O + " VERSION " + C_E + sep2 + C_C + " LAN_IP" + C_E + "\n"
-    result = result + C_W + "-----+----------+----------+---------------------------+------------+---------------------------" + C_E + "\n"
     
     portId = 1
     for port in ports
