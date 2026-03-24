@@ -205,5 +205,5 @@ wraith_fs = {
     "wrm": @wrm,
     "wcat": @wcat,
     "wwrite": @wwrite,
-    "wcopy": @wcopy
+    "wcopy": @wcopy,
 }

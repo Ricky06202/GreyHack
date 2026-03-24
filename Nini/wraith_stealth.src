@@ -282,5 +282,5 @@ wraith_stealth = {
     "viewLogsFormatted": @viewLogsFormatted,
     "searchInLogs": @searchInLogs,
     "viewLogsNumbered": @viewLogsNumbered,
-    "deleteLogLinesByNumbers": @deleteLogLinesByNumbers
+    "deleteLogLinesByNumbers": @deleteLogLinesByNumbers,
 }

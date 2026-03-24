@@ -122,5 +122,5 @@ wraith_exploits = {
     "saveExploit": @saveExploit,
     "getExploits": @getExploits,
     "listExploits": @listExploits,
-    "clearExploits": @clearExploits
+    "clearExploits": @clearExploits,
 }

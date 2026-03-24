@@ -215,5 +215,5 @@ wraith_net = {
     "getNetworkInfo": @getNetworkInfo,
     "checkHost": @checkHost,
     "pivotTo": @pivotTo,
-    "discoverNetworkDetailed": @discoverNetworkDetailed
+    "discoverNetworkDetailed": @discoverNetworkDetailed,
 }
