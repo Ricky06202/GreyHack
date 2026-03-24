@@ -24,7 +24,7 @@ end if
 
 // 2. Copiar archivos .src a /lib/wraith
 print "[2] Copiando archivos de módulos..."
-modules = ["wraith_db.src", "wraith_fs.src", "wraith_net.src", "wraith_exploit.src", "wraith_stealth.src"]
+modules = ["wraith_db.src", "wraith_fs.src", "wraith_net.src", "wraith_exploit.src", "wraith_stealth.src", "wraith_vulncache.src"]
 
 for moduleName in modules
     // Buscar en directorio actual y en modules/
