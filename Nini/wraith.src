@@ -168,7 +168,7 @@ displayRandomHeader = function()
               @style6, @style7, @style8, @style9, @style10]
     
     // Elegir estilo aleatorio
-    styleIndex = rnd(styles.len).floor
+    styleIndex = floor(rnd * styles.len)
     selectedStyle = styles[styleIndex]
     
     // Imprimir lineas del estilo
