@@ -1,0 +1,723 @@
+// ==========================================================
+// WRAITH OS v4.0 - COMBINED FOR TESTING
+// ==========================================================
+
+// --- wraith_db.src ---
+getVaultPath = function()
+    shell = get_shell
+    comp = shell.host_computer
+    home = comp.File("/home")
+    if home then
+        currentUser = comp.active_user
+        userFolder = comp.File("/home/" + currentUser)
+        if userFolder then
+            return userFolder.path + "/.wraith_vault"
+        end if
+    end if
+    return current_path + "/.wraith_vault"
+end function
+
+saveVault = function(data)
+    vaultPath = getVaultPath()
+    file = get_shell.host_computer.File(vaultPath)
+    if file then
+        file.set_content(serialize(data))
+    else
+        shell = get_shell
+        comp = shell.host_computer
+        parent = comp.File(parent_path(vaultPath))
+        if parent then
+            newFile = parent.create_file(vaultPath)
+            if newFile then newFile.set_content(serialize(data))
+        end if
+    end if
+end function
+
+loadVault = function()
+    vaultPath = getVaultPath()
+    file = get_shell.host_computer.File(vaultPath)
+    if not file then return {}
+    content = file.get_content
+    if not content then return {}
+    return deserialize(content)
+end function
+
+saveCredentials = function(ip, user, pass, privilege = "user")
+    vault = loadVault()
+    if not vault.hasIndex("credentials") then vault["credentials"] = {}
+    vault["credentials"][ip] = {"ip": ip, "user": user, "pass": pass, "priv": privilege}
+    saveVault(vault)
+end function
+
+getCredentials = function(ip)
+    vault = loadVault()
+    if vault.hasIndex("credentials") and vault["credentials"].hasIndex(ip) then
+        return vault["credentials"][ip]
+    end if
+    return null
+end function
+
+listCredentials = function()
+    vault = loadVault()
+    if vault.hasIndex("credentials") then return vault["credentials"]
+    return {}
+end function
+
+deleteCredentials = function(ip)
+    vault = loadVault()
+    if vault.hasIndex("credentials") and vault["credentials"].hasIndex(ip) then
+        vault["credentials"].remove(ip)
+        saveVault(vault)
+        return true
+    end if
+    return false
+end function
+
+serialize = function(data)
+    return str(data)
+end function
+
+// --- wraith_fs.src ---
+wls = function(target, path = "/", showHidden = false)
+    if not target then return "Error: No target specified"
+    comp = null
+    if typeof(target) == "computer" then comp = target
+    else if typeof(target) == "shell" then comp = target.host_computer
+    else return "Error: Invalid target type"
+    end if
+    file = comp.File(path)
+    if not file then return "Error: Path not found"
+    if not file.is_folder then return path + " [FILE] " + file.permissions + " " + file.size + " bytes"
+    result = "Listing: " + path + "\n"
+    items = file.get_files + file.get_folders
+    for item in items
+        type = "[FILE]"
+        if item.is_folder then type = "[DIR]"
+        result = result + item.permissions + " " + type + " " + item.name + " " + item.size + " bytes\n"
+    end for
+    return result
+end function
+
+wcd = function(target, path)
+    if not target then return "Error: No target specified"
+    comp = null
+    if typeof(target) == "computer" then comp = target
+    else if typeof(target) == "shell" then comp = target.host_computer
+    else return "Error: Invalid target type"
+    end if
+    file = comp.File(path)
+    if file and file.is_folder then return file.path
+    return null
+end function
+
+wrm = function(target, path, recursive = false)
+    if not target then return "Error: No target specified"
+    comp = null
+    if typeof(target) == "computer" then comp = target
+    else if typeof(target) == "shell" then comp = target.host_computer
+    else return "Error: Invalid target type"
+    end if
+    file = comp.File(path)
+    if not file then return "Error: File not found"
+    if recursive and file.is_folder then
+        items = file.get_files + file.get_folders
+        for item in items
+            wrm(target, path + "/" + item.name, true)
+        end for
+    end if
+    parent = file.parent
+    success = parent.delete(file.name)
+    if success then return "Deleted: " + path
+    return "Error: Delete failed"
+end function
+
+wcat = function(target, path, lines = 0)
+    if not target then return "Error: No target specified"
+    comp = null
+    if typeof(target) == "computer" then comp = target
+    else if typeof(target) == "shell" then comp = target.host_computer
+    else return "Error: Invalid target type"
+    end if
+    file = comp.File(path)
+    if not file then return "Error: File not found"
+    content = file.get_content
+    if lines > 0 then
+        allLines = content.split(char(10))
+        if allLines.len <= lines then return content
+        return allLines[allLines.len - lines:].join(char(10))
+    end if
+    return content
+end function
+
+wwrite = function(target, path, content, append = false)
+    if not target then return "Error: No target specified"
+    comp = null
+    if typeof(target) == "computer" then comp = target
+    else if typeof(target) == "shell" then comp = target.host_computer
+    else return "Error: Invalid target type"
+    end if
+    file = comp.File(path)
+    if not file then
+        parentPath = parent_path(path)
+        fileName = path.split("/")[-1]
+        parent = comp.File(parentPath)
+        if not parent then return "Error: Parent directory not found"
+        file = parent.create_file(fileName)
+        if not file then return "Error: Could not create file"
+    end if
+    if append then
+        current = file.get_content
+        if not current then current = ""
+        file.set_content(current + content)
+    else
+        file.set_content(content)
+    end if
+    return "Written: " + path
+end function
+
+wcopy = function(target, sourcePath, destPath)
+    if not target then return "Error: No target specified"
+    comp = null
+    if typeof(target) == "computer" then comp = target
+    else if typeof(target) == "shell" then comp = target.host_computer
+    else return "Error: Invalid target type"
+    end if
+    source = comp.File(sourcePath)
+    if not source then return "Error: Source not found"
+    destDir = parent_path(destPath)
+    destName = destPath.split("/")[-1]
+    parent = comp.File(destDir)
+    if not parent then return "Error: Destination directory not found"
+    success = source.copy(destDir, destName)
+    if success then return "Copied: " + sourcePath + " to " + destPath
+    return "Error: Copy failed"
+end function
+
+// --- wraith_net.src ---
+getWraithRouter = function(targetIp = null)
+    if targetIp == null then return get_router
+    return get_router(targetIp)
+end function
+
+scanPorts = function(targetIp, portRange = null)
+    if not targetIp then return "Error: No target IP"
+    shell = get_shell
+    if not shell.ping(targetIp) then return "Error: Host unreachable"
+    isLan = is_lan_ip(targetIp)
+    router = getWraithRouter(targetIp)
+    if not router then return "Error: Router not found"
+    ports = []
+    if isLan then ports = router.device_ports(targetIp)
+    if ports.len == 0 then return "No open ports found"
+    result = "Open ports on " + targetIp + ":\n"
+    for port in ports
+        result = result + "  " + port + "\n"
+    end for
+    return result
+end function
+
+getPortInfo = function(targetIp, port)
+    router = getWraithRouter(targetIp)
+    if not router then return null
+    portInfo = router.port_info(targetIp, port)
+    return portInfo
+end function
+
+scanLocalNetwork = function()
+    shell = get_shell
+    router = get_router
+    if not router then return "Error: No router found"
+    devices = router.lan_devices
+    result = "LAN Devices:\n"
+    for ip in devices.indexes
+        dev = devices[ip]
+        result = result + "  " + ip + " - " + dev.hw_address + "\n"
+    end for
+    return result
+end function
+
+getNetworkInfo = function(targetIp)
+    router = getWraithRouter(targetIp)
+    if not router then return null
+    info = {"ip": targetIp, "gateway": router.ip, "subnet": ""}
+    return info
+end function
+
+checkHost = function(targetIp)
+    shell = get_shell
+    if shell.ping(targetIp) then return true
+    return false
+end function
+
+pivotTo = function(targetIp)
+    shell = get_shell
+    if not shell.ping(targetIp) then return null
+    router = getWraithRouter(targetIp)
+    if not router then return null
+    session = router.connect(targetIp)
+    return session
+end function
+
+discoverNetworkDetailed = function()
+    router = get_router
+    if not router then return "Error: No router found"
+    devices = router.lan_devices
+    result = []
+    for ip in devices.indexes
+        dev = devices[ip]
+        result.push({"ip": ip, "mac": dev.hw_address})
+    end for
+    return result
+end function
+
+// --- wraith_exploit.src ---
+loadExploitLibs = function()
+    metax = include_lib("/lib/metaxploit.so")
+    crypto = include_lib("/lib/crypto.so")
+    if not metax then return {"error": "metaxploit.so not found"}
+    return {"metax": metax, "crypto": crypto}
+end function
+
+loadExploitsCacheModule = function()
+    import_code("/lib/wraith/wraith_vulncache.src")
+end function
+
+connectToTarget = function(ip, port)
+    libs = loadExploitLibs()
+    if libs.hasIndex("error") then return libs
+    session = libs["metax"].net_use(ip, port)
+    if not session then return {"error": "Connection failed"}
+    lib = session.dump_lib
+    if not lib then return {"error": "Could not dump library"}
+    return {"session": session, "lib": lib, "libs": libs}
+end function
+
+scanVulnerabilities = function(lib, info = null)
+    libs = loadExploitLibs()
+    if libs.hasIndex("error") then return {"vulns": [], "cached": false}
+    metax = libs["metax"]
+    if info != null and info.hasIndex("service") and info.hasIndex("version") and info.hasIndex("ip") then
+        loadExploitsCacheModule()
+        cached = getExploits(info["service"], info["version"])
+        if cached.len > 0 then
+            result = []
+            for exp in cached
+                if exp["ip"] == info["ip"] then
+                    result.push({"area": exp["area"], "vuln": exp["vuln"]})
+                end if
+            end for
+            if result.len > 0 then return {"vulns": result, "cached": true}
+        end if
+    end if
+    areas = []
+    if metax then areas = metax.scan(lib)
+    if areas == null then return {"vulns": [], "cached": false}
+    vulnerabilities = []
+    for area in areas
+        vulns = []
+        scanResult = metax.scan_address(lib, area)
+        if scanResult == null then continue
+        vulns = scanResult.split("<b>")
+        for v_raw in vulns
+            if v_raw.indexOf("</b>") == null then continue
+            v = v_raw.split("</b>")[0]
+            vulnerabilities.push({"area": area, "vuln": v})
+            if info != null and info.hasIndex("service") and info.hasIndex("version") and info.hasIndex("ip") then
+                loadExploitsCacheModule()
+                saveExploit(info["service"], info["version"], info["ip"], area, v)
+            end if
+        end for
+    end for
+    return {"vulns": vulnerabilities, "cached": false}
+end function
+
+executeExploit = function(lib, area, vuln, lanIp = null)
+    res = null
+    if lib and area and vuln then
+        if lanIp then res = lib.overflow(area, vuln, lanIp)
+        else res = lib.overflow(area, vuln)
+        end if
+    end if
+    return res
+end function
+
+getSessionType = function(sessionObj)
+    if not sessionObj then return "none"
+    return typeof(sessionObj)
+end function
+
+extractIntel = function(computer, silent = true)
+    if not computer or typeof(computer) != "computer" then return {}
+    intel = {"users": [], "banks": {}, "mails": {}, "passwd": null, "system_info": {}}
+    if computer then
+        comp = computer
+        if comp then
+            intel["system_info"] = {"hostname": comp.host_name, "lan_ip": comp.local_ip, "public_ip": comp.public_ip, "active_user": comp.active_user, "is_network_active": comp.is_network_active}
+        end if
+    end if
+    home = computer.File("/home")
+    if home then
+        users = home.get_folders
+        for userFolder in users
+            userName = userFolder.name
+            intel["users"].push(userName)
+            bankFile = computer.File("/home/" + userName + "/Config/Bank.txt")
+            if bankFile then
+                content = bankFile.get_content
+                if content then
+                    decrypted = content
+                    libs = loadExploitLibs()
+                    if libs.hasIndex("crypto") and libs["crypto"] then
+                        decipherResult = libs["crypto"].decipher(content)
+                        if decipherResult then decrypted = decipherResult
+                    end if
+                    intel["banks"][userName] = decrypted
+                end if
+            end if
+            mailFile = computer.File("/home/" + userName + "/Config/Mail.txt")
+            if mailFile then
+                content = mailFile.get_content
+                if content then
+                    decrypted = content
+                    libs = loadExploitLibs()
+                    if libs.hasIndex("crypto") and libs["crypto"] then
+                        decipherResult = libs["crypto"].decipher(content)
+                        if decipherResult then decrypted = decipherResult
+                    end if
+                    intel["mails"][userName] = decrypted
+                end if
+            end if
+        end for
+    end if
+    passwdFile = computer.File("/etc/passwd")
+    if passwdFile then
+        content = passwdFile.get_content
+        if content then intel["passwd"] = content
+    end if
+    return intel
+end function
+
+scanLocalVulnerabilities = function(computer)
+    if not computer or typeof(computer) != "computer" then return []
+    vulns = []
+    root = computer.File("/")
+    if root then
+        paths = ["/etc", "/bin", "/usr/bin", "/lib"]
+        for path in paths
+            folder = computer.File(path)
+            if folder then
+                items = folder.get_files + folder.get_folders
+                for item in items
+                    if item.has_permission("w") and not item.has_permission("r") then
+                        vulns.push({"path": item.path, "type": "write_only", "severity": "medium"})
+                    end if
+                end for
+            end if
+        end for
+    end if
+    binFolder = computer.File("/bin")
+    if binFolder then
+        items = binFolder.get_files
+        for item in items
+            if item.permissions.indexOf("s") != null then
+                vulns.push({"path": item.path, "type": "setuid", "severity": "high"})
+            end if
+        end for
+    end if
+    return vulns
+end function
+
+uploadFile = function(sourceShell, sourcePath, targetComputer, destPath)
+    if not sourceShell or not targetComputer then return "Error: Invalid parameters"
+    result = null
+    if targetComputer and sourcePath and destPath and sourceShell then
+        result = targetComputer.scp(sourcePath, destPath, sourceShell, 1)
+    end if
+    if result then return "Upload successful: " + destPath
+    return "Upload failed"
+end function
+
+downloadFile = function(targetComputer, sourcePath, destShell, destPath)
+    if not targetComputer or not destShell then return "Error: Invalid parameters"
+    result = null
+    if targetComputer and sourcePath and destPath and destShell then
+        result = targetComputer.scp(sourcePath, destPath, destShell, 0)
+    end if
+    if result then return "Download successful: " + destPath
+    return "Download failed"
+end function
+
+autoLogin = function(computer, db)
+    if not computer or typeof(computer) != "computer" then return null
+    credentials = db.listCredentials
+    for key in credentials.indexes
+        cred = credentials[key]
+        if cred.ip == computer.public_ip or cred.ip == computer.local_ip then
+            shell = computer.start_terminal(cred.user, cred.pass)
+            if shell then return shell
+        end if
+    end for
+    return null
+end function
+
+manageSessions = function()
+    return {"sessions": [], "count": 0}
+end function
+
+decipherHash = function(hash)
+    if not hash or hash == "" then return null
+    libs = loadExploitLibs()
+    if not libs.hasIndex("crypto") or not libs["crypto"] then return null
+    result = null
+    if libs["crypto"] then result = libs["crypto"].decipher(hash)
+    return result
+end function
+
+crackHash = function(raw)
+    if not raw or raw == "" then return "EMPTY"
+    parts = raw.split(":")
+    hash = parts[0]
+    if parts.len > 1 then hash = parts[1]
+    result = decipherHash(hash)
+    if result then return result
+    return "FAIL"
+end function
+
+// --- wraith_vulncache.src ---
+getExploitsPath = function()
+    shell = get_shell
+    comp = shell.host_computer
+    home = comp.File("/home")
+    if home then
+        currentUser = comp.active_user
+        userFolder = comp.File("/home/" + currentUser)
+        if userFolder then return userFolder.path + "/.wraith_exploits"
+    end if
+    return current_path + "/.wraith_exploits"
+end function
+
+loadExploitsCache = function()
+    cachePath = getExploitsPath()
+    file = get_shell.host_computer.File(cachePath)
+    if not file then return {}
+    content = file.get_content
+    if not content then return {}
+    cache = {}
+    lines = content.split(char(10))
+    for line in lines
+        if line == "" then continue
+        parts = line.split("|")
+        if parts.len != 5 then continue
+        service = parts[0]
+        version = parts[1]
+        ip = parts[2]
+        area = parts[3]
+        vuln = parts[4]
+        key = service + "|" + version
+        if not cache.hasIndex(key) then cache[key] = []
+        cache[key].push({"ip": ip, "area": area, "vuln": vuln})
+    end for
+    return cache
+end function
+
+saveExploitsCache = function(cache)
+    cachePath = getExploitsPath()
+    content = ""
+    for key in cache.indexes
+        entries = cache[key]
+        parts = key.split("|")
+        service = parts[0]
+        version = parts[1]
+        for entry in entries
+            content = content + service + "|" + version + "|" + entry.ip + "|" + entry.area + "|" + entry.vuln + char(10)
+        end for
+    end for
+    file = get_shell.host_computer.File(cachePath)
+    if not file then
+        shell = get_shell
+        comp = shell.host_computer
+        parent = comp.File(parent_path(cachePath))
+        if parent then
+            newFile = parent.create_file(cachePath)
+            if newFile then newFile.set_content(content)
+        end if
+    else
+        file.set_content(content)
+    end if
+end function
+
+saveExploit = function(service, version, ip, area, vuln)
+    cache = loadExploitsCache()
+    key = service + "|" + version
+    if not cache.hasIndex(key) then cache[key] = []
+    cache[key].push({"ip": ip, "area": area, "vuln": vuln})
+    saveExploitsCache(cache)
+end function
+
+getExploits = function(service, version)
+    cache = loadExploitsCache()
+    key = service + "|" + version
+    if cache.hasIndex(key) then return cache[key]
+    return []
+end function
+
+listExploits = function()
+    return loadExploitsCache()
+end function
+
+clearExploits = function()
+    cachePath = getExploitsPath()
+    file = get_shell.host_computer.File(cachePath)
+    if file then file.set_content("")
+    return true
+end function
+
+// --- wraith_stealth.src ---
+readSystemLog = function(computer, lines = 0)
+    if not computer or typeof(computer) != "computer" then return "Error: Invalid computer object"
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return "Error: Log file not found"
+    if not logFile.has_permission("r") then return "Error: No read permission"
+    content = logFile.get_content
+    if not content then return ""
+    if lines > 0 then
+        allLines = content.split(char(10))
+        if allLines.len <= lines then return content
+        return allLines[allLines.len - lines:].join(char(10))
+    end if
+    return content
+end function
+
+filterLogsByIP = function(computer, ipAddress)
+    if not computer or typeof(computer) != "computer" then return []
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return []
+    content = logFile.get_content
+    if not content then return []
+    lines = content.split(char(10))
+    results = []
+    for i in range(0, lines.len - 1)
+        if lines[i].indexOf(ipAddress) != null then
+            results.push({"line": i + 1, "content": lines[i]})
+        end if
+    end for
+    return results
+end function
+
+deleteLogLines = function(computer, lineNumbers)
+    if not computer or typeof(computer) != "computer" then return "Error: Invalid computer"
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return "Error: Log file not found"
+    content = logFile.get_content
+    if not content then return "Error: Empty log"
+    lines = content.split(char(10))
+    newLines = []
+    for i in range(0, lines.len - 1)
+        if lineNumbers.indexOf(i + 1) == null then
+            newLines.push(lines[i])
+        end if
+    end for
+    newContent = newLines.join(char(10))
+    logFile.set_content(newContent)
+    return "Deleted " + lineNumbers.len + " lines"
+end function
+
+cleanLogsByIP = function(computer, ipAddress)
+    if not computer or typeof(computer) != "computer" then return "Error: Invalid computer"
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return "Error: Log file not found"
+    content = logFile.get_content
+    if not content then return "No content"
+    lines = content.split(char(10))
+    deletedCount = 0
+    newLines = []
+    for line in lines
+        if line.indexOf(ipAddress) != null then
+            deletedCount = deletedCount + 1
+        else
+            newLines.push(line)
+        end if
+    end for
+    newContent = newLines.join(char(10))
+    logFile.set_content(newContent)
+    return "Deleted " + deletedCount + " log entries"
+end function
+
+getLogStats = function(computer)
+    if not computer or typeof(computer) != "computer" then return "Error: Invalid computer"
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return "Error: Log file not found"
+    content = logFile.get_content
+    if not content then return "Empty log"
+    lines = content.split(char(10))
+    return {"totalLines": lines.len, "fileSize": content.len}
+end function
+
+viewLogsFormatted = function(computer, lines = 50)
+    if not computer or typeof(computer) != "computer" then return "Error: Invalid computer"
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return "Error: Log file not found"
+    content = logFile.get_content
+    if not content then return ""
+    allLines = content.split(char(10))
+    displayLines = allLines[-lines:]
+    result = ""
+    for line in displayLines
+        result = result + line + "\n"
+    end for
+    return result
+end function
+
+searchInLogs = function(computer, searchTerm)
+    if not computer or typeof(computer) != "computer" then return []
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return []
+    content = logFile.get_content
+    if not content then return []
+    lines = content.split(char(10))
+    result = []
+    for i in range(0, lines.len - 1)
+        if lines[i].indexOf(searchTerm) != null then
+            result.push({"line": i + 1, "content": lines[i]})
+        end if
+    end for
+    return result
+end function
+
+viewLogsNumbered = function(computer, lines = 50)
+    if not computer or typeof(computer) != "computer" then return "Error: Invalid computer"
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return "Error: Log file not found"
+    content = logFile.get_content
+    if not content then return ""
+    allLines = content.split(char(10))
+    displayLines = allLines[-lines:]
+    result = ""
+    for i in range(0, displayLines.len - 1)
+        result = result + str(i + 1) + ": " + displayLines[i] + "\n"
+    end for
+    return result
+end function
+
+deleteLogLinesByNumbers = function(computer, lineNumbers)
+    if not computer or typeof(computer) != "computer" then return "Error: Invalid computer"
+    logFile = computer.File("/var/log/system.log")
+    if not logFile then return "Error: Log file not found"
+    content = logFile.get_content
+    if not content then return "Error: Empty log"
+    lines = content.split(char(10))
+    newLines = []
+    for i in range(0, lines.len - 1)
+        if lineNumbers.indexOf(i + 1) == null then
+            newLines.push(lines[i])
+        end if
+    end for
+    newContent = newLines.join(char(10))
+    logFile.set_content(newContent)
+    return "Deleted " + lineNumbers.len + " lines"
+end function
+
+// ==========================================================
+// MAIN WRAITH CODE (simplified for testing)
+// ==========================================================
+print "WRAITH COMBINED TEST FILE LOADED"
