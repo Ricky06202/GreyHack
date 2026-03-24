@@ -707,62 +707,158 @@ gestorCreds = function()
     print HUD_LINE
     
     // Obtener todas las credenciales
-    creds = wraith_db.listCredentials
-    if creds.keys.len == 0 then
+    allCreds = wraith_db.listCredentials
+    if allCreds.keys.len == 0 then
         print C_Y + " No hay credenciales guardadas" + C_E
         user_input "[ENTER]"
         return
     end if
     
-    // Mostrar en tabla
-    header = C_Y + "ID" + C_E + " | " + C_W + "IP" + C_E + " | " + C_G + "USER" + C_E + " | " + C_B + "PASS" + C_E + " | " + C_P + "PRIV" + C_E
-    cuerpo = ""
-    id_count = 1
-    for key in creds.keys
-        cred = creds[key]
-        cuerpo = cuerpo + "\n" + C_Y + id_count + C_E + " | " + C_W + cred["ip"] + C_E + " | " + C_G + cred["user"] + C_E + " | " + C_B + cred["pass"] + C_E + " | " + C_P + cred["priv"] + C_E
-        id_count = id_count + 1
-    end for
+    // Variables para filtrado
+    filteredCreds = allCreds
+    filterType = ""
+    filterValue = ""
     
-    table = format_columns(header + "\n" + cuerpo)
-    print table
-    
-    // Opciones
-    print C_W + " [1] ELIMINAR CREDENCIAL  [2] EXPORTAR  [3] BACK" + C_E
-    opt = user_input(C_G + ">> " + C_E)
-    
-    if opt == "1" then
-        // Eliminar credencial
-        idx = user_input(C_Y + "ID a eliminar: " + C_E)
-        if idx == "" then return
-        idxNum = idx.to_int
-        if idxNum < 1 or idxNum > creds.keys.len then
-            print C_R + " ID inválida" + C_E
+    while true
+        limpiar
+        print HUD_LINE
+        print C_W + "CREDENTIALS MANAGER" + C_E
+        if filterType != "" then
+            print C_B + " Filtrado por " + filterType + ": " + C_G + filterValue + C_E
+        end if
+        print HUD_LINE
+        
+        // Mostrar en tabla
+        if filteredCreds.keys.len == 0 then
+            print C_Y + " No hay credenciales que coincidan con el filtro" + C_E
         else
-            key = creds.keys[idxNum-1]
-            parts = key.split("_")
-            if parts.len >= 2 then
-                ip = parts[0]
-                user = parts[1]
-                wraith_db.deleteCredentials(ip, user)
-                print C_G + " Credencial eliminada" + C_E
+            header = C_Y + "ID" + C_E + " | " + C_W + "IP" + C_E + " | " + C_G + "USER" + C_E + " | " + C_B + "PASS" + C_E + " | " + C_P + "PRIV" + C_E
+            cuerpo = ""
+            id_count = 1
+            for key in filteredCreds.keys
+                cred = filteredCreds[key]
+                cuerpo = cuerpo + "\n" + C_Y + id_count + C_E + " | " + C_W + cred["ip"] + C_E + " | " + C_G + cred["user"] + C_E + " | " + C_B + cred["pass"] + C_E + " | " + C_P + cred["priv"] + C_E
+                id_count = id_count + 1
+            end for
+            
+            table = format_columns(header + "\n" + cuerpo)
+            print table
+        end if
+        
+        // Opciones
+        print C_W + " [1] FILTRAR  [2] ELIMINAR  [3] EXPORTAR  [4] LIMPIAR FILTRO  [5] BACK" + C_E
+        opt = user_input(C_G + ">> " + C_E)
+        
+        if opt == "1" then
+            // Filtrar
+            print C_W + " Filtrar por:" + C_E
+            print " [1] IP  [2] Usuario  [3] TODOS"
+            filterOpt = user_input(">> ")
+            if filterOpt == "1" then
+                filterValue = user_input(C_Y + "IP a buscar: " + C_E)
+                if filterValue != "" then
+                    filterType = "IP"
+                    // Filtrar por IP
+                    filteredCreds = {}
+                    for key in allCreds.keys
+                        cred = allCreds[key]
+                        if cred["ip"].indexOf(filterValue) != null then
+                            filteredCreds[key] = cred
+                        end if
+                    end for
+                end if
+            else if filterOpt == "2" then
+                filterValue = user_input(C_Y + "Usuario a buscar: " + C_E)
+                if filterValue != "" then
+                    filterType = "USER"
+                    // Filtrar por usuario
+                    filteredCreds = {}
+                    for key in allCreds.keys
+                        cred = allCreds[key]
+                        if cred["user"].indexOf(filterValue) != null then
+                            filteredCreds[key] = cred
+                        end if
+                    end for
+                end if
+            else if filterOpt == "3" then
+                filterType = ""
+                filterValue = ""
+                filteredCreds = allCreds
             end if
-        end if
-        user_input "[ENTER]"
-    else if opt == "2" then
-        // Exportar a archivo
-        exportPath = current_path + "/wraith_creds.txt"
-        file = get_shell.host_computer.File(exportPath)
-        if file then
-            file.set_content(wraith_db.serialize(creds))
-        else
-            get_shell.host_computer.touch(current_path, "wraith_creds.txt")
+            
+        else if opt == "2" then
+            // Eliminar credencial (usar filteredCreds)
+            if filteredCreds.keys.len == 0 then
+                print C_Y + " No hay credenciales para eliminar" + C_E
+            else
+                idx = user_input(C_Y + "ID a eliminar (según tabla filtrada): " + C_E)
+                if idx != "" then
+                    idxNum = idx.to_int
+                    if idxNum < 1 or idxNum > filteredCreds.keys.len then
+                        print C_R + " ID inválida" + C_E
+                    else
+                        key = filteredCreds.keys[idxNum-1]
+                        parts = key.split("_")
+                        if parts.len >= 2 then
+                            ip = parts[0]
+                            user = parts[1]
+                            wraith_db.deleteCredentials(ip, user)
+                            print C_G + " Credencial eliminada" + C_E
+                            // Actualizar listas
+                            allCreds = wraith_db.listCredentials
+                            if filterType != "" then
+                                // Re aplicar filtro
+                                if filterType == "IP" then
+                                    filteredCreds = {}
+                                    for k in allCreds.keys
+                                        c = allCreds[k]
+                                        if c["ip"].indexOf(filterValue) != null then filteredCreds[k] = c
+                                    end for
+                                else if filterType == "USER" then
+                                    filteredCreds = {}
+                                    for k in allCreds.keys
+                                        c = allCreds[k]
+                                        if c["user"].indexOf(filterValue) != null then filteredCreds[k] = c
+                                    end for
+                                end if
+                            else
+                                filteredCreds = allCreds
+                            end if
+                        end if
+                    end if
+                end if
+            end if
+            user_input "[ENTER]"
+            
+        else if opt == "3" then
+            // Exportar a archivo (filteredCreds)
+            exportPath = current_path + "/wraith_creds.txt"
             file = get_shell.host_computer.File(exportPath)
-            if file then file.set_content(wraith_db.serialize(creds))
+            content = ""
+            for key in filteredCreds.keys
+                cred = filteredCreds[key]
+                content = content + cred["ip"] + "_" + cred["user"] + "=" + cred["pass"] + ":" + cred["priv"] + char(10)
+            end for
+            if file then
+                file.set_content(content)
+            else
+                get_shell.host_computer.touch(current_path, "wraith_creds.txt")
+                file = get_shell.host_computer.File(exportPath)
+                if file then file.set_content(content)
+            end if
+            print C_G + " Exportado " + filteredCreds.keys.len + " credenciales a: " + exportPath + C_E
+            user_input "[ENTER]"
+            
+        else if opt == "4" then
+            // Limpiar filtro
+            filterType = ""
+            filterValue = ""
+            filteredCreds = allCreds
+            
+        else if opt == "5" then
+            return
         end if
-        print C_G + " Exportado a: " + exportPath + C_E
-        user_input "[ENTER]"
-    end if
+    end while
 end function
 
 // Interfaz de shell remota
