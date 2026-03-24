@@ -81,7 +81,7 @@ displayRandomHeader = function()
         lines.push neonRed + "  \ / \ / \ / \ / \ / \ / \ / \ / " + reset
         return lines
     end function
-    
+
     // Estilo 5: Piramides isometricas
     style5 = function()
         lines = []
@@ -287,7 +287,7 @@ nmapWraith = function()
         parts = line.split(" ")
         if parts.len >= 1 then
             portNum = parts[0]
-            if is_valid_number(portNum) then
+            if typeof(portNum) == "number" then
                 globals.lastScan.push(portNum.to_int)
             end if
         end if
