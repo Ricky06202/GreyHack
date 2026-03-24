@@ -133,7 +133,7 @@ getNetworkInfo = function()
     }
     
     // Obtener informacion del router
-    router = getWraithRouter
+    router = getWraithRouter()
     if router then
         info["router_ip"] = router.ip_address
         info["router_ports"] = router.used_ports.len
