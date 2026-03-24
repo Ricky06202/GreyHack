@@ -2,6 +2,16 @@
 // WRAITH NET - Motor de Red para Wraith OS
 // ==========================================================
 
+C_G = "<color=#00FF41>"
+C_R = "<color=#FF3131>"
+C_B = "<color=#00D4FF>"
+C_Y = "<color=#F7FF00>"
+C_P = "<color=#B537F2>"
+C_W = "<color=#E0E0E0>"
+C_E = "</color>"
+C_O = "<color=#FF6600>"
+C_C = "<color=#00FFFF>"
+
 // Funcion para obtener el router correcto
 getWraithRouter = function(targetIp = null)
     if targetIp == null then
@@ -45,8 +55,14 @@ scanPorts = function(targetIp, portRange = null)
         ports = filtered
     end if
     
-    // Construir tabla de resultados con IDs
-    result = "ID  PORT STATE SERVICE VERSION LAN_IP\n"
+    // Construir tabla de resultados con IDs y colores
+    sep = C_W + " | " + C_E
+    sep2 = C_W + "|" + C_E
+    
+    // Encabezado
+    result = C_B + "ID" + C_E + sep2 + C_P + " PORT " + C_E + sep2 + C_G + " STATE " + C_E + sep2 + C_Y + " SERVICE " + C_E + sep2 + C_O + " VERSION " + C_E + sep2 + C_C + " LAN_IP" + C_E + "\n"
+    result = result + C_W + "---+----------+----------+---------------------------+------------+--------------------------" + C_E + "\n"
+    
     portId = 1
     for port in ports
         info = router.port_info(port)
@@ -56,15 +72,19 @@ scanPorts = function(targetIp, portRange = null)
         if parts.len > 1 then version = parts[1]
         
         status = "open"
-        if port.is_closed and not isLan then status = "closed"
+        statusColor = C_G
+        if port.is_closed and not isLan then 
+            status = "closed"
+            statusColor = C_R
+        end if
         
         lanIp = port.get_lan_ip
         
-        result = result + portId + "  " + port.port_number + " " + status + " " + service + " " + version + " " + lanIp + "\n"
+        result = result + C_B + str(portId) + C_E + sep2 + C_P + str(port.port_number) + C_E + sep2 + statusColor + status + C_E + sep2 + C_Y + service + C_E + sep2 + C_O + version + C_E + sep2 + C_C + lanIp + C_E + "\n"
         portId = portId + 1
     end for
     
-    return format_columns(result)
+    return result
 end function
 
 // Funcion para obtener informacion de un puerto especifico
