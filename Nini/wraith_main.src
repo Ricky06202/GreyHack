@@ -257,34 +257,7 @@ updateCurrentComputer = function(newComputer)
     end if
 end function
 
-// Función para mostrar tablas limpias (sin colores en separadores)
-displayTable = function(header, rows)
-    // Crear tabla sin colores en separadores
-    // Usar format_columns sin colores en los separadores
-    // Primero, eliminar etiquetas de color de los separadores "|"
-    // Asumimos que rows ya tiene colores en datos, pero no en "|"
-    table = format_columns(header + "\n" + rows)
-    // Reemplazar cualquier color en los separadores "|"
-    // Los separadores son "|", asegurarse de que no tengan etiquetas de color
-    // Simplemente imprimimos la tabla
-    print table
-end function
 
-// Función para formatear fila de tabla sin colores en separadores
-formatTableRow = function(columns, colors = null)
-    // columns: lista de valores
-    // colors: lista de colores para cada columna (opcional)
-    row = ""
-    for i in range(0, columns.len - 1)
-        if i > 0 then row = row + " | "
-        if colors and colors.hasIndex(i) then
-            row = row + colors[i] + columns[i] + C_E
-        else
-            row = row + columns[i]
-        end if
-    end for
-    return row
-end function
 
 // ==========================================================
 // MÓDULOS DE FUNCIONALIDAD
@@ -401,15 +374,17 @@ gestorSesiones = function()
         return
     end if
     
-    // Crear tabla sin colores en separadores
-    header = "ID | TYPE | TARGET"
+    // Crear tabla con colores en headers y datos (sin colores en separadores)
+    header = C_Y + "ID" + C_E + " | " + C_W + "TYPE" + C_E + " | " + C_G + "TARGET" + C_E
     cuerpo = ""
     for i in range(0, globals.sesiones.len - 1)
         s = globals.sesiones[i]
         cuerpo = cuerpo + "\n" + C_Y + (i+1) + C_E + " | " + C_W + typeof(s.obj).upper + C_E + " | " + C_G + s.info + C_E
     end for
     
-    print displayTable(header, cuerpo)
+    // Usar format_columns directamente (header y cuerpo ya tienen colores consistentes)
+    table = format_columns(header + "\n" + cuerpo)
+    print table
     print HUD_LINE
     
     idxS = user_input(C_Y + "ID: " + C_E)
