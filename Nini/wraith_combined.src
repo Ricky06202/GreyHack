@@ -82,7 +82,9 @@ wls = function(target, path = "/", showHidden = false)
     if not target then return "Error: No target specified"
     comp = null
     if typeof(target) == "computer" then comp = target
-    else if typeof(target) == "shell" then comp = target.host_computer
+    else
+        if typeof(target) == "shell" then comp = target.host_computer
+        end if
     else return "Error: Invalid target type"
     end if
     file = comp.File(path)
@@ -102,7 +104,9 @@ wcd = function(target, path)
     if not target then return "Error: No target specified"
     comp = null
     if typeof(target) == "computer" then comp = target
-    else if typeof(target) == "shell" then comp = target.host_computer
+    else
+        if typeof(target) == "shell" then comp = target.host_computer
+        end if
     else return "Error: Invalid target type"
     end if
     file = comp.File(path)
@@ -114,7 +118,9 @@ wrm = function(target, path, recursive = false)
     if not target then return "Error: No target specified"
     comp = null
     if typeof(target) == "computer" then comp = target
-    else if typeof(target) == "shell" then comp = target.host_computer
+    else
+        if typeof(target) == "shell" then comp = target.host_computer
+        end if
     else return "Error: Invalid target type"
     end if
     file = comp.File(path)
@@ -135,7 +141,9 @@ wcat = function(target, path, lines = 0)
     if not target then return "Error: No target specified"
     comp = null
     if typeof(target) == "computer" then comp = target
-    else if typeof(target) == "shell" then comp = target.host_computer
+    else
+        if typeof(target) == "shell" then comp = target.host_computer
+        end if
     else return "Error: Invalid target type"
     end if
     file = comp.File(path)
@@ -153,7 +161,9 @@ wwrite = function(target, path, content, append = false)
     if not target then return "Error: No target specified"
     comp = null
     if typeof(target) == "computer" then comp = target
-    else if typeof(target) == "shell" then comp = target.host_computer
+    else
+        if typeof(target) == "shell" then comp = target.host_computer
+        end if
     else return "Error: Invalid target type"
     end if
     file = comp.File(path)
@@ -179,7 +189,9 @@ wcopy = function(target, sourcePath, destPath)
     if not target then return "Error: No target specified"
     comp = null
     if typeof(target) == "computer" then comp = target
-    else if typeof(target) == "shell" then comp = target.host_computer
+    else
+        if typeof(target) == "shell" then comp = target.host_computer
+        end if
     else return "Error: Invalid target type"
     end if
     source = comp.File(sourcePath)
