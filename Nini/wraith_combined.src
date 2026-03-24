@@ -81,9 +81,12 @@ end function
 wls = function(target, path = "/", showHidden = false)
     if not target then return "Error: No target specified"
     comp = null
-    if typeof(target) == "computer" then comp = target
-    else if typeof(target) == "shell" then comp = target.host_computer
-    else return "Error: Invalid target type"
+    if typeof(target) == "computer" then 
+        comp = target
+    else if typeof(target) == "shell" then 
+        comp = target.host_computer
+    else 
+        return "Error: Invalid target type"
     end if
     file = comp.File(path)
     if not file then return "Error: Path not found"
@@ -101,11 +104,12 @@ end function
 wcd = function(target, path)
     if not target then return "Error: No target specified"
     comp = null
-    if typeof(target) == "computer" then comp = target
-    else
-        if typeof(target) == "shell" then comp = target.host_computer
-        end if
-    else return "Error: Invalid target type"
+    if typeof(target) == "computer" then 
+        comp = target
+    else if typeof(target) == "shell" then 
+        comp = target.host_computer
+    else 
+        return "Error: Invalid target type"
     end if
     file = comp.File(path)
     if file and file.is_folder then return file.path
@@ -115,11 +119,12 @@ end function
 wrm = function(target, path, recursive = false)
     if not target then return "Error: No target specified"
     comp = null
-    if typeof(target) == "computer" then comp = target
-    else
-        if typeof(target) == "shell" then comp = target.host_computer
-        end if
-    else return "Error: Invalid target type"
+    if typeof(target) == "computer" then 
+        comp = target
+    else if typeof(target) == "shell" then 
+        comp = target.host_computer
+    else 
+        return "Error: Invalid target type"
     end if
     file = comp.File(path)
     if not file then return "Error: File not found"
@@ -138,11 +143,12 @@ end function
 wcat = function(target, path, lines = 0)
     if not target then return "Error: No target specified"
     comp = null
-    if typeof(target) == "computer" then comp = target
-    else
-        if typeof(target) == "shell" then comp = target.host_computer
-        end if
-    else return "Error: Invalid target type"
+    if typeof(target) == "computer" then 
+        comp = target
+    else if typeof(target) == "shell" then 
+        comp = target.host_computer
+    else 
+        return "Error: Invalid target type"
     end if
     file = comp.File(path)
     if not file then return "Error: File not found"
@@ -158,11 +164,12 @@ end function
 wwrite = function(target, path, content, append = false)
     if not target then return "Error: No target specified"
     comp = null
-    if typeof(target) == "computer" then comp = target
-    else
-        if typeof(target) == "shell" then comp = target.host_computer
-        end if
-    else return "Error: Invalid target type"
+    if typeof(target) == "computer" then 
+        comp = target
+    else if typeof(target) == "shell" then 
+        comp = target.host_computer
+    else 
+        return "Error: Invalid target type"
     end if
     file = comp.File(path)
     if not file then
@@ -186,11 +193,12 @@ end function
 wcopy = function(target, sourcePath, destPath)
     if not target then return "Error: No target specified"
     comp = null
-    if typeof(target) == "computer" then comp = target
-    else
-        if typeof(target) == "shell" then comp = target.host_computer
-        end if
-    else return "Error: Invalid target type"
+    if typeof(target) == "computer" then 
+        comp = target
+    else if typeof(target) == "shell" then 
+        comp = target.host_computer
+    else 
+        return "Error: Invalid target type"
     end if
     source = comp.File(sourcePath)
     if not source then return "Error: Source not found"
