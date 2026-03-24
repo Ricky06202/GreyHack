@@ -732,7 +732,7 @@ gestorCreds = function()
     
     // Obtener todas las credenciales
     allCreds = wraith_db.listCredentials
-    if allCreds.keys.len == 0 then
+    if allCreds.indexes.len == 0 then
         print C_Y + " No hay credenciales guardadas" + C_E
         user_input "[ENTER]"
         return
@@ -753,15 +753,32 @@ gestorCreds = function()
         print HUD_LINE
         
         // Mostrar en tabla
-        if filteredCreds.keys.len == 0 then
+        if filteredCreds.indexes.len == 0 then
             print C_Y + " No hay credenciales que coincidan con el filtro" + C_E
         else
             header = C_Y + "ID" + C_E + " | " + C_W + "IP" + C_E + " | " + C_G + "USER" + C_E + " | " + C_B + "PASS" + C_E + " | " + C_P + "PRIV" + C_E
             cuerpo = ""
             id_count = 1
-            for key in filteredCreds.keys
+            for key in filteredCreds.indexes
                 cred = filteredCreds[key]
-                cuerpo = cuerpo + "\n" + C_Y + id_count + C_E + " | " + C_W + cred["ip"] + C_E + " | " + C_G + cred["user"] + C_E + " | " + C_B + cred["pass"] + C_E + " | " + C_P + cred["priv"] + C_E
+                // Soporte para registros viejos (string) y nuevos (map)
+                ipStr = "unknown"; userStr = "unknown"; passStr = "unknown"; privStr = "unknown"
+                if typeof(cred) == "map" then
+                    if cred.hasIndex("ip") then ipStr = cred["ip"]
+                    if cred.hasIndex("user") then userStr = cred["user"]
+                    if cred.hasIndex("pass") then passStr = cred["pass"]
+                    if cred.hasIndex("priv") then privStr = cred["priv"]
+                else if typeof(cred) == "string" then
+                    // Formato viejo: ip_user=pass:priv
+                    passStr = cred
+                    keyParts = key.split("_")
+                    if keyParts.len >= 2 then
+                        ipStr = keyParts[0]
+                        userStr = keyParts[1]
+                    end if
+                end if
+                
+                cuerpo = cuerpo + "\n" + C_Y + id_count + C_E + " | " + C_W + ipStr + C_E + " | " + C_G + userStr + C_E + " | " + C_B + passStr + C_E + " | " + C_P + privStr + C_E
                 id_count = id_count + 1
             end for
             
@@ -784,7 +801,7 @@ gestorCreds = function()
                     filterType = "IP"
                     // Filtrar por IP
                     filteredCreds = {}
-                    for key in allCreds.keys
+                    for key in allCreds.indexes
                         cred = allCreds[key]
                         if cred["ip"].indexOf(filterValue) != null then
                             filteredCreds[key] = cred
@@ -797,7 +814,7 @@ gestorCreds = function()
                     filterType = "USER"
                     // Filtrar por usuario
                     filteredCreds = {}
-                    for key in allCreds.keys
+                    for key in allCreds.indexes
                         cred = allCreds[key]
                         if cred["user"].indexOf(filterValue) != null then
                             filteredCreds[key] = cred
@@ -812,16 +829,16 @@ gestorCreds = function()
             
         else if opt == "2" then
             // Eliminar credencial (usar filteredCreds)
-            if filteredCreds.keys.len == 0 then
+            if filteredCreds.indexes.len == 0 then
                 print C_Y + " No hay credenciales para eliminar" + C_E
             else
                 idx = user_input(C_Y + "ID a eliminar (segun tabla filtrada): " + C_E)
                 if idx != "" then
                     idxNum = idx.to_int
-                    if idxNum < 1 or idxNum > filteredCreds.keys.len then
+                    if idxNum < 1 or idxNum > filteredCreds.indexes.len then
                         print C_R + " ID invalida" + C_E
                     else
-                        key = filteredCreds.keys[idxNum-1]
+                        key = filteredCreds.indexes[idxNum-1]
                         parts = key.split("_")
                         if parts.len >= 2 then
                             ip = parts[0]
@@ -834,13 +851,13 @@ gestorCreds = function()
                                 // Re aplicar filtro
                                 if filterType == "IP" then
                                     filteredCreds = {}
-                                    for k in allCreds.keys
+                                    for k in allCreds.indexes
                                         c = allCreds[k]
                                         if c["ip"].indexOf(filterValue) != null then filteredCreds[k] = c
                                     end for
                                 else if filterType == "USER" then
                                     filteredCreds = {}
-                                    for k in allCreds.keys
+                                    for k in allCreds.indexes
                                         c = allCreds[k]
                                         if c["user"].indexOf(filterValue) != null then filteredCreds[k] = c
                                     end for
@@ -859,7 +876,7 @@ gestorCreds = function()
             exportPath = current_path + "/wraith_creds.txt"
             file = get_shell.host_computer.File(exportPath)
             content = ""
-            for key in filteredCreds.keys
+            for key in filteredCreds.indexes
                 cred = filteredCreds[key]
                 content = content + cred["ip"] + "_" + cred["user"] + "=" + cred["pass"] + ":" + cred["priv"] + char(10)
             end for
@@ -870,7 +887,7 @@ gestorCreds = function()
                 file = get_shell.host_computer.File(exportPath)
                 if file then file.set_content(content)
             end if
-            print C_G + " Exportado " + filteredCreds.keys.len + " credenciales a: " + exportPath + C_E
+            print C_G + " Exportado " + filteredCreds.indexes.len + " credenciales a: " + exportPath + C_E
             user_input "[ENTER]"
             
         else if opt == "4" then

@@ -35,6 +35,8 @@ loadExploitsCache = function()
     if not content then return {}
     
     cache = {}
+    // Limpiar retornos de carro y normalizar
+    content = content.replace(char(13), "")
     lines = content.split(char(10))
     for line in lines
         if line == "" then continue
@@ -79,7 +81,22 @@ saveExploitsCache = function(cache)
         get_shell.host_computer.touch(parentPath, fileName)
         file = get_shell.host_computer.File(cachePath)
     end if
-    if file then file.set_content(content)
+    if file then 
+        file.set_content(content)
+        print C_B + " [*] CACHE: Vulnerabilidades guardadas en " + cachePath + C_E
+    else
+        // Fallback robusto a ruta local
+        localPath = current_path + "/vulns.cache"
+        file = get_shell.host_computer.File(localPath)
+        if not file then
+            get_shell.host_computer.touch(current_path, "vulns.cache")
+            file = get_shell.host_computer.File(localPath)
+        end if
+        if file then 
+            file.set_content(content)
+            print C_Y + " [*] CACHE: Vulnerabilidades guardadas en FALLBACK: " + localPath + C_E
+        end if
+    end if
 end function
 
 // Guardar un exploit individual
