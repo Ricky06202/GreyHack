@@ -343,7 +343,14 @@ ejecutarAtaqueID = function(idInput)
     
     // Escanear vulnerabilidades (con cache)
     info = {"service": service, "version": version, "ip": globals.ipTarget}
-    vulns = wraith_exploit.scanVulnerabilities(lib, info)
+    result = wraith_exploit.scanVulnerabilities(lib, info)
+    vulns = result["vulns"]
+    cached = result["cached"]
+    
+    if cached then
+        print C_G + " [+] Usando vulnerabilidades cacheadas para " + service + " " + version + C_E
+    end if
+    
     if vulns.len == 0 then
         print C_Y + " [!] No vulnerabilities found" + C_E
         return
@@ -758,83 +765,6 @@ gestorCreds = function()
     end if
 end function
 
-// Gestor de cache de exploits
-gestorExploits = function()
-    print HUD_LINE
-    print C_W + "EXPLOITS CACHE MANAGER" + C_E
-    print HUD_LINE
-    
-    // Obtener cache
-    cache = wraith_exploits.listExploits
-    if cache.keys.len == 0 then
-        print C_Y + " No hay exploits cacheados" + C_E
-        user_input "[ENTER]"
-        return
-    end if
-    
-    // Mostrar en tabla
-    print C_W + "Servicios cacheados:" + C_E
-    id_count = 1
-    for key in cache.keys
-        exploits = cache[key]
-        parts = key.split("|")
-        if parts.len != 2 then continue
-        service = parts[0]
-        version = parts[1]
-        print C_Y + id_count + ". " + C_B + service + " " + C_G + version + C_E + " (" + exploits.len + " vulnerabilidades)"
-        id_count = id_count + 1
-    end for
-    
-    // Opciones
-    print C_W + " [1] VER DETALLE  [2] LIMPAR TODO  [3] EXPORTAR  [4] BACK" + C_E
-    opt = user_input(C_G + ">> " + C_E)
-    
-    if opt == "1" then
-        // Ver detalle de un servicio
-        idx = user_input(C_Y + "ID servicio: " + C_E)
-        if idx == "" then return
-        idxNum = idx.to_int
-        if idxNum < 1 or idxNum > cache.keys.len then
-            print C_R + " ID inválida" + C_E
-        else
-            key = cache.keys[idxNum-1]
-            exploits = cache[key]
-            print C_W + "Detalle de " + key + ":" + C_E
-            for exp in exploits
-                print C_B + "IP: " + exp["ip"] + " Area: " + exp["area"] + " Vuln: " + exp["vuln"] + C_E
-            end for
-        end if
-        user_input "[ENTER]"
-    else if opt == "2" then
-        // Limpiar todo
-        wraith_exploits.clearExploits
-        print C_G + " Cache limpiado" + C_E
-        user_input "[ENTER]"
-    else if opt == "3" then
-        // Exportar a archivo
-        exportPath = current_path + "/wraith_exploits.txt"
-        file = get_shell.host_computer.File(exportPath)
-        content = ""
-        for key in cache.keys
-            exploits = cache[key]
-            for exp in exploits
-                parts = key.split("|")
-                if parts.len != 2 then continue
-                content = content + parts[0] + "|" + parts[1] + "|" + exp["ip"] + "|" + exp["area"] + "|" + exp["vuln"] + char(10)
-            end for
-        end for
-        if file then
-            file.set_content(content)
-        else
-            get_shell.host_computer.touch(current_path, "wraith_exploits.txt")
-            file = get_shell.host_computer.File(exportPath)
-            if file then file.set_content(content)
-        end if
-        print C_G + " Exportado a: " + exportPath + C_E
-        user_input "[ENTER]"
-    end if
-end function
-
 // Interfaz de shell remota
 remoteShell = function()
     if not globals.activeShell and not globals.currentComputer then
@@ -1035,7 +965,7 @@ while true
     print HUD_SUB
     
     // Menú principal
-    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER [7] CREDS [8] CACHE" + C_E
+    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER [7] CREDS" + C_E
     cmd = user_input(C_G + "wraith>> " + C_E)
     
     if cmd == "1" then
@@ -1069,7 +999,5 @@ while true
         gestorDecipher
     else if cmd == "7" then
         gestorCreds
-    else if cmd == "8" then
-        gestorExploits
     end if
 end while
