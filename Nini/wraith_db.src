@@ -4,15 +4,19 @@
 
 // Funcion para obtener la ruta del vault
 getVaultPath = function()
-    // Guardar en /var/wraith/
     shell = get_shell
     comp = shell.host_computer
     varFolder = comp.File("/var/wraith")
     if not varFolder then
-        varFolder = comp.create_folder("/var", "wraith")
+        newFolder = comp.create_folder("/var", "wraith")
+        if newFolder then varFolder = comp.File("/var/wraith")
     end if
-    if varFolder then return varFolder.path + "/wraith_vault"
-    return current_path + "/wraith_vault"
+    if varFolder and typeof(varFolder) == "file" then return varFolder.path + "/wraith_vault"
+    if not varFolder and comp.File("/home") then
+        users = comp.File("/home").get_folders
+        if users.len > 0 then return users[0].path + "/.wraith_vault"
+    end if
+    return current_path + "/.wraith_vault"
 end function
 
 // Guardar datos en el vault
