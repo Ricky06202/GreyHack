@@ -681,6 +681,71 @@ gestorDecipher = function()
     user_input "[ENTER]"
 end function
 
+// Gestor de credenciales guardadas
+gestorCreds = function()
+    print HUD_LINE
+    print C_W + "CREDENTIALS MANAGER" + C_E
+    print HUD_LINE
+    
+    // Obtener todas las credenciales
+    creds = wraith_db.listCredentials
+    if creds.keys.len == 0 then
+        print C_Y + " No hay credenciales guardadas" + C_E
+        user_input "[ENTER]"
+        return
+    end if
+    
+    // Mostrar en tabla
+    header = C_Y + "ID" + C_E + " | " + C_W + "IP" + C_E + " | " + C_G + "USER" + C_E + " | " + C_B + "PASS" + C_E + " | " + C_P + "PRIV" + C_E
+    cuerpo = ""
+    id_count = 1
+    for key in creds.keys
+        cred = creds[key]
+        cuerpo = cuerpo + "\n" + C_Y + id_count + C_E + " | " + C_W + cred["ip"] + C_E + " | " + C_G + cred["user"] + C_E + " | " + C_B + cred["pass"] + C_E + " | " + C_P + cred["priv"] + C_E
+        id_count = id_count + 1
+    end for
+    
+    table = format_columns(header + "\n" + cuerpo)
+    print table
+    
+    // Opciones
+    print C_W + " [1] ELIMINAR CREDENCIAL  [2] EXPORTAR  [3] BACK" + C_E
+    opt = user_input(C_G + ">> " + C_E)
+    
+    if opt == "1" then
+        // Eliminar credencial
+        idx = user_input(C_Y + "ID a eliminar: " + C_E)
+        if idx == "" then return
+        idxNum = idx.to_int
+        if idxNum < 1 or idxNum > creds.keys.len then
+            print C_R + " ID inválida" + C_E
+        else
+            key = creds.keys[idxNum-1]
+            parts = key.split("_")
+            if parts.len >= 2 then
+                ip = parts[0]
+                user = parts[1]
+                wraith_db.deleteCredentials(ip, user)
+                print C_G + " Credencial eliminada" + C_E
+            end if
+        end if
+        user_input "[ENTER]"
+    else if opt == "2" then
+        // Exportar a archivo
+        exportPath = current_path + "/wraith_creds.txt"
+        file = get_shell.host_computer.File(exportPath)
+        if file then
+            file.set_content(wraith_db.serialize(creds))
+        else
+            get_shell.host_computer.touch(current_path, "wraith_creds.txt")
+            file = get_shell.host_computer.File(exportPath)
+            if file then file.set_content(wraith_db.serialize(creds))
+        end if
+        print C_G + " Exportado a: " + exportPath + C_E
+        user_input "[ENTER]"
+    end if
+end function
+
 // Interfaz de shell remota
 remoteShell = function()
     if not globals.activeShell and not globals.currentComputer then
@@ -881,7 +946,7 @@ while true
     print HUD_SUB
     
     // Menú principal
-    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER" + C_E
+    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER [7] CREDS" + C_E
     cmd = user_input(C_G + "wraith>> " + C_E)
     
     if cmd == "1" then
@@ -913,5 +978,7 @@ while true
         end if
     else if cmd == "6" then
         gestorDecipher
+    else if cmd == "7" then
+        gestorCreds
     end if
 end while

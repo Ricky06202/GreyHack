@@ -124,5 +124,6 @@ wraith_db = {
     "saveCredentials": @saveCredentials,
     "getCredentials": @getCredentials,
     "listCredentials": @listCredentials,
-    "deleteCredentials": @deleteCredentials
+    "deleteCredentials": @deleteCredentials,
+    "serialize": @serialize
 }
