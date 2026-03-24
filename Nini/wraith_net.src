@@ -83,7 +83,7 @@ scanPorts = function(targetIp, portRange = null)
         portId = portId + 1
     end for
     
-    return result
+    return format_columns(result)
 end function
 
 // Funcion para obtener informacion de un puerto especifico
