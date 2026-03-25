@@ -10,19 +10,25 @@ C_C = "<color=#00FFFF>"
 getWraithRouter = function(targetIp = null)
     if targetIp == null then return get_router
     if not is_lan_ip(targetIp) then return get_router(targetIp)
-    // Logica de Rebote (Bounce) para LAN
+    
+    // 1. Si es LAN, primero vemos si es nuestra LAN local real
     localRouter = get_router(targetIp)
     if localRouter then return localRouter
-    // Si no es alcanzable localmente y estamos pivoteados, usar el router del pivote
-    pubIp = ""; comp = getCurrentComputer()
-    if comp then pubIp = comp.public_ip
-    if pubIp != "" and pubIp != "unknown" then return get_router(pubIp)
-    return get_router // Fallback
+    
+    // 2. Si no es nuestra LAN y estamos pivoteando, el router es el del equipo donde estemos
+    if globals.hasIndex("activeShell") and globals.activeShell then
+        comp = globals.activeShell.host_computer
+        pubIp = comp.public_ip
+        if pubIp and pubIp != "unknown" then return get_router(pubIp)
+    end if
+    
+    return get_router // Fallback local
 end function
 scanPorts = function(targetIp, portRange = null)
     if not targetIp then return "Error: No target IP"
-    comp = getCurrentComputer()
-    if not comp.ping(targetIp) then return "Error: Host unreachable"
+    sh = get_shell
+    if globals.hasIndex("activeShell") and globals.activeShell then sh = globals.activeShell
+    if sh.ping(targetIp) != 1 then return "Error: Host unreachable"
     isLan = is_lan_ip(targetIp)
     router = getWraithRouter(targetIp)
     if not router then return "Error: Router not found"
@@ -100,7 +106,9 @@ scanLocalNetwork = function(subnet = null)
     hosts = []
     for i in range(1, 254)
         ip = subnet + i
-        if ip != localIp and comp.ping(ip) then
+        sh = get_shell
+        if globals.hasIndex("activeShell") and globals.activeShell then sh = globals.activeShell
+        if ip != localIp and sh.ping(ip) == 1 then
             hosts.push(ip)
         end if
     end for
@@ -121,8 +129,10 @@ getNetworkInfo = function()
     return info
 end function
 checkHost = function(ip)
-    shell = get_shell
-    return shell.ping(ip)
+    if not ip or ip == "" then return false
+    sh = get_shell
+    if globals.hasIndex("activeShell") and globals.activeShell then sh = globals.activeShell
+    return sh.ping(ip) == 1
 end function
 pivotTo = function(shell, targetIp)
     if not shell then return "Error: No shell provided"

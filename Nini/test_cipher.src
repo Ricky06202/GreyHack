@@ -1,0 +1,48 @@
+k = "WRA1TH_0S_S3CUR3"; h = "0123456789ABCDEF"
+
+bitwiseXor = function(a, b)
+    res = 0; p = 1
+    while a > 0 or b > 0
+        a_bit = a % 2; b_bit = b % 2
+        if a_bit != b_bit then res = res + p
+        a = floor(a / 2); b = floor(b / 2); p = p * 2
+    end while
+    return res
+end function
+
+cipher = function(data)
+    if not data or len(data) == 0 then return ""
+    res = ""; dataStr = str(data)
+    for i in range(0, len(dataStr) - 1)
+        char_at_i = dataStr[i:i+1]
+        c_code = code(char_at_i)
+        k_code = code(k[i % 16 : (i % 16) + 1])
+        v = bitwiseXor(c_code, k_code) % 256
+        res = res + h[floor(v/16)] + h[v%16]
+    end for
+    return res
+end function
+
+decipher = function(data)
+    if not data or len(data) < 2 or len(data) % 2 != 0 then return ""
+    res = ""; dataStr = str(data)
+    for i in range(0, floor(len(dataStr)/2) - 1)
+        high = h.indexOf(dataStr[i*2 : i*2+1])
+        low = h.indexOf(dataStr[i*2+1 : i*2+2])
+        v = bitwiseXor(high * 16 + low, code(k[i % 16 : (i % 16) + 1]))
+        res = res + char(v % 256)
+    end for
+    return res
+end function
+
+print "--- WRAITH ENCRYPTION TEST 3.0 (MANUAL XOR) ---"
+test_strings = ["Hello", "WraithOS", "1234567890", "user:admin,pass:1234"]
+for t in test_strings
+    enc = cipher(t)
+    dec = decipher(enc)
+    print "Original: " + t
+    print "Encrypted: " + enc
+    print "Decrypted: " + dec
+    if t == dec then print "RESULT: SUCCESS" else print "RESULT: FAIL"
+    print "----------------------------"
+end for

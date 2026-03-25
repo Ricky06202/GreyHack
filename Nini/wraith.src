@@ -3,6 +3,7 @@ C_Y = "<color=#F7FF00>"; C_P = "<color=#B537F2>"; C_W = "<color=#E0E0E0>"
 C_E = "</color>"
 HUD_LINE = C_P + "==================================================" + C_E
 HUD_SUB  = C_B + "--------------------------------------------------" + C_E
+HUD_CLEAN = C_W + " Type 'help' or '?' for a list of commands.                      Wraith v3.0" + C_E
 displayRandomHeader = function()
     neonGreen = "<color=#39FF14>"
     neonCyan = "<color=#00FFFF>"
@@ -168,9 +169,8 @@ globals.crypto = cargarLib("crypto.so")
 verificarConexion = function(ip)
     if not ip or ip == "" then return false
     if ip == "localhost" or ip == "127.0.0.1" then return true
-    comp = getCurrentComputer()
-    if not comp or typeof(comp) != "computer" then return false
-    return comp.ping(ip)
+    sh = getCurrentShell()
+    return sh.ping(ip) == 1
 end function
 updateRoute = function(description)
     if globals.route.indexOf(description) == null then
@@ -185,13 +185,15 @@ displayRoute = function
     end for
     print C_B + " RUTA: " + C_W + routeStr + C_E
 end function
+getCurrentShell = function
+    if globals.activeShell and typeof(globals.activeShell) == "shell" then return globals.activeShell
+    return get_shell
+end function
+
 getCurrentComputer = function
     if globals.currentComputer then return globals.currentComputer
-    if typeof(globals.activeShell) == "shell" then
-        return globals.activeShell.host_computer
-    else if typeof(globals.activeShell) == "computer" then
-        return globals.activeShell
-    end if
+    sh = getCurrentShell()
+    if sh then return sh.host_computer
     return get_shell.host_computer
 end function
 updateCurrentComputer = function(newComputer)
@@ -222,19 +224,19 @@ mostrarAyuda = function()
     limpiar; print HUD_LINE
     print C_P + " [WRAITH OS - AYUDA DE COMANDOS]" + C_E
     h = "COMANDO | ALIAS | DESCRIPCION"
-    c = "exploit | x | Ataque remoto/local (overflows)"
-    c = c + "\nsessions| s | Gestor de sesiones y pivotes"
-    c = c + "\nlogs    | l | Lanza LogViewer en la sesion activa"
-    c = c + "\nshell   | sh| Terminal interactiva remota"
-    c = c + "\ntarget  | t | Definir IP objetivo"
-    c = c + "\ndecipher| d | Crackear hashes (vault integrado)"
-    c = c + "\ncreds   | c | Ver bóveda de credenciales"
-    c = c + "\nscan    | sn| Inyectar ScanLan.exe en pivot"
-    c = c + "\ninject  | i | Auto-replicar Wraith en remoto"
-    c = c + "\nssh     | ssh| Login SSH automatico (vault)"
-    c = c + "\nmode    | m | Cambiar modo REMOTE/LOCAL"
-    c = c + "\nclear   | cls| Limpiar la pantalla"
-    c = c + "\nexit    | q | Salir de Wraith OS"
+    c = "exploit | x | Ataque-remoto-local-(overflows)"
+    c = c + "\nsessions | s | Gestor-de-sesiones-y-pivotes"
+    c = c + "\nlogs | l | Lanza-LogViewer-en-la-sesion-activa"
+    c = c + "\nshell | sh | Terminal-interactiva-remota"
+    c = c + "\ntarget | t | Definir-IP-objetivo"
+    c = c + "\ndecipher | d | Crackear-hashes-(vault-integrado)"
+    c = c + "\ncreds | c | Ver-bóveda-de-credenciales"
+    c = c + "\nscan | sn | Inyectar-ScanLan.exe-en-pivot"
+    c = c + "\ninject | i | Auto-replicar-Wraith-en-remoto"
+    c = c + "\nssh | ssh | Login-SSH-automatico-(vault)"
+    c = c + "\nmode | m | Cambiar-modo-REMOTE-LOCAL"
+    c = c + "\nclear | cls | Limpiar-la-pantalla"
+    c = c + "\nexit | q | Salir-de-Wraith-OS"
     print format_columns(h + "\n" + c)
     print HUD_LINE
     user_input("[ENTER]")
@@ -351,21 +353,68 @@ ejecutarAtaqueID = function(idInput, isAuto = false)
             manageSessions(res, infoSess)
             
             // Auto-Bounce Logic
-            if isAuto and (typeof(res) == "router" or (typeof(res) == "shell" and res.host_computer.is_router)) then
-                print C_P + " [!] ROUTER COMPROMETIDO. Iniciando Auto-Bounce..." + C_E
-                devices = []
-                if typeof(res) == "router" then devices = res.devices_lan_ip
-                if typeof(res) == "shell" then devices = res.host_computer.active_net_card.devices_lan_ip
-                if len(devices) > 0 then
-                    targetLan = devices[0]
-                    print C_Y + " [*] Saltando a dispositivo: " + targetLan + C_E
-                    globals.ipTarget = targetLan
-                    updateRoute("Bounce -> " + targetLan)
+            if isAuto then
+                r = get_router(globals.ipTarget)
+                if r then
+                    devices = r.devices_lan_ip
+                    if len(devices) > 0 then
+                        print C_P + " [!] ROUTER COMPROMETIDO. Iniciando Auto-Bounce..." + C_E
+                        targetLan = devices[0]
+                        print C_Y + " [*] Saltando a dispositivo: " + targetLan + C_E
+                        globals.ipTarget = targetLan
+                        updateRoute("Bounce -> " + targetLan)
+                    end if
                 end if
             end if
         end if
     end for
 end function
+performInjection = function(targetSh)
+    if not targetSh then return
+    print C_P + " [INJECT] Preparando auto-inyeccion..." + C_E
+    
+    localBinary = get_shell.host_computer.File("/bin/wraith")
+    if not localBinary then localBinary = get_shell.host_computer.File(program_path)
+    if not localBinary then localBinary = get_shell.host_computer.File(current_path + "/wraith")
+    
+    if not localBinary then
+        print C_R + " [!] Error: No se pudo localizar el binario Wraith local." + C_E
+        return
+    end if
+    
+    comp = targetSh.host_computer
+    paths = ["/bin"]
+    homeDir = comp.File("/home")
+    if homeDir then
+        for uDir in homeDir.get_folders
+            paths.push(uDir.path)
+        end for
+    end if
+    // Rutas de backup
+    if paths.indexOf("/var") == null then paths.push("/var")
+    if paths.indexOf("/") == null then paths.push("/")
+    
+    uploaded = false
+    for p in paths
+        res = comp.touch(p, "wraith")
+        if res != 1 and typeof(res) == "string" then continue
+        remoteFile = comp.File(p + "/wraith")
+        if remoteFile then
+            res = remoteFile.set_content(localBinary.get_content)
+            if res != 1 and typeof(res) == "string" then continue
+            remoteFile.chmod("o+x", true)
+            remoteFile.chmod("g+x", true)
+            remoteFile.chmod("u+x", true)
+            print C_G + " [+] Wraith inyectado exitosamente en " + p + "/wraith" + C_E
+            uploaded = true
+            break
+        end if
+    end for
+    if not uploaded then 
+        print C_R + " [!] Error: No se pudo inyectar Wraith en ninguna ruta." + C_E
+    end if
+end function
+
 manageSessions = function(res, infoSess)
     if not res then return
     modeLabel = "[R]"
@@ -374,7 +423,9 @@ manageSessions = function(res, infoSess)
     print C_G + "[+] Acceso obtenido: " + typeof(res).upper + " " + modeLabel + C_E
     if typeof(res) == "computer" or typeof(res) == "shell" then
         comp = res
-        if typeof(res) == "shell" then comp = res.host_computer
+        if typeof(res) == "shell" then 
+            comp = res.host_computer
+        end if
         intel = wraith_exploit.extractIntel(comp, true, globals.ipTarget)
         if intel.hasIndex("users") and len(intel["users"]) > 0 then
             print C_P + " [INTEL] Usuarios encontrados: " + intel["users"].join(", ") + C_E
@@ -867,8 +918,35 @@ remoteShell = function()
         return
     end if
     print C_B + "=== REMOTE SHELL (" + targetType + ") ===" + C_E
-    print C_W + "Comandos: ls, cd, cat, pwd, passwd, scp, download, upload, help, exit" + C_E
+    print C_W + "Comandos: ls, cd, cat, rm, su, logs, pwd, passwd, scp, download, upload, help, exit" + C_E
     currentDir = "/"
+    if targetType == "shell" then
+        // Auto-Inyectar Wraith si no existe en el destino antes de empezar la sesion
+        binPath = "/bin/wraith"
+        if target.host_computer.File(binPath) == null then
+            print C_Y + " [*] Wraith no detectado en " + globals.ipTarget + ". Inyectando suite..." + C_E
+            performInjection(target)
+        end if
+        
+        pubIp = globals.ipTarget
+        vault = wraith_db.listCredentials()
+        for key in vault.indexes
+            v = vault[key]
+            if v.user == "root" and (v.ip == pubIp or v.lan == pubIp) then
+                print C_P + " [!] CREDENCIALES DE ROOT DETECTADAS EN LA BOVEDA." + C_E
+                print C_B + " [*] Intentando elevacion automatica..." + C_E
+                newSh = target.connect_service(pubIp, 22, "root", v.pass, "ssh")
+                if typeof(newSh) == "shell" then
+                    target = newSh
+                    globals.activeShell = newSh
+                    print C_G + " [+] EXITO: Sesion elevada a ROOT automáticamente." + C_E
+                    break
+                else
+                    print C_R + " [!] Error en auto-elevacion: " + newSh + C_E
+                end if
+            end if
+        end for
+    end if
     while true
         prompt = C_G + "wraith:" + currentDir + "$ " + C_E
         cmd = user_input(prompt).trim
@@ -881,8 +959,10 @@ remoteShell = function()
             print " ls [path]        - Listar archivos"
             print " cd [path]        - Cambiar directorio"
             print " cat [file]       - Mostrar contenido"
+            print " rm [file/dir]    - Eliminar archivo o carpeta"
+            print " su               - Cambiar a usuario de la boveda"
+            print " logs             - Ver registros (/usr/bin/LogViewer.exe)"
             print " pwd              - Directorio actual"
-            print " passwd           - Mostrar /etc/passwd"
             print " scp [src] [dest] - Copiar archivo (requiere shell)"
             print " download [path]  - Descargar archivo a local"
             print " upload [local] [remote] - Subir archivo"
@@ -934,6 +1014,33 @@ remoteShell = function()
                     end if
                 end if
                 print C_B + " Directorio: " + currentDir + C_E
+            end if
+            continue
+        end if
+        if command == "rm" then
+            if len(parts) < 2 then
+                print C_R + " Uso: rm [archivo/carpeta]" + C_E
+            else
+                filePath = parts[1]
+                if filePath[0] != "/" then
+                    if currentDir == "/" then filePath = "/" + filePath else filePath = currentDir + "/" + filePath
+                end if
+                file = null
+                if targetType == "shell" then
+                    file = target.host_computer.File(filePath)
+                else if targetType == "computer" then
+                    file = target.File(filePath)
+                end if
+                if file then
+                    res = file.delete
+                    if res == "" or res == 1 then
+                        print C_G + " [+] Eliminado: " + filePath + C_E
+                    else
+                        print C_R + " [!] Error al eliminar: " + res + C_E
+                    end if
+                else
+                    print C_R + " [!] No encontrado: " + filePath + C_E
+                end if
             end if
             continue
         end if
@@ -1028,6 +1135,51 @@ remoteShell = function()
             end if
             continue
         end if
+        if command == "logs" then
+            if targetType != "shell" then
+                print C_R + " Error: logs requiere una sesion de SHELL activa." + C_E
+            else
+                print C_B + " [*] Iniciando /usr/bin/LogViewer.exe..." + C_E
+                target.launch("/usr/bin/LogViewer.exe")
+            end if
+            continue
+        end if
+        if command == "su" then
+            if targetType != "shell" then
+                print C_R + " Error: su requiere una sesion de SHELL activa." + C_E
+            else
+                pubIp = globals.ipTarget
+                print C_B + " [SU] Buscando credenciales para " + pubIp + "..." + C_E
+                vault = wraith_db.listCredentials()
+                cands = []
+                for key in vault.indexes
+                    v = vault[key]
+                    if v.hasIndex("ip") and (v.ip == pubIp or v.lan == pubIp) then cands.push(v)
+                end for
+                if len(cands) == 0 then
+                    print C_R + " [!] No hay credenciales para esta IP en la boveda." + C_E
+                else
+                    for i in range(0, len(cands)-1)
+                        print " [" + (i+1) + "] " + cands[i].user + " (" + cands[i].priv + ")"
+                    end for
+                    sel = user_input("ID: ")
+                    idx = sel.to_int - 1
+                    if idx >= 0 and idx < len(cands) then
+                        u = cands[idx].user; p = cands[idx].pass
+                        print C_P + " [*] Intentando cambio a " + u + "..." + C_E
+                        newSh = target.connect_service(pubIp, 22, u, p, "ssh")
+                        if typeof(newSh) == "shell" then
+                            target = newSh
+                            globals.activeShell = newSh
+                            print C_G + " [+] Cambio de usuario exitoso." + C_E
+                        else
+                            print C_R + " [!] Error al cambiar: " + newSh + C_E
+                        end if
+                    end if
+                end if
+            end if
+            continue
+        end if
         if command == "run" or command == "launch" then
             if targetType != "shell" then
                 print C_R + " Error: Se requiere una sesion de SHELL para ejecutar programas." + C_E
@@ -1090,13 +1242,12 @@ remoteShell = function()
                             end if
                         end if
                         res = wraith_exploit.decipherHash(hash)
-                        if res then
-                                pass = libs["crypto"].decipher(hash)
-                                if pass then
-                                    wraith_db.saveCredentials(pubIp, user, pass, "linux", lanIp, hash)
-                                    deciprogress = deciprogress + 1
-                                end if
-                        print C_R + " [FAIL] " + user + " (" + hash[0:8] + "...)" + C_E
+                        if res and res != "FAIL" and res != "EMPTY" then
+                            wraith_db.saveCredentials(pubIp, user, res, "linux", lanIp, hash)
+                            deciprogress = deciprogress + 1
+                            print C_G + " [OK] " + user + " -> " + res + C_E
+                        else
+                            print C_R + " [FAIL] " + user + " (" + hash[0:8] + "...)" + C_E
                         end if
                     end for
                     print C_B + " [+] Finalizado. " + deciprogress + " credenciales almacenadas." + C_E
@@ -1209,66 +1360,55 @@ while true
         end if
         continue
     else if cmd == "inject" or cmd == "i" then
-        targetSh = globals.activeShell
-        if not targetSh then 
+        if not globals.activeShell then 
             print C_R + " [!] Necesitas una shell activa para inyectar Wraith." + C_E
             continue
         end if
-        print C_P + " [INJECT] Preparando auto-inyeccion..." + C_E
-        localFile = get_shell.host_computer.File(program_path)
-        if not localFile then
-            print C_R + " [!] Error: No se pudo localizar el binario local." + C_E
-        else
-            paths = ["/bin", "/usr/bin", "/home/guest", "/home", "/"]
-            comp = targetSh.host_computer
-            uploaded = false
-            for p in paths
-                comp.touch(p, "wraith")
-                remoteFile = comp.File(p + "/wraith")
-                if remoteFile then
-                    remoteFile.set_content(localFile.get_content)
-                    remoteFile.chmod("u+x", true)
-                    remoteFile.chmod("o+x", true)
-                    remoteFile.chmod("g+x", true)
-                    print C_G + " [+] Wraith inyectado exitosamente en " + p + "/wraith" + C_E
-                    uploaded = true
-                    break
-                end if
-            end for
-            if not uploaded then print C_R + " [!] Error: No se pudo inyectar Wraith en ninguna ruta." + C_E
-        end if
+        performInjection(globals.activeShell)
+        continue
     else if cmd == "ssh" or cmd == "0" then
-        if not globals.ipTarget or globals.ipTarget == "" then
-            print C_R + " [!] Primero define un TARGET con el comando 'target'" + C_E
-            continue
-        end if
-        print C_B + " [SSH] Buscando credenciales para " + globals.ipTarget + "..." + C_E
+        ssh_ip = globals.ipTarget
+        if len(cmd_parts) > 1 then ssh_ip = cmd_parts[1]
+        if not ssh_ip or ssh_ip == "" then ssh_ip = user_input("IP SSH: ")
+        if not ssh_ip or ssh_ip == "" then continue
+        
+        print C_B + " [SSH] Buscando credenciales para " + ssh_ip + "..." + C_E
         vault = wraith_db.listCredentials()
         cands = []
         for key in vault.indexes
             v = vault[key]
-            if v.ip == globals.ipTarget or v.lan == globals.ipTarget then cands.push(v)
+            if v.ip == ssh_ip or v.lan == ssh_ip then cands.push(v)
         end for
         
-        if len(cands) == 0 then
-            print C_R + " [!] No hay credenciales guardadas para este host." + C_E
-        else
-            print C_G + " [+] Encontradas " + len(cands) + " credenciales." + C_E
+        ssh_user = ""; ssh_pass = ""
+        if len(cands) > 0 then
+            print C_G + " [+] Encontradas " + len(cands) + " credenciales en Vault." + C_E
             for i in range(0, len(cands)-1)
                 print " [" + (i+1) + "] " + cands[i].user + " (" + cands[i].priv + ")"
             end for
+            print " [" + (len(cands)+1) + "] Entrada Manual"
             sel = user_input("ID [1]: ")
             if sel == "" then sel = "1"
             idx = sel.to_int - 1
             if idx >= 0 and idx < len(cands) then
-                cred = cands[idx]
-                print C_P + " [*] Intentando conexion SSH con " + cred.user + "..." + C_E
-                newShell = get_shell.connect_service(globals.ipTarget, 22, cred.user, cred.pass, "ssh")
-                if typeof(newShell) == "shell" then
-                    manageSessions(newShell, globals.ipTarget + " (SSH:" + cred.user + ")")
-                else
-                    print C_R + " [!] Error de conexion: " + newShell + C_E
-                end if
+                ssh_user = cands[idx].user
+                ssh_pass = cands[idx].pass
+            end if
+        end if
+        
+        if ssh_user == "" then
+            print C_Y + " [!] No se usaran credenciales de la boveda." + C_E
+            ssh_user = user_input("Usuario: ")
+            ssh_pass = user_input("Clave: ")
+        end if
+        
+        if ssh_user != "" then
+            print C_P + " [*] Intentando conexion SSH a " + ssh_ip + " con " + ssh_user + "..." + C_E
+            newShell = get_shell.connect_service(ssh_ip, 22, ssh_user, ssh_pass, "ssh")
+            if typeof(newShell) == "shell" then
+                manageSessions(newShell, ssh_ip + " (SSH:" + ssh_user + ")")
+            else
+                print C_R + " [!] Error de conexion: " + newShell + C_E
             end if
         end if
     else if cmd == "mode" or cmd == "m" then
