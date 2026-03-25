@@ -203,16 +203,34 @@ updateCurrentComputer = function(newComputer)
     end if
 end function
 nmapWraith = function()
+    if globals.exploitMode == "LOCAL" then
+        comp = getCurrentComputer()
+        libs = []
+        folders = ["/lib", "/usr/lib"]
+        for folder in folders
+            fObj = comp.File(folder)
+            if not fObj then continue
+            for item in fObj.get_files
+                if item.name.indexOf(".so") != null then libs.push(item.name)
+            end for
+        end for
+        if len(libs) == 0 then return C_Y + " [!] No se detectaron librerias locales en /lib" + C_E
+        return C_P + " [LOCAL] LIBRERIAS DETECTADAS: " + C_W + libs.join(", ") + C_E
+    end if
+    
     globals.lastScan = []
     target = globals.ipTarget
-    if not target then return C_R + " [!] No target IP set" + C_E
+    if not target or target == "" then return C_R + " [!] No target IP set (MODO REMOTE)" + C_E
+    
     hostActivo = getCurrentComputer()
     if target == "127.0.0.1" or target == "localhost" then target = hostActivo.local_ip
     if not verificarConexion(target) then return C_R + " [!] HOST UNREACHABLE" + C_E
+    
     scanResult = wraith_net.scanPorts(target)
     if typeof(scanResult) == "string" and scanResult.indexOf("Error") != null then
         return C_R + scanResult + C_E
     end if
+    
     result = scanResult["output"]
     portList = scanResult["ports"]
     for p in portList
@@ -395,19 +413,28 @@ performInjection = function(targetSh)
     if paths.indexOf("/") == null then paths.push("/")
     
     uploaded = false
+    sourceLibs = ["/lib/metaxploit.so", "/lib/crypto.so"]
     for p in paths
-        res = comp.touch(p, "wraith")
-        if res != 1 and typeof(res) == "string" then continue
-        remoteFile = comp.File(p + "/wraith")
-        if remoteFile then
-            res = remoteFile.set_content(localBinary.get_content)
-            if res != 1 and typeof(res) == "string" then continue
-            remoteFile.chmod("o+x", true)
-            remoteFile.chmod("g+x", true)
-            remoteFile.chmod("u+x", true)
-            print C_G + " [+] Wraith inyectado exitosamente en " + p + "/wraith" + C_E
-            uploaded = true
-            break
+        dir = comp.File(p)
+        if not dir or not dir.is_folder then continue
+        
+        // Inyectar Binario Wraith
+        res = targetSh.scp(localBinary.path, p, get_shell, 1)
+        if res == 1 or res == true then
+            remoteFile = comp.File(p + "/wraith")
+            if remoteFile then
+                remoteFile.chmod("o+x", true); remoteFile.chmod("g+x", true); remoteFile.chmod("u+x", true)
+                
+                // Inyectar Librerias en la misma carpeta
+                for libPath in sourceLibs
+                    libName = libPath.split("/")[-1]
+                    targetSh.scp(libPath, p, get_shell, 1)
+                end for
+                
+                print C_G + " [+] Wraith (+libs) inyectado exitosamente en " + p + C_E
+                uploaded = true
+                break
+            end if
         end if
     end for
     if not uploaded then 
@@ -422,14 +449,7 @@ manageSessions = function(res, infoSess)
     globals.sesiones.push({"obj": res, "info": infoSess, "mode": modeLabel})
     print C_G + "[+] Acceso obtenido: " + typeof(res).upper + " " + modeLabel + C_E
     if typeof(res) == "computer" or typeof(res) == "shell" then
-        comp = res
-        if typeof(res) == "shell" then 
-            comp = res.host_computer
-        end if
-        intel = wraith_exploit.extractIntel(comp, true, globals.ipTarget)
-        if intel.hasIndex("users") and len(intel["users"]) > 0 then
-            print C_P + " [INTEL] Usuarios encontrados: " + intel["users"].join(", ") + C_E
-        end if
+        print C_P + " [INTEL] Sesion registrada. Usa 'GET INTEL' en sessions para extraer datos." + C_E
     end if
 end function
 exploreFileRecursively = function(fileObj, depth = 0)
@@ -493,10 +513,11 @@ gestorSesiones = function()
     obj = s.obj
     typ = typeof(obj)
     if typ == "shell" then
-        print C_B + " [1] INTERACT  [2] PIVOT  [3] REMOTE SHELL (default)" + C_E
+        print C_B + " [1] INTERACT  [2] PIVOT  [3] REMOTE SHELL  [4] GET INTEL  [5] BACK" + C_E
         opt = user_input(">> ")
         if opt == "" then opt = "3" 
         if opt == "1" then
+            performInjection(obj)
             obj.start_terminal
         else if opt == "2" then
             globals.activeShell = obj
@@ -506,62 +527,72 @@ gestorSesiones = function()
             globals.activeShell = obj
             globals.currentComputer = obj.host_computer
             remoteShell
+        else if opt == "4" then
+            print C_P + " [INTEL] Extrayendo informacion a traves de la shell..." + C_E
+            intel = wraith_exploit.extractIntel(obj.host_computer, false, globals.ipTarget)
+            if len(intel["users"]) > 0 then print C_G + " Usuarios: " + intel["users"].join(", ") + C_E
+            if len(intel["banks"]) > 0 then print C_Y + " Bancos: " + len(intel["banks"]) + C_E
+            if len(intel["mails"]) > 0 then print C_B + " Mails: " + len(intel["mails"]) + C_E
+            user_input("[ENTER]")
         end if
     else if typ == "computer" then
-        print C_P + " [INTEL] Extrayendo informacion..." + C_E
-        intel = wraith_exploit.extractIntel(obj, false, obj.local_ip)
-        if len(intel["users"]) > 0 then
-            print C_G + " Usuarios: " + intel["users"].join(", ") + C_E
-        end if
-        if len(intel["banks"]) > 0 then
-            print C_Y + " Bancos encontrados: " + len(intel["banks"]) + C_E
-            for user in intel["banks"].indexes
-                print "   " + user + ": " + intel["banks"][user]
-            end for
-        end if
-        if len(intel["mails"]) > 0 then
-            print C_B + " Correos encontrados: " + len(intel["mails"]) + C_E
-            for user in intel["mails"].indexes
-                print "   " + user + ": " + intel["mails"][user]
-            end for
-        end if
-        if len(intel["hashes"]) > 0 then
-            print C_P + " Credenciales de sistema detectadas (/etc/passwd): " + len(intel["hashes"]) + C_E
-            for user in intel["hashes"].indexes
-                print "   " + user + ": " + intel["hashes"][user]
-            end for
-        end if
-        if intel["passwd"] then
-            print C_P + " /etc/passwd:" + C_E
-            print intel["passwd"]
-        end if
-        print C_W + " [1] EXPLORAR ARCHIVOS  [2] REMOTE SHELL  [3] PRIVESC  [4] BACK" + C_E
-        opt = user_input(">> ")
-        if opt == "1" then
-            print C_W + " Exploracion recursiva de /home:" + C_E
-            home = obj.File("/home")
-            if home then
-                exploreFileRecursively(home, 0)
-            else
-                print C_R + " No se puede acceder a /home" + C_E
+        while true
+            print C_W + " [1] EXPLORAR ARCHIVOS  [2] REMOTE SHELL  [3] PRIVESC  [4] GET INTEL  [5] BACK" + C_E
+            opt = user_input(">> ")
+            if opt == "5" or opt == "" then break
+            if opt == "4" then
+                print C_P + " [INTEL] Extrayendo informacion profunda..." + C_E
+                intel = wraith_exploit.extractIntel(obj, false, obj.local_ip)
+                if len(intel["users"]) > 0 then print C_G + " Usuarios: " + intel["users"].join(", ") + C_E
+                if len(intel["banks"]) > 0 then
+                    print C_Y + " Bancos encontrados: " + len(intel["banks"]) + C_E
+                    for user in intel["banks"].indexes
+                        print "   " + user + ": " + intel["banks"][user]
+                    end for
+                end if
+                if len(intel["mails"]) > 0 then
+                    print C_B + " Correos encontrados: " + len(intel["mails"]) + C_E
+                    for user in intel["mails"].indexes
+                        print "   " + user + ": " + intel["mails"][user]
+                    end for
+                end if
+                if len(intel["hashes"]) > 0 then
+                    print C_P + " Credenciales de sistema detectadas (/etc/passwd): " + len(intel["hashes"]) + C_E
+                    for user in intel["hashes"].indexes
+                        print "   " + user + ": " + intel["hashes"][user]
+                    end for
+                end if
+                if intel.hasIndex("passwd") and intel["passwd"] then
+                    print C_P + " /etc/passwd:" + C_E
+                    print intel["passwd"]
+                end if
+                user_input("[ENTER]")
+            else if opt == "1" then
+                print C_W + " Exploracion recursiva de /home:" + C_E
+                home = obj.File("/home")
+                if home then
+                    exploreFileRecursively(home, 0)
+                else
+                    print C_R + " No se puede acceder a /home" + C_E
+                end if
+                user_input("[ENTER]")
+            else if opt == "2" then
+                globals.currentComputer = obj
+                remoteShell
+            else if opt == "3" then
+                print C_P + " Escaneando vulnerabilidades locales..." + C_E
+                vulns = wraith_exploit.scanLocalVulnerabilities(obj)
+                if len(vulns) == 0 then
+                    print C_Y + " No se encontraron vulnerabilidades locales" + C_E
+                else
+                    print C_G + " Vulnerabilidades encontradas: " + len(vulns) + C_E
+                    for v in vulns
+                        print C_B + " " + v["path"] + " (" + v["type"] + ") - " + v["severity"] + C_E
+                    end for
+                end if
+                user_input("[ENTER]")
             end if
-            user_input("[ENTER]")
-        else if opt == "2" then
-            globals.currentComputer = obj
-            remoteShell
-        else if opt == "3" then
-            print C_P + " Escaneando vulnerabilidades locales..." + C_E
-            vulns = wraith_exploit.scanLocalVulnerabilities(obj)
-            if len(vulns) == 0 then
-                print C_Y + " No se encontraron vulnerabilidades locales" + C_E
-            else
-                print C_G + " Vulnerabilidades encontradas: " + len(vulns) + C_E
-                for v in vulns
-                    print C_B + " " + v["path"] + " (" + v["type"] + ") - " + v["severity"] + C_E
-                end for
-            end if
-            user_input("[ENTER]")
-        end if
+        end while
     else if typ == "file" then
         print C_W + " Archivo: " + obj.path + C_E
         print " Permisos: " + obj.permissions + " Tamano: " + obj.size + " bytes"
@@ -607,45 +638,75 @@ end function
 // gestorLogs ha sido eliminado a favor de LogViewer.exe nativo
 gestorDecipher = function()
     print HUD_LINE
-    print C_W + "HASH DECIPHER" + C_E
+    print C_W + "HASH DECIPHER MANAGER" + C_E
     print HUD_LINE
-    print C_W + "Ingresa hash (formato usuario:hash o solo hash):" + C_E
-    hashInput = user_input(C_G + ">> " + C_E)
-    user = ""
-    parts = hashInput.split(":")
-    if len(parts) >= 2 then user = parts[0]
-    if globals.currentComputer then
-        ip = globals.currentComputer.public_ip
-        if not ip or ip == "" then ip = globals.currentComputer.local_ip
-        if user != "" then
-            existing = wraith_db.getCredentials(ip, user)
-            if existing and existing.pass != "FAIL" and existing.pass.indexOf("[ENCRYPTED]") == null then
-                print C_G + " [+] Credencial ya descifrada encontrada: " + C_W + existing.pass + C_E
-                user_input("[ENTER]")
-                return
-            end if
+    print C_W + " [1] AUTO-DECIPHER /etc/passwd  [2] MANUAL ENTRY (user:hash)  [3] BACK" + C_E
+    opt = user_input(C_G + ">> " + C_E)
+    if opt == "3" or opt == "" then return
+    
+    if opt == "1" then
+        targetObj = globals.activeShell
+        if not targetObj then targetObj = globals.currentComputer
+        if not targetObj then
+            print C_R + " [!] No hay session activa (shell/computer) para leer /etc/passwd" + C_E
+            user_input("[ENTER]")
+            return
         end if
-    end if
-    result = wraith_exploit.crackHash(hashInput)
-    if result == "FAIL" then
-        print C_R + " [!] No se pudo decifrar" + C_E
-    else if result == "EMPTY" then
-        print C_R + " [!] Hash vacio" + C_E
-    else
-        print C_G + " [+] Resultado: " + result + C_E
-        if globals.currentComputer then
-            pubIp = globals.currentComputer.public_ip
-            lanIp = globals.currentComputer.local_ip
-            ip = pubIp
-            if not ip or ip == "" then ip = lanIp
-            user = ""
-            parts = hashInput.split(":")
-            if len(parts) >= 2 then user = parts[0]
-            if user == "" then user = "unknown"
-            wraith_db.saveCredentials(ip, user, result, "user", lanIp)
-            print C_P + " [+] Credenciales guardadas para " + ip + " (LAN: " + lanIp + ")" + C_E
+        
+        print C_B + " [*] Intentando leer /etc/passwd..." + C_E
+        content = wraith_fs.wcat(targetObj, "/etc/passwd")
+        if not content or content.indexOf("Error") != null then
+            print C_R + " [!] Error al leer /etc/passwd (permisos denegados)" + C_E
+            user_input("[ENTER]")
+            return
+        end if
+        
+        lines = content.split(char(10))
+        print C_G + " [+] Encontradas " + len(lines) + " lineas. Procesando..." + C_E
+        ip = globals.ipTarget
+        lanIp = "unknown"
+        if typeof(targetObj) == "computer" then
+            lanIp = targetObj.local_ip
+        else if typeof(targetObj) == "shell" then
+            lanIp = targetObj.host_computer.local_ip
+        end if
+        
+        successCount = 0
+        for line in lines
+            line = line.trim
+            if line == "" then continue
+            uParts = line.split(":")
+            if len(uParts) < 2 then continue
+            user = uParts[0]; hash = uParts[1]
+            if hash == "x" or hash == "*" then continue
+            
+            print C_B + " [*] Cracking " + user + "..." + C_E
+            res = wraith_exploit.crackHash(hash)
+            if res and res != "FAIL" and res != "EMPTY" then
+                print C_G + " [+] OK: " + user + " -> " + res + C_E
+                wraith_db.saveCredentials(ip, user, res, "linux", lanIp, hash)
+                successCount = successCount + 1
+            else
+                print C_R + " [!] FAIL: " + user + C_E
+            end if
+        end for
+        print C_G + " [+] Proceso finalizado. " + successCount + " claves nuevas en la boveda." + C_E
+    
+    else if opt == "2" then
+        print C_W + " Ingresa hash (formato usuario:hash o solo hash):" + C_E
+        hashInput = user_input(C_G + ">> " + C_E)
+        if hashInput == "" then return
+        
+        result = wraith_exploit.crackHash(hashInput)
+        if result == "FAIL" or result == "EMPTY" then
+            print C_R + " [!] Error al descifrar" + C_E
         else
-            print C_Y + " [!] No hay computer activa para asociar IP" + C_E
+            print C_G + " [+] Resultado: " + result + C_E
+            ip = globals.ipTarget
+            user = "unknown"; parts = hashInput.split(":")
+            if len(parts) >= 2 then user = parts[0]
+            wraith_db.saveCredentials(ip, user, result, "user", "manual")
+            print C_P + " [+] Guardado en Vault para " + ip + C_E
         end if
     end if
     user_input("[ENTER]")
@@ -875,26 +936,26 @@ gestorXfer = function()
     print C_W + " [1] UPLOAD (subir archivo)  [2] DOWNLOAD (descargar)  [3] BACK" + C_E
     opt = user_input(C_G + ">> " + C_E)
     if opt == "1" then
-        if targetType != "computer" then
-            print C_R + " Upload requiere sesion de computer" + C_E
+        if not globals.activeShell then
+            print C_R + " Upload requiere sesion de SHELL activa" + C_E
         else
             localPath = user_input(C_Y + "Archivo local (ruta completa): " + C_E)
             if localPath == "" then return
             remotePath = user_input(C_Y + "Destino remoto (ej: /home/user/file.txt): " + C_E)
             if remotePath == "" then return
-            result = wraith_exploit.uploadFile(get_shell, localPath, globals.currentComputer, remotePath)
+            result = wraith_exploit.uploadFile(get_shell, localPath, globals.activeShell, remotePath)
             print result
         end if
         user_input("[ENTER]")
     else if opt == "2" then
-        if targetType != "computer" then
-            print C_R + " Download requiere sesion de computer" + C_E
+        if not globals.activeShell then
+            print C_R + " Download requiere sesion de SHELL activa" + C_E
         else
             remotePath = user_input(C_Y + "Archivo remoto (ej: /home/user/file.txt): " + C_E)
             if remotePath == "" then return
             localPath = user_input(C_Y + "Destino local (ruta completa): " + C_E)
             if localPath == "" then return
-            result = wraith_exploit.downloadFile(globals.currentComputer, remotePath, get_shell, localPath)
+            result = wraith_exploit.downloadFile(globals.activeShell, remotePath, get_shell, localPath)
             print result
         end if
         user_input("[ENTER]")
@@ -921,31 +982,7 @@ remoteShell = function()
     print C_W + "Comandos: ls, cd, cat, rm, su, logs, pwd, passwd, scp, download, upload, help, exit" + C_E
     currentDir = "/"
     if targetType == "shell" then
-        // Auto-Inyectar Wraith si no existe en el destino antes de empezar la sesion
-        binPath = "/bin/wraith"
-        if target.host_computer.File(binPath) == null then
-            print C_Y + " [*] Wraith no detectado en " + globals.ipTarget + ". Inyectando suite..." + C_E
-            performInjection(target)
-        end if
-        
         pubIp = globals.ipTarget
-        vault = wraith_db.listCredentials()
-        for key in vault.indexes
-            v = vault[key]
-            if v.user == "root" and (v.ip == pubIp or v.lan == pubIp) then
-                print C_P + " [!] CREDENCIALES DE ROOT DETECTADAS EN LA BOVEDA." + C_E
-                print C_B + " [*] Intentando elevacion automatica..." + C_E
-                newSh = target.connect_service(pubIp, 22, "root", v.pass, "ssh")
-                if typeof(newSh) == "shell" then
-                    target = newSh
-                    globals.activeShell = newSh
-                    print C_G + " [+] EXITO: Sesion elevada a ROOT automáticamente." + C_E
-                    break
-                else
-                    print C_R + " [!] Error en auto-elevacion: " + newSh + C_E
-                end if
-            end if
-        end for
     end if
     while true
         prompt = C_G + "wraith:" + currentDir + "$ " + C_E
