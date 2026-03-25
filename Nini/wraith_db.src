@@ -1,3 +1,11 @@
+globals.WRAITH_KEY = "WRA1TH_0S_S3CUR3"
+cipher = function(data)
+    res = ""
+    for i in range(0, len(data) - 1)
+        res = res + char(code(data[i]) ^ code(globals.WRAITH_KEY[i % len(globals.WRAITH_KEY)]))
+    end for
+    return res
+end function
 getVaultPath = function()
     comp = get_shell.host_computer
     varPath = "/var/wraith"
@@ -45,19 +53,28 @@ saveVault = function(data)
             get_shell.host_computer.touch(current_path, "vault.db")
             file = get_shell.host_computer.File(localPath)
         end if
+        if not file then return "Error: Could not access vault file"
         if file then 
-            file.set_content(serialized)
+            data = serialized.replace(char(10), ";") // Replace newline with semicolon for encryption
+            file.set_content(cipher(data))
             print C_Y + " [*] DB: Datos guardados en FALLBACK: " + localPath + C_E
+            return true
         end if
     end if
+    return false // Should not be reached if file is successfully written
 end function
 loadVault = function()
     vaultPath = getVaultPath()
     file = get_shell.host_computer.File(vaultPath)
     if not file then return {}
     content = file.get_content
-    if not content then return {}
-    return deserialize(content)
+    if not content or content == "" then return {} // Changed from 'true' to '{}' for consistency
+    
+    // Si el primer caracter no es { ni [, asumimos que esta encriptado
+    if content[0] != "{" and content[0] != "[" then content = cipher(content)
+    
+    lines = content.split(";") // Split by semicolon now
+    return deserialize(lines.join(char(10))) // Re-join with newline for deserialize function
 end function
 serialize = function(data)
     if typeof(data) != "map" then return ""
@@ -71,7 +88,8 @@ serialize = function(data)
             sUsr = "unknown"; if val.hasIndex("user") then sUsr = str(val["user"])
             sPas = "unknown"; if val.hasIndex("pass") then sPas = str(val["pass"])
             sPrv = "user"; if val.hasIndex("priv") then sPrv = str(val["priv"])
-            line = "ip:" + sIp + ",lan:" + sLp + ",user:" + sUsr + ",pass:" + sPas + ",priv:" + sPrv
+            sHsh = "none"; if val.hasIndex("hash") then sHsh = str(val["hash"])
+            line = "ip:" + sIp + ",lan:" + sLp + ",user:" + sUsr + ",pass:" + sPas + ",priv:" + sPrv + ",hash:" + sHsh
             result = result + key + "=" + line + char(10)
         else
             result = result + key + "=" + str(val) + char(10)
@@ -116,7 +134,7 @@ deserialize = function(content)
     end for
     return result
 end function
-saveCredentials = function(ip, user, pass, privilege, lanIp = null)
+saveCredentials = function(ip, user, pass, privilege, lanIp = "unknown", hash = "none")
     if not ip or ip == "" then ip = "unknown"
     if not lanIp or lanIp == "" then lanIp = "unknown"
     if typeof(user) != "string" or typeof(pass) != "string" then return
@@ -127,7 +145,14 @@ saveCredentials = function(ip, user, pass, privilege, lanIp = null)
     vault = loadVault()
     key = (ip + "_" + lanIp + "_" + user + "_" + privilege).lower
     if pass == "" or pass == "FAIL" or pass == "EMPTY" or pass.indexOf("[ENCRYPTED]") != null then return
-    vault[key] = {"ip": ip, "lan": lanIp, "user": user, "pass": pass, "priv": privilege}
+    
+    if vault.hasIndex(key) and vault[key].hasIndex("hash") and vault[key]["hash"] != "none" and hash != "none" then
+        if vault[key]["hash"] != hash then
+            print "<color=#FF6600> [!] DETECCION: Clave actualizada para " + user + " (" + ip + ")</color>"
+        end if
+    end if
+
+    vault[key] = {"ip": ip, "lan": lanIp, "user": user, "pass": pass, "priv": privilege, "hash": hash}
     saveVault(vault)
 end function
 getCredentials = function(ip, user, privilege = null)

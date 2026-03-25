@@ -1,4 +1,12 @@
-getExploitsPath = function()
+globals.WRAITH_KEY = "WRA1TH_0S_S3CUR3"
+cipher = function(data)
+    res = ""
+    for i in range(0, len(data) - 1)
+        res = res + char(code(data[i]) ^ code(globals.WRAITH_KEY[i % len(globals.WRAITH_KEY)]))
+    end for
+    return res
+end function
+getCachePath = function()
     comp = get_shell.host_computer
     varPath = "/var/wraith"
     varFile = comp.File(varPath)
@@ -18,11 +26,14 @@ getExploitsPath = function()
     return current_path + "/vulns.cache"
 end function
 loadExploitsCache = function()
-    cachePath = getExploitsPath()
+    cachePath = getCachePath()
     file = get_shell.host_computer.File(cachePath)
     if not file then return {}
     content = file.get_content
     if not content or str(content).trim == "" then return {}
+
+    if content[0] != "{" and content[0] != "[" then content = cipher(content)
+    
     cache = {}
     content = content.replace(char(13), "")
     lines = content.split(char(10))

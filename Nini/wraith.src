@@ -163,6 +163,7 @@ cargarLib = function(nombre)
     return lib
 end function
 globals.metax = cargarLib("metaxploit.so")
+globals.exploitMode = "REMOTE"
 globals.crypto = cargarLib("crypto.so")
 verificarConexion = function(ip)
     if not ip or ip == "" then return false
@@ -217,7 +218,83 @@ nmapWraith = function()
     end for
     return result
 end function
-ejecutarAtaqueID = function(idInput)
+mostrarAyuda = function()
+    limpiar; print HUD_LINE
+    print C_P + " [WRAITH OS - AYUDA DE COMANDOS]" + C_E
+    h = "COMANDO | ALIAS | DESCRIPCION"
+    c = "exploit | x | Ataque remoto/local (overflows)"
+    c = c + "\nsessions| s | Gestor de sesiones y pivotes"
+    c = c + "\nlogs    | l | Lanza LogViewer en la sesion activa"
+    c = c + "\nshell   | sh| Terminal interactiva remota"
+    c = c + "\ntarget  | t | Definir IP objetivo"
+    c = c + "\ndecipher| d | Crackear hashes (vault integrado)"
+    c = c + "\ncreds   | c | Ver bóveda de credenciales"
+    c = c + "\nscan    | sn| Inyectar ScanLan.exe en pivot"
+    c = c + "\ninject  | i | Auto-replicar Wraith en remoto"
+    c = c + "\nssh     | ssh| Login SSH automatico (vault)"
+    c = c + "\nmode    | m | Cambiar modo REMOTE/LOCAL"
+    c = c + "\nclear   | cls| Limpiar la pantalla"
+    c = c + "\nexit    | q | Salir de Wraith OS"
+    print format_columns(h + "\n" + c)
+    print HUD_LINE
+    user_input("[ENTER]")
+end function
+ejecutarAtaqueLocal = function()
+    comp = getCurrentComputer()
+    print C_B + " [LOCAL] Escaneando librerias de sistema..." + C_E
+    folders = ["/lib", "/usr/lib"]
+    libs = []
+    for folder in folders
+        fObj = comp.File(folder)
+        if not fObj then continue
+        for item in fObj.get_files
+            if item.name.indexOf(".so") != null then libs.push(item)
+        end for
+    end for
+    
+    if len(libs) == 0 then
+        print C_R + " [!] No se encontraron librerias (.so) en el equipo." + C_E
+        return
+    end if
+    
+    for i in range(0, len(libs) - 1)
+        print " [" + (i+1) + "] " + libs[i].path
+    end for
+    
+    sel = user_input("ID de libreria a atacar: ")
+    if sel == "" then return
+    idx = val(sel) - 1
+    if idx < 0 or idx >= len(libs) then return
+    
+    targetLibFile = libs[idx]
+    print C_P + " [+] Escaneando " + targetLibFile.path + "..." + C_E
+    
+    // El motor de metaxploit.load normalmente carga la libreria en memoria
+    metax = globals.metax
+    if not metax then metax = include_lib("/lib/metaxploit.so")
+    
+    targetLib = metax.load(targetLibFile.path)
+    if not targetLib then
+        print C_R + " [!] Error al cargar libreria remota." + C_E
+        return
+    end if
+    
+    vulns = wraith_exploit.scanVulnerabilities(targetLib)
+    if len(vulns["vulns"]) == 0 then
+        print C_Y + " [*] No se encontraron vulnerabilidades conocidas." + C_E
+        return
+    end if
+    
+    print C_G + " [+] Encontradas: " + len(vulns["vulns"]) + " vulnerabilidades." + C_E
+    for v in vulns["vulns"]
+        print C_B + " [!] Atacando: " + v["area"] + " (" + v["vuln"] + ")" + C_E
+        result = targetLib.overflow(v["area"], v["vuln"])
+        if result then 
+            manageSessions(result, "LOCAL:" + targetLibFile.name)
+        end if
+    end for
+end function
+ejecutarAtaqueID = function(idInput, isAuto = false)
     if idInput == "" then return
     pNum = 0
     if idInput != "0" then
@@ -271,16 +348,38 @@ ejecutarAtaqueID = function(idInput)
         if res then
             infoSess = globals.ipTarget + ":" + pNum
             if lanTarget != "" then infoSess = lanTarget + " (via " + globals.ipTarget + ")"
-            globals.sesiones.push({"obj": res, "info": infoSess})
-            print C_G + "[+] Acceso obtenido: " + typeof(res).upper + C_E
-            if typeof(res) == "computer" then
-                intel = wraith_exploit.extractIntel(res, true, globals.ipTarget)
-                if len(intel["users"]) > 0 then
-                    print C_P + " [INTEL] Usuarios encontrados: " + intel["users"].join(", ") + C_E
+            manageSessions(res, infoSess)
+            
+            // Auto-Bounce Logic
+            if isAuto and (typeof(res) == "router" or (typeof(res) == "shell" and res.host_computer.is_router)) then
+                print C_P + " [!] ROUTER COMPROMETIDO. Iniciando Auto-Bounce..." + C_E
+                devices = []
+                if typeof(res) == "router" then devices = res.devices_lan_ip
+                if typeof(res) == "shell" then devices = res.host_computer.active_net_card.devices_lan_ip
+                if len(devices) > 0 then
+                    targetLan = devices[0]
+                    print C_Y + " [*] Saltando a dispositivo: " + targetLan + C_E
+                    globals.ipTarget = targetLan
+                    updateRoute("Bounce -> " + targetLan)
                 end if
             end if
         end if
     end for
+end function
+manageSessions = function(res, infoSess)
+    if not res then return
+    modeLabel = "[R]"
+    if globals.exploitMode == "LOCAL" then modeLabel = "[L]"
+    globals.sesiones.push({"obj": res, "info": infoSess, "mode": modeLabel})
+    print C_G + "[+] Acceso obtenido: " + typeof(res).upper + " " + modeLabel + C_E
+    if typeof(res) == "computer" or typeof(res) == "shell" then
+        comp = res
+        if typeof(res) == "shell" then comp = res.host_computer
+        intel = wraith_exploit.extractIntel(comp, true, globals.ipTarget)
+        if intel.hasIndex("users") and len(intel["users"]) > 0 then
+            print C_P + " [INTEL] Usuarios encontrados: " + intel["users"].join(", ") + C_E
+        end if
+    end if
 end function
 exploreFileRecursively = function(fileObj, depth = 0)
     if not fileObj then return
@@ -325,11 +424,12 @@ gestorSesiones = function()
         user_input("[ENTER]")
         return
     end if
-    header = C_Y + "ID" + C_E + " | " + C_W + "TYPE" + C_E + " | " + C_G + "TARGET" + C_E
+    header = C_Y + "ID" + C_E + " | " + C_W + "TYPE" + C_E + " | " + C_P + "ORG" + C_E + " | " + C_G + "TARGET" + C_E
     cuerpo = ""
     for i in range(0, len(globals.sesiones) - 1)
         s = globals.sesiones[i]
-        cuerpo = cuerpo + "\n" + C_Y + (i+1) + C_E + " | " + C_W + typeof(s.obj).upper + C_E + " | " + C_G + s.info + C_E
+        org = "[R]"; if s.hasIndex("mode") then org = s.mode
+        cuerpo = cuerpo + "\n" + C_Y + (i+1) + C_E + " | " + C_W + typeof(s.obj).upper + C_E + " | " + C_P + org + C_E + " | " + C_G + s.info + C_E
     end for
     table = format_columns(header + "\n" + cuerpo)
     print table
@@ -372,6 +472,12 @@ gestorSesiones = function()
             print C_B + " Correos encontrados: " + len(intel["mails"]) + C_E
             for user in intel["mails"].indexes
                 print "   " + user + ": " + intel["mails"][user]
+            end for
+        end if
+        if len(intel["hashes"]) > 0 then
+            print C_P + " Credenciales de sistema detectadas (/etc/passwd): " + len(intel["hashes"]) + C_E
+            for user in intel["hashes"].indexes
+                print "   " + user + ": " + intel["hashes"][user]
             end for
         end if
         if intel["passwd"] then
@@ -985,12 +1091,12 @@ remoteShell = function()
                         end if
                         res = wraith_exploit.decipherHash(hash)
                         if res then
-                            print C_G + " [OK] " + user + " -> " + res + C_E
-                            // Guardado persistente dual (Public IP y LAN IP)
-                            wraith_db.saveCredentials(pubIp, user, res, "remote", lanIp)
-                            deciprogress = deciprogress + 1
-                        else
-                            print C_R + " [FAIL] " + user + " (" + hash[0:8] + "...)" + C_E
+                                pass = libs["crypto"].decipher(hash)
+                                if pass then
+                                    wraith_db.saveCredentials(pubIp, user, pass, "linux", lanIp, hash)
+                                    deciprogress = deciprogress + 1
+                                end if
+                        print C_R + " [FAIL] " + user + " (" + hash[0:8] + "...)" + C_E
                         end if
                     end for
                     print C_B + " [+] Finalizado. " + deciprogress + " credenciales almacenadas." + C_E
@@ -1009,18 +1115,34 @@ while true
     status_host = C_R + "(OFFLINE)" + C_E
     if globals.ipTarget and verificarConexion(globals.ipTarget) then status_host = C_G + "(ONLINE)" + C_E
     print " ORIGIN: " + C_B + globals.originDisplay + C_E + " | TARGET: " + C_Y + globals.ipTarget + C_E + " " + status_host
-    print " SESSIONS: " + C_G + len(globals.sesiones) + C_E
+    print " SESSIONS: " + C_G + len(globals.sesiones) + C_E + " | MODE: " + C_P + globals.exploitMode + C_E
     print HUD_LINE
     print nmapWraith
     print HUD_SUB
-    print C_W + "[1] EXPLOIT [2] SESS [3] LOGS [4] SHELL [5] TARGET [6] DECIPHER [7] CREDS [8] SCAN [9] XFER" + C_E
-    cmd = user_input(C_G + "wraith>> " + C_E)
-    if cmd == "1" then
-        idS = user_input("ID: ")
-        ejecutarAtaqueID(idS)
-    else if cmd == "2" then
+    print HUD_CLEAN
+    cmd_raw = user_input(C_G + "wraith>> " + C_E).lower
+    cmd_parts = cmd_raw.split(" ")
+    cmd = cmd_parts[0]
+    
+    if cmd == "exploit" or cmd == "x" or cmd == "1" then
+        if globals.exploitMode == "LOCAL" then
+            ejecutarAtaqueLocal
+        else
+            idS = user_input("ID [Enter = ALL]: ")
+            if idS == "" then
+                print C_Y + " [!] MODO AUTO-EXPLOIT ACTIVADO + PUERTO 0. Atacando..." + C_E
+                ejecutarAtaqueID("0", true)
+                for i in range(1, len(globals.lastScan))
+                    ejecutarAtaqueID(str(i), true)
+                end for
+                user_input("[ENTER] Proceso de Auto-Exploit finalizado.")
+            else
+                ejecutarAtaqueID(idS, false)
+            end if
+        end if
+    else if cmd == "sessions" or cmd == "s" or cmd == "2" then
         gestorSesiones
-    else if cmd == "3" then
+    else if cmd == "logs" or cmd == "l" or cmd == "3" then
         if globals.activeShell then
             globals.activeShell.launch("/usr/bin/LogViewer.exe")
             print C_G + " [+] LogViewer.exe lanzado en shell activa." + C_E
@@ -1029,7 +1151,7 @@ while true
             print C_G + " [+] LogViewer.exe lanzado en equipo actual." + C_E
         end if
         continue
-    else if cmd == "4" then
+    else if cmd == "shell" or cmd == "sh" or cmd == "4" then
         print C_B + " [1] REAL TERMINAL  [2] REMOTE SHELL (default)" + C_E
         opt = user_input(">> ")
         if opt == "" then opt = "2" 
@@ -1042,19 +1164,125 @@ while true
         else if opt == "2" then
             remoteShell
         end if
-    else if cmd == "5" then
-        nt = user_input("IP: ")
+    else if cmd == "target" or cmd == "t" or cmd == "5" then
+        nt = ""
+        if len(cmd_parts) > 1 then nt = cmd_parts[1] else nt = user_input("IP Objetivo: ")
         if nt != "" then
             globals.ipTarget = nt
             updateRoute("Target -> " + nt)
         end if
-    else if cmd == "6" then
+    else if cmd == "decipher" or cmd == "d" or cmd == "6" then
         gestorDecipher
-    else if cmd == "7" then
+    else if cmd == "creds" or cmd == "c" or cmd == "7" then
         gestorCreds
-    else if cmd == "8" then
-        gestorScan
-    else if cmd == "9" then
-        gestorXfer
+    else if cmd == "scan" or cmd == "sn" or cmd == "8" then
+        print C_P + " [SCAN] Lanzando ScanLan.exe..." + C_E
+        targetSh = globals.activeShell
+        if not targetSh then targetSh = get_shell
+        comp = targetSh.host_computer
+        
+        // Intentar lanzar directamente
+        res = targetSh.launch("/usr/bin/ScanLan.exe")
+        if not res then
+            print C_Y + " [*] ScanLan.exe no encontrado en destino. Buscando ruta de subida..." + C_E
+            localFile = get_shell.host_computer.File("/usr/bin/ScanLan.exe")
+            if not localFile then
+                print C_R + " [!] Error: ScanLan.exe no encontrado localmente." + C_E
+            else
+                paths = ["/usr/bin", "/home/guest", "/home", "/"]
+                uploaded = false
+                for p in paths
+                    comp.touch(p, "ScanLan.exe")
+                    remoteFile = comp.File(p + "/ScanLan.exe")
+                    if remoteFile then
+                        remoteFile.set_content(localFile.get_content)
+                        targetSh.launch(p + "/ScanLan.exe")
+                        print C_G + " [+] ScanLan.exe subido y lanzado en " + p + "/ScanLan.exe" + C_E
+                        uploaded = true
+                        break
+                    end if
+                end for
+                if not uploaded then print C_R + " [!] Error: No se pudo subir ScanLan.exe en ninguna ruta conocida." + C_E
+            end if
+        else
+            print C_G + " [+] ScanLan.exe lanzado exitosamente." + C_E
+        end if
+        continue
+    else if cmd == "inject" or cmd == "i" then
+        targetSh = globals.activeShell
+        if not targetSh then 
+            print C_R + " [!] Necesitas una shell activa para inyectar Wraith." + C_E
+            continue
+        end if
+        print C_P + " [INJECT] Preparando auto-inyeccion..." + C_E
+        localFile = get_shell.host_computer.File(program_path)
+        if not localFile then
+            print C_R + " [!] Error: No se pudo localizar el binario local." + C_E
+        else
+            paths = ["/bin", "/usr/bin", "/home/guest", "/home", "/"]
+            comp = targetSh.host_computer
+            uploaded = false
+            for p in paths
+                comp.touch(p, "wraith")
+                remoteFile = comp.File(p + "/wraith")
+                if remoteFile then
+                    remoteFile.set_content(localFile.get_content)
+                    remoteFile.chmod("u+x", true)
+                    remoteFile.chmod("o+x", true)
+                    remoteFile.chmod("g+x", true)
+                    print C_G + " [+] Wraith inyectado exitosamente en " + p + "/wraith" + C_E
+                    uploaded = true
+                    break
+                end if
+            end for
+            if not uploaded then print C_R + " [!] Error: No se pudo inyectar Wraith en ninguna ruta." + C_E
+        end if
+    else if cmd == "ssh" or cmd == "0" then
+        if not globals.ipTarget or globals.ipTarget == "" then
+            print C_R + " [!] Primero define un TARGET con el comando 'target'" + C_E
+            continue
+        end if
+        print C_B + " [SSH] Buscando credenciales para " + globals.ipTarget + "..." + C_E
+        vault = wraith_db.listCredentials()
+        cands = []
+        for key in vault.indexes
+            v = vault[key]
+            if v.ip == globals.ipTarget or v.lan == globals.ipTarget then cands.push(v)
+        end for
+        
+        if len(cands) == 0 then
+            print C_R + " [!] No hay credenciales guardadas para este host." + C_E
+        else
+            print C_G + " [+] Encontradas " + len(cands) + " credenciales." + C_E
+            for i in range(0, len(cands)-1)
+                print " [" + (i+1) + "] " + cands[i].user + " (" + cands[i].priv + ")"
+            end for
+            sel = user_input("ID [1]: ")
+            if sel == "" then sel = "1"
+            idx = sel.to_int - 1
+            if idx >= 0 and idx < len(cands) then
+                cred = cands[idx]
+                print C_P + " [*] Intentando conexion SSH con " + cred.user + "..." + C_E
+                newShell = get_shell.connect_service(globals.ipTarget, 22, cred.user, cred.pass, "ssh")
+                if typeof(newShell) == "shell" then
+                    manageSessions(newShell, globals.ipTarget + " (SSH:" + cred.user + ")")
+                else
+                    print C_R + " [!] Error de conexion: " + newShell + C_E
+                end if
+            end if
+        end if
+    else if cmd == "mode" or cmd == "m" then
+        if globals.exploitMode == "REMOTE" then
+            globals.exploitMode = "LOCAL"
+        else
+            globals.exploitMode = "REMOTE"
+        end if
+        continue
+    else if cmd == "help" or cmd == "?" then
+        mostrarAyuda
+    else if cmd == "clear" or cmd == "cls" then
+        limpiar
+    else if cmd == "exit" or cmd == "quit" or cmd == "q" then
+        exit(C_P + " Wraih OS offline. Volviendo a la realidad..." + C_E)
     end if
 end while
