@@ -227,8 +227,16 @@ nmapWraith = function()
     if not verificarConexion(target) then return C_R + " [!] HOST UNREACHABLE" + C_E
     
     scanResult = wraith_net.scanPorts(target)
-    if typeof(scanResult) == "string" and scanResult.indexOf("Error") != null then
-        return C_R + scanResult + C_E
+    if typeof(scanResult) == "string" then
+        if scanResult.indexOf("Error") != null then
+            return C_R + " [!] " + scanResult + C_E
+        else
+            return C_Y + " [*] " + scanResult + C_E
+        end if
+    end if
+    
+    if not scanResult.hasIndex("output") then
+        return C_R + " [!] Formato de resultado invalido." + C_E
     end if
     
     result = scanResult["output"]
@@ -305,12 +313,32 @@ ejecutarAtaqueLocal = function()
         return
     end if
     
-    print C_G + " [+] Encontradas: " + len(vulns["vulns"]) + " vulnerabilidades." + C_E
+    isRouter = false
+    r = get_router(comp.public_ip)
+    if r and r.local_ip == comp.local_ip then isRouter = true
+    if comp.get_name == "router" then isRouter = true
+
+    lanTarget = ""
+    if isRouter then
+        print C_P + " [!] ROUTER DETECTADO. ?USAR BOUNCE?" + C_E
+        print " [1] NO (Atacar Router)  [2] SI (Saltar a IP Interna)"
+        if user_input(">> ") == "2" then
+            lanTarget = user_input(C_Y + "IP Interna: " + C_E)
+            updateRoute("Router -> " + lanTarget)
+        end if
+    end if
+
     for v in vulns["vulns"]
         print C_B + " [!] Atacando: " + v["area"] + " (" + v["vuln"] + ")" + C_E
-        result = targetLib.overflow(v["area"], v["vuln"])
+        if lanTarget != "" then
+            result = targetLib.overflow(v["area"], v["vuln"], lanTarget)
+        else
+            result = targetLib.overflow(v["area"], v["vuln"])
+        end if
         if result then 
-            manageSessions(result, "LOCAL:" + targetLibFile.name)
+            infoSess = "LOCAL:" + targetLibFile.name
+            if lanTarget != "" then infoSess = lanTarget + " (via LOCAL)"
+            manageSessions(result, infoSess)
         end if
     end for
 end function
@@ -332,8 +360,20 @@ ejecutarAtaqueID = function(idInput, isAuto = false)
     end if
     lib = connection["lib"]
     libs = connection["libs"]
+    portInfo = wraith_net.getPortInfo(globals.ipTarget, pNum)
+    
+    isRouter = false
+    r = get_router(globals.ipTarget)
+    if r then
+        if portInfo and typeof(portInfo) == "map" and portInfo.hasIndex("lan_ip") then
+            if portInfo["lan_ip"] == r.local_ip then isRouter = true
+        else if globals.ipTarget == r.local_ip then
+            isRouter = true
+        end if
+    end if
+
     lanTarget = ""
-    if lib.lib_name == "kernel_router.so" then
+    if isRouter then
         print C_P + " [!] ROUTER DETECTADO. ?USAR BOUNCE?" + C_E
         print " [1] NO (Atacar Router)  [2] SI (Saltar a IP Interna)"
         if user_input(">> ") == "2" then
@@ -341,7 +381,7 @@ ejecutarAtaqueID = function(idInput, isAuto = false)
             updateRoute("Router -> " + lanTarget)
         end if
     end if
-    portInfo = wraith_net.getPortInfo(globals.ipTarget, pNum)
+
     service = ""
     version = ""
     if portInfo and typeof(portInfo) == "map" and portInfo.hasIndex("info") then
@@ -531,8 +571,28 @@ gestorSesiones = function()
             print C_P + " [INTEL] Extrayendo informacion a traves de la shell..." + C_E
             intel = wraith_exploit.extractIntel(obj.host_computer, false, globals.ipTarget)
             if len(intel["users"]) > 0 then print C_G + " Usuarios: " + intel["users"].join(", ") + C_E
-            if len(intel["banks"]) > 0 then print C_Y + " Bancos: " + len(intel["banks"]) + C_E
-            if len(intel["mails"]) > 0 then print C_B + " Mails: " + len(intel["mails"]) + C_E
+            if len(intel["banks"]) > 0 then
+                print C_Y + " Bancos encontrados: " + len(intel["banks"]) + C_E
+                for user in intel["banks"].indexes
+                    print "   " + user + ": " + intel["banks"][user]
+                end for
+            end if
+            if len(intel["mails"]) > 0 then
+                print C_B + " Correos encontrados: " + len(intel["mails"]) + C_E
+                for user in intel["mails"].indexes
+                    print "   " + user + ": " + intel["mails"][user]
+                end for
+            end if
+            if len(intel["hashes"]) > 0 then
+                print C_P + " Credenciales de sistema detectadas (/etc/passwd): " + len(intel["hashes"]) + C_E
+                for user in intel["hashes"].indexes
+                    print "   " + user + ": " + intel["hashes"][user]
+                end for
+            end if
+            if intel.hasIndex("passwd") and intel["passwd"] then
+                print C_P + " /etc/passwd:" + C_E
+                print intel["passwd"]
+            end if
             user_input("[ENTER]")
         end if
     else if typ == "computer" then
@@ -542,7 +602,7 @@ gestorSesiones = function()
             if opt == "5" or opt == "" then break
             if opt == "4" then
                 print C_P + " [INTEL] Extrayendo informacion profunda..." + C_E
-                intel = wraith_exploit.extractIntel(obj, false, obj.local_ip)
+                intel = wraith_exploit.extractIntel(obj, false)
                 if len(intel["users"]) > 0 then print C_G + " Usuarios: " + intel["users"].join(", ") + C_E
                 if len(intel["banks"]) > 0 then
                     print C_Y + " Bancos encontrados: " + len(intel["banks"]) + C_E

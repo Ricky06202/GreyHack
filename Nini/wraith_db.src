@@ -178,18 +178,18 @@ saveCredentials = function(ip, user, pass, privilege, lanIp = "unknown", hash = 
     vault[key] = {"ip": ip, "lan": lanIp, "user": user, "pass": pass, "priv": privilege, "hash": hash}
     saveVault(vault)
 end function
-getCredentials = function(ip, user, privilege = null)
+getCredentials = function(ip, user, privilege = null, lanIp = null)
     vault = loadVault()
-    // Buscar todas las entradas que coincidan con IP y usuario (ignorando LAN en la busqueda inicial)
     for key in vault.indexes
         if typeof(vault[key]) != "map" then continue
         v = vault[key]
         if v.hasIndex("ip") and v.hasIndex("user") and v.hasIndex("priv") then
             if v["ip"] == ip and v["user"].lower == user.lower then
+                if lanIp != null and v.hasIndex("lan") and v["lan"] != lanIp and v["lan"] != "unknown" then continue
                 if privilege == null or v["priv"] == privilege then return v
             end if
-            // Tambien buscar si la IP guardada es la LAN
             if v.hasIndex("lan") and v["lan"] == ip and v["user"].lower == user.lower then
+                if lanIp != null and v["lan"] != lanIp and v["lan"] != "unknown" then continue
                 if privilege == null or v["priv"] == privilege then return v
             end if
         end if
