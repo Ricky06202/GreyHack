@@ -1,0 +1,24 @@
+// modulo espectro.nini - Reconocimiento Avanzado
+
+tarea modulo_espectro_recon:
+    si globals.objetivo_actual == null:
+        error("Abotando: No hay ningun objetivo fijado en memoria. Usa 'objetivo <ip>'.")
+        return
+        
+    info("Iniciando Mapeo Nmap Profundo sobre: " + globals.objetivo_actual)
+    
+    // Inyectamos el router en memoria
+    mirar(globals.objetivo_actual)
+    
+    // La macro automatica 'escanear' de Nini depende internamente de 'target_ip' y 'router'
+    globals.target_ip = globals.objetivo_actual
+    escanear
+    
+    archivo_log = current_path + "/scan_" + target_ip + ".txt"
+    resultado = get_shell.host_computer.File(archivo_log)
+    
+    si resultado:
+        exito("Matriz de puertos obtenida y guardada localmente.")
+        print(resultado.get_content)
+    sino:
+        error("Fallo critico al generar o leer el archivo de escaneo.")

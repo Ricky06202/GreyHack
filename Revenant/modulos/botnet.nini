@@ -1,0 +1,54 @@
+// modulo botnet.nini - El Alma de Revenant
+
+tarea modulo_botnet_info:
+    si enjambre.len == 0:
+        error("El enjambre esta vacio. Asalta algun objetivo primero.")
+        return
+        
+    info("Desplegando estado del enjambre (" + enjambre.len + " nodos activos):")
+    columnas = ["IP Victima", "Tipo Acceso"]
+    filas = []
+    
+    para nodo en enjambre:
+        ip_nodo = nodo.key
+        sesion_hash = typeof(nodo.value)
+        filas.push([ip_nodo, sesion_hash])
+    
+    tabla = construir_tabla(columnas, filas)
+    print(tabla)
+
+tarea modulo_botnet_saquear:
+    si enjambre.len == 0:
+        error("El enjambre esta vacio.")
+        return
+        
+    info("Iniciando extraccion e iteracion masiva de diccionarios...")
+    
+    para nodo en enjambre:
+        ip_nodo = nodo.key
+        sesion = nodo.value
+        
+        computer_node = null
+        si typeof(sesion) == "shell":
+            computer_node = sesion.host_computer
+        osi typeof(sesion) == "computer":
+            computer_node = sesion
+            
+        si computer_node:
+            info("Escaneando /etc/passwd en " + ip_nodo)
+            archivo = computer_node.File("/etc/passwd")
+            si archivo and archivo.has_permission("r"):
+                exito("Sombra obtenida. Desplegando algoritmos crypto...")
+                
+                contenido_passwd = archivo.get_content
+                // Usando macro cruda del auto-hacker API Nini
+                crackear_diccionario(contenido_passwd)
+                credenciales = __nini_res_crack
+                
+                si typeof(credenciales) == "map":
+                    para cred en credenciales:
+                        info("> [VULNERADO] Usuario: " + cred.key + " | Pass: " + cred.value)
+                sino:
+                    error("Fallo al inyectar auto-hacker crypto.")
+            sino:
+                error("Proteccion detectada en " + ip_nodo)

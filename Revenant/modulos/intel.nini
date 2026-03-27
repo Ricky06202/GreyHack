@@ -1,0 +1,63 @@
+// modulos/intel.nini - Operación Cosecha Silenciosa 🌾💀
+
+tarea modulo_intel_saquear:
+    si globals.objetivo_actual == null:
+        error("Fije un objetivo primero.")
+        retornar
+        
+    sesion = enjambre[globals.objetivo_actual]
+    si no sesion:
+        error("No hay sesion activa para " + globals.objetivo_actual + " en el enjambre.")
+        retornar
+        
+    info("Iniciando extracción de inteligencia profunda en " + globals.objetivo_actual)
+    
+    comp = nulo
+    si typeof(sesion) == "shell": comp = sesion.host_computer
+    sino: comp = sesion
+    
+    // 1. Cosechar /etc/passwd
+    passwd = comp.File("/etc/passwd")
+    si passwd y no passwd.is_binary:
+        info("Procesando /etc/passwd...")
+        lineas = passwd.get_content.split(char(10))
+        recorrer lineas como l:
+            si l.indexOf(":") == nulo: continuar
+            partes = l.split(":")
+            usuario = partes[0]
+            hash = partes[1]
+            si hash == "x" o hash == "*": continuar
+            
+            info("Descifrando hash de sistema: " + usuario)
+            clave = crackear_hash(hash)
+            si clave:
+                guardar_credencial(globals.objetivo_actual, usuario, clave, "linux", comp.local_ip)
+    
+    // 2. Cosechar /home (Bancos y Correos)
+    home = comp.File("/home")
+    si home:
+        recorrer home.get_folders como user_dir:
+            usr = user_dir.name
+            info("Explorando entorno de usuario: " + usr)
+            
+            // Bancos
+            banco_file = comp.File("/home/" + usr + "/Config/Bank.txt")
+            si banco_file:
+                recorrer banco_file.get_content.split(char(10)) como l:
+                    si l.indexOf(":") == nulo: continuar
+                    p = l.split(":")
+                    acc = p[0]; h = p[1]
+                    pass_dec = crackear_hash(h)
+                    si pass_dec: guardar_credencial(globals.objetivo_actual, acc, pass_dec, "banco", comp.local_ip)
+            
+            // Correos
+            mail_file = comp.File("/home/" + usr + "/Config/Mail.txt")
+            si mail_file:
+                recorrer mail_file.get_content.split(char(10)) como l:
+                    si l.indexOf(":") == nulo: continuar
+                    p = l.split(":")
+                    acc = p[0]; h = p[1]
+                    pass_dec = crackear_hash(h)
+                    si pass_dec: guardar_credencial(globals.objetivo_actual, acc, pass_dec, "correo", comp.local_ip)
+    
+    exito("Operación de inteligencia finalizada. Revisa el 'vault'.")

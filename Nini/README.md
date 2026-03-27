@@ -1,4 +1,4 @@
-# Nini v9.0 - Documentación Oficial (Auto-Hacker & OS Framework)
+# Nini - Documentación Oficial (Auto-Hacker & OS Framework)
 
 Nini ha evolucionado de un simple transpilador a un **Lanzador de Exploits y Sistema Operativo de Red Team** (Nini-Wraith OS) super-vitaminado para Grey Hack. Convierte eficientemente código escrito en un espanglish minimalista (estilo Python) a **MiniScript** nativo, inyectando abstracciones automáticas para saltarse el 90% del código aburrido.
 

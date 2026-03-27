@@ -1,0 +1,18 @@
+importar "repl.nini"
+importar "modulos/espectro.nini"
+importar "modulos/asalto.nini"
+importar "modulos/ui.nini"
+importar "modulos/botnet.nini"
+importar "modulos/persistencia.nini"
+importar "modulos/vault.nini"
+importar "modulos/intel.nini"
+importar "modulos/red.nini"
+importar "modulos/inyeccion.nini"
+importar "modulos/escalada.nini"
+
+modo ninja:
+inicializar_vault()
+mostrar_banner_revenant()
+info("Cargando REVENANT OS...")
+
+iniciar_repl()

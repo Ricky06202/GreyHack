@@ -1,0 +1,542 @@
+// --- INICIO SUB-MODULO: repl.nini ---
+// repl.nini - Bucle Principal Interactivo
+
+// Estado Global (La Memoria Inmortal)
+enjambre = {}
+objetivo_actual = null
+estado_activo = verdadero
+
+tarea iniciar_repl:
+    mientras estado_activo:
+        p = "<color=#ff1744>[#] </color><color=#ffffff>Revenant</color>"
+        si globals.objetivo_actual != nulo:
+            p = p + " <color=#424242>[</color><color=#ffea00>" + globals.objetivo_actual + "</color><color=#424242>]</color>"
+        p = p + " <color=#00e5ff>> </color>"
+        entrada = pedir(p)
+        
+        si entrada == "salir" or entrada == "exit" or entrada == "x" or entrada == "q":
+            info("Apagando nucleo Revenant...")
+            globals.estado_activo = falso
+            
+        osi entrada == "ayuda" or entrada == "help" or entrada == "h":
+            columnas = ["Cmd", "Alias", "Accion"]
+            filas = [
+                ["ayuda", "h", "Muestra este panel"],
+                ["objetivo", "o", "Fija un target en memoria"],
+                ["recon", "r", "Ejecuta nmap automatizado"],
+                ["asalto", "a", "Gana ejecucion (Metaxploit)"],
+                ["vault", "v", "Lista el botin guardado"],
+                ["intel", "i", "Cosecha secretos del target"],
+                ["inject", "inj", "Auto-replica Revenant"],
+                ["privesc", "p", "Busca vectores de Root"],
+                ["red escanear", "re", "Busca hosts en subred"],
+                ["red info", "ri", "Topologia del enjambre"],
+                ["botnet info", "bi", "Estado del enjambre"],
+                ["sesiones", "s", "Muestra shells activas"],
+                ["salir", "x/q", "Apaga el framework"],
+            ]
+            tabla = construir_tabla(columnas, filas)
+            print(tabla)
+            
+        osi entrada.indexOf("objetivo ") == 0 or entrada.indexOf("o ") == 0:
+            partes = entrada.split(" ")
+            si partes.len == 2:
+                ip = resolver_objetivo(partes[1])
+                si ip:
+                    globals.objetivo_actual = ip
+                    exito("Objetivo fijado en memoria: " + globals.objetivo_actual)
+                sino:
+                    error("Dominio/IP Invalida.")
+            sino:
+                error("Uso: o <ip> o objetivo <ip>")
+                
+        osi entrada == "sesiones" or entrada == "s":
+            info("Sesiones activas en enjambre: " + enjambre.len)
+            
+        osi entrada == "recon" or entrada == "r":
+            modulo_espectro_recon()
+            
+        osi entrada == "asalto" or entrada == "a":
+            modulo_asalto_root()
+            
+        osi entrada == "botnet info" or entrada == "bi":
+            modulo_botnet_info()
+            
+        osi entrada == "botnet saquear" or entrada == "bs":
+            modulo_botnet_saquear()
+            
+        osi entrada == "botnet persistir" or entrada == "bp":
+            modulo_botnet_persistir()
+            
+        osi entrada == "vault" or entrada == "v":
+            listar_credenciales()
+            
+        osi entrada == "intel" or entrada == "i":
+            modulo_intel_saquear()
+            
+        osi entrada == "red escanear" or entrada == "re":
+            modulo_red_escanear()
+            
+        osi entrada == "red info" or entrada == "ri":
+            modulo_red_info()
+            
+        osi entrada == "inject" or entrada == "inj":
+            modulo_inyeccion_replicar()
+            
+        osi entrada == "privesc" or entrada == "p":
+            modulo_escalada_analizar()
+            
+        osi entrada == "":
+            continue
+            
+        sino:
+            error("Comando '" + entrada + "' desconocido.")
+
+// --- FIN SUB-MODULO: repl.nini ---
+// --- INICIO SUB-MODULO: modulos/espectro.nini ---
+// modulo espectro.nini - Reconocimiento Avanzado
+
+tarea modulo_espectro_recon:
+    si globals.objetivo_actual == null:
+        error("Abotando: No hay ningun objetivo fijado en memoria. Usa 'objetivo <ip>'.")
+        return
+        
+    info("Iniciando Mapeo Nmap Profundo sobre: " + globals.objetivo_actual)
+    
+    // Inyectamos el router en memoria
+    mirar(globals.objetivo_actual)
+    
+    // La macro automatica 'escanear' de Nini depende internamente de 'target_ip' y 'router'
+    globals.target_ip = globals.objetivo_actual
+    escanear
+    
+    archivo_log = current_path + "/scan_" + target_ip + ".txt"
+    resultado = get_shell.host_computer.File(archivo_log)
+    
+    si resultado:
+        exito("Matriz de puertos obtenida y guardada localmente.")
+        print(resultado.get_content)
+    sino:
+        error("Fallo critico al generar o leer el archivo de escaneo.")
+
+// --- FIN SUB-MODULO: modulos/espectro.nini ---
+// --- INICIO SUB-MODULO: modulos/asalto.nini ---
+// modulo asalto.nini - Inyecciones Metaxploit
+
+tarea modulo_asalto_root:
+    si globals.objetivo_actual == null:
+        error("Abotando: No hay ningun objetivo fijado. Usa 'objetivo <ip>'.")
+        retornar
+        
+    puerto = pedir("Ingresa el puerto a vulnerar (dejalo vacio para el router 0): ")
+    port_int = 0
+    si puerto.len > 0: port_int = puerto.to_int
+        
+    info("Analizando " + globals.objetivo_actual + ":" + port_int + " mediante Vault...")
+    
+    // Detección de Router para Bounce
+    es_router = falso
+    r = obtener_router_objetivo(globals.objetivo_actual)
+    si r: es_router = verdadero
+    
+    lan_target = nulo
+    si es_router:
+        alerta("¡ROUTER DETECTADO! Posibilidad de Salto (Bounce).")
+        opcion = pedir("¿Deseas saltar a IP interna? (s/n): ")
+        si opcion == "s":
+            lan_target = pedir("Ingresa la IP interna del objetivo final: ")
+            info("Configurando ataque de salto hacia: " + lan_target)
+
+    // Intento de recuperación de cache
+    lib_info = obtener_info_libreria(globals.objetivo_actual, port_int)
+    
+    vulns_cache = []
+    si lib_info:
+        vulns_cache = obtener_vulnerabilidades(lib_info.lib_name, lib_info.version)
+    
+    si vulns_cache.len > 0:
+        exito("Vulnerabilidades recuperadas del Vault para " + lib_info.lib_name)
+        recorrer vulns_cache como v:
+            info("Explotando via Cache: " + v.area + " | " + v.vuln)
+            sesion = explotar_directo(lib_info.metalib, v.area, v.vuln, lan_target)
+            si typeof(sesion) == "shell" o typeof(sesion) == "computer":
+                exito("Acceso obtenido via Vault Cache.")
+                enjambre[globals.objetivo_actual] = sesion
+                retornar
+    
+    // Si no hay cache or fallo, escaneo tradicional
+    info("No hay cache operativa. Iniciando escaneo profundo...")
+    vuln = buscar_vulnerabilidad(globals.objetivo_actual, port_int)
+    
+    si vuln:
+        exito("Vulnerabilidad detectada: " + vuln.area + " | " + vuln.vuln)
+        cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, vuln.area, vuln.vuln)
+        
+        info("Ejecutando Pipeline de asalto...")
+        sesion = vuln >> explotar("1337_password", lan_target)
+        
+        si typeof(sesion) == "shell" o typeof(sesion) == "computer":
+            exito("Brecha abierta. Objetivo añadido al enjambre.")
+            enjambre[globals.objetivo_actual] = sesion
+        sino:
+            error("Ataque fallido.")
+    sino:
+        error("Objetivo invulnerable.")
+
+// --- FIN SUB-MODULO: modulos/asalto.nini ---
+// --- INICIO SUB-MODULO: modulos/ui.nini ---
+// ui.nini - Identidad Visual y Arte ASCII de Revenant
+
+tarea mostrar_banner_revenant:
+    limpiar
+    print("<color=#ff1744>      :::::::::  :::::::::: :::     ::: :::::::::: ::::    :::     :::     ::::    ::: ::::::::::: </color>")
+    print("<color=#ff5252>     :+:    :+: :+:        :+:     :+: :+:        :+:+:   :+:   :+: :+:   :+:+:   :+:     :+:      </color>")
+    print("<color=#ff8a80>    +:+    +:+ +:+        +:+     +:+ +:+        :+:+:+  +:+  +:+   +:+  :+:+:+  +:+     +:+       </color>")
+    print("<color=#ffffff>   +#++:++#:  +#++:++#  +#+     +:+ +#++:++#  +#+ +:+ +#+ +#++:++#++ +#+ +:+ +#+     +#+        </color>")
+    print("<color=#b0bec5>  +#+    +#+ +#+         +#+   +#+  +#+        +#+  +#+#+# +#+     +#+ +#+  +#+#+#     +#+         </color>")
+    print("<color=#90a4ae> #+#    #+# #+#          #+#+#+#   #+#        #+#   #+#+# #+#     #+# #+#   #+#+#     #+#          </color>")
+    print("<color=#607d8b>###    ### ##########     ###     ########## ###    #### ###     ### ###    ####     ###           </color>")
+    print("")
+    print("<color=#00e5ff>[#] REVENANT FRAMEWORK | Operativo en Enjambre</color>")
+    print("<color=#424242>---------------------------------------------------------------------------</color>")
+
+// --- FIN SUB-MODULO: modulos/ui.nini ---
+// --- INICIO SUB-MODULO: modulos/botnet.nini ---
+// modulo botnet.nini - El Alma de Revenant
+
+tarea modulo_botnet_info:
+    si enjambre.len == 0:
+        error("El enjambre esta vacio. Asalta algun objetivo primero.")
+        return
+        
+    info("Desplegando estado del enjambre (" + enjambre.len + " nodos activos):")
+    columnas = ["IP Victima", "Tipo Acceso"]
+    filas = []
+    
+    para nodo en enjambre:
+        ip_nodo = nodo.key
+        sesion_hash = typeof(nodo.value)
+        filas.push([ip_nodo, sesion_hash])
+    
+    tabla = construir_tabla(columnas, filas)
+    print(tabla)
+
+tarea modulo_botnet_saquear:
+    si enjambre.len == 0:
+        error("El enjambre esta vacio.")
+        return
+        
+    info("Iniciando extraccion e iteracion masiva de diccionarios...")
+    
+    para nodo en enjambre:
+        ip_nodo = nodo.key
+        sesion = nodo.value
+        
+        computer_node = null
+        si typeof(sesion) == "shell":
+            computer_node = sesion.host_computer
+        osi typeof(sesion) == "computer":
+            computer_node = sesion
+            
+        si computer_node:
+            info("Escaneando /etc/passwd en " + ip_nodo)
+            archivo = computer_node.File("/etc/passwd")
+            si archivo and archivo.has_permission("r"):
+                exito("Sombra obtenida. Desplegando algoritmos crypto...")
+                
+                contenido_passwd = archivo.get_content
+                // Usando macro cruda del auto-hacker API Nini
+                crackear_diccionario(contenido_passwd)
+                credenciales = __nini_res_crack
+                
+                si typeof(credenciales) == "map":
+                    para cred en credenciales:
+                        info("> [VULNERADO] Usuario: " + cred.key + " | Pass: " + cred.value)
+                sino:
+                    error("Fallo al inyectar auto-hacker crypto.")
+            sino:
+                error("Proteccion detectada en " + ip_nodo)
+
+// --- FIN SUB-MODULO: modulos/botnet.nini ---
+// --- INICIO SUB-MODULO: modulos/persistencia.nini ---
+// modulos/persistencia.nini - Inyección de Demonios
+
+tarea modulo_botnet_persistir:
+    si enjambre.len == 0:
+        error("El enjambre esta vacio.")
+        return
+        
+    info("Inyectando Daemons Backdoor en " + enjambre.len + " subsistemas...")
+    
+    para nodo en enjambre:
+        ip_nodo = nodo.key
+        sesion = nodo.value
+        
+        computer_node = null
+        si typeof(sesion) == "shell":
+            computer_node = sesion.host_computer
+        osi typeof(sesion) == "computer":
+            computer_node = sesion
+            
+        si computer_node:
+            info("Configurando persistencia remota en " + ip_nodo)
+            
+            // Verificamos permisos de Sysadmin
+            carpeta_init = computer_node.File("/lib/")
+                
+            si carpeta_init and carpeta_init.has_permission("w"):
+                exito("Privilegios root confirmados. Modificando cronjobs / Systemd.")
+                
+                // Construyendo archivo demonio malicioso en PC victima
+                computer_node.touch("/lib/systemd/system/", "nrpe_revenant.service")
+                
+                archivo_fake = computer_node.File("/lib/systemd/system/nrpe_revenant.service")
+                si archivo_fake:
+                    archivo_fake.set_content("[Unit]\nDescription=Revenant Keeper\n[Service]\nExecStart=/bin/sh")
+                
+                exito("[INSTALADO] Troyano persistente en latencia sobre " + ip_nodo)
+            sino:
+                error("Proteccion ring-0 en " + ip_nodo + ". Requiere rooteado manual.")
+
+// --- FIN SUB-MODULO: modulos/persistencia.nini ---
+// --- INICIO SUB-MODULO: modulos/vault.nini ---
+_vault_data = {"creds": {}, "vulns": {}}
+_vault_k = "R3V3N4NT_S3CUR3"
+_version = "STABLE"
+
+tarea inicializar_vault:
+    p = "/var/revenant"
+    si no mirar(p): p = "./"
+    ruta = p + "/vault.db"
+    
+    si mirar(ruta):
+        f = obtener_archivo(ruta)
+        contenido = f.get_content
+        si contenido.len > 0:
+            _vault_data = deserializar_vault(contenido)
+            info("Vault cargado: " + _vault_data.creds.len + " creds, " + _vault_data.vulns.len + " vulns.")
+    sino:
+        info("Iniciando nuevo Vault en: " + ruta)
+
+tarea cifrar(txt):
+    res = ""
+    recorrer txt como i:
+        v = nini_xor(code(txt[i]), code(_vault_k[i % _vault_k.len]))
+        res = res + v.to_str + ","
+    retornar res
+
+tarea descifrar(txt):
+    res = ""
+    partes = txt.split(",")
+    recorrer partes como p:
+        si p == "": continuar
+        res = res + char(nini_xor(val(p), code(_vault_k[res.len % _vault_k.len])))
+    retornar res
+
+tarea serializar_vault(data):
+    // Formato simple: creds|{...} \n vulns|{...}
+    retornar cifrar(str(data))
+
+tarea deserializar_vault(txt):
+    raw = descifrar(txt)
+    retornar val(raw)
+
+tarea guardar_vault:
+    p = "/var/revenant"
+    si no mirar(p): p = "./"
+    ruta = p + "/vault.db"
+    f = obtener_archivo(ruta)
+    si no f:
+        // Crear si no existe
+        tocar(p, "vault.db")
+        f = obtener_archivo(ruta)
+    
+    f.set_content(serializar_vault(_vault_data))
+
+tarea guardar_credencial(ip, usuario, clave, priv, lan):
+    k = (ip + "_" + usuario + "_" + priv).lower()
+    _vault_data.creds[k] = {"ip": ip, "user": usuario, "pass": clave, "priv": priv, "lan": lan}
+    guardar_vault()
+    exito("Vault actualizado: " + usuario + "@" + ip)
+
+tarea listar_credenciales:
+    columnas = ["IP", "Usuario", "Clave", "Priv", "LAN"]
+    filas = []
+    recorrer _vault_data.creds como k:
+        c = _vault_data.creds[k]
+        filas.push([c.ip, c.user, c.pass, c.priv, c.lan])
+    
+    print(construir_tabla(columnas, filas))
+
+tarea cachear_vulnerabilidad(lib, ver, area, vuln):
+    k = (lib + "_" + ver).lower()
+    si no _vault_data.vulns.tiene(k): _vault_data.vulns[k] = []
+    _vault_data.vulns[k].push({"area": area, "vuln": vuln})
+    guardar_vault()
+
+tarea obtener_vulnerabilidades(lib, ver):
+    k = (lib + "_" + ver).lower()
+    si _vault_data.vulns.tiene(k): retornar _vault_data.vulns[k]
+    retornar []
+
+
+// --- FIN SUB-MODULO: modulos/vault.nini ---
+// --- INICIO SUB-MODULO: modulos/intel.nini ---
+// modulos/intel.nini - Operación Cosecha Silenciosa 🌾💀
+
+tarea modulo_intel_saquear:
+    si globals.objetivo_actual == null:
+        error("Fije un objetivo primero.")
+        retornar
+        
+    sesion = enjambre[globals.objetivo_actual]
+    si no sesion:
+        error("No hay sesion activa para " + globals.objetivo_actual + " en el enjambre.")
+        retornar
+        
+    info("Iniciando extracción de inteligencia profunda en " + globals.objetivo_actual)
+    
+    comp = nulo
+    si typeof(sesion) == "shell": comp = sesion.host_computer
+    sino: comp = sesion
+    
+    // 1. Cosechar /etc/passwd
+    passwd = comp.File("/etc/passwd")
+    si passwd y no passwd.is_binary:
+        info("Procesando /etc/passwd...")
+        lineas = passwd.get_content.split(char(10))
+        recorrer lineas como l:
+            si l.indexOf(":") == nulo: continuar
+            partes = l.split(":")
+            usuario = partes[0]
+            hash = partes[1]
+            si hash == "x" o hash == "*": continuar
+            
+            info("Descifrando hash de sistema: " + usuario)
+            clave = crackear_hash(hash)
+            si clave:
+                guardar_credencial(globals.objetivo_actual, usuario, clave, "linux", comp.local_ip)
+    
+    // 2. Cosechar /home (Bancos y Correos)
+    home = comp.File("/home")
+    si home:
+        recorrer home.get_folders como user_dir:
+            usr = user_dir.name
+            info("Explorando entorno de usuario: " + usr)
+            
+            // Bancos
+            banco_file = comp.File("/home/" + usr + "/Config/Bank.txt")
+            si banco_file:
+                recorrer banco_file.get_content.split(char(10)) como l:
+                    si l.indexOf(":") == nulo: continuar
+                    p = l.split(":")
+                    acc = p[0]; h = p[1]
+                    pass_dec = crackear_hash(h)
+                    si pass_dec: guardar_credencial(globals.objetivo_actual, acc, pass_dec, "banco", comp.local_ip)
+            
+            // Correos
+            mail_file = comp.File("/home/" + usr + "/Config/Mail.txt")
+            si mail_file:
+                recorrer mail_file.get_content.split(char(10)) como l:
+                    si l.indexOf(":") == nulo: continuar
+                    p = l.split(":")
+                    acc = p[0]; h = p[1]
+                    pass_dec = crackear_hash(h)
+                    si pass_dec: guardar_credencial(globals.objetivo_actual, acc, pass_dec, "correo", comp.local_ip)
+    
+    exito("Operación de inteligencia finalizada. Revisa el 'vault'.")
+
+// --- FIN SUB-MODULO: modulos/intel.nini ---
+// --- INICIO SUB-MODULO: modulos/red.nini ---
+// modulos/red.nini - El Mapa de la Redes Invisibles 🌐
+
+tarea modulo_red_escanear:
+    si globals.objetivo_actual == null:
+        info("Escaneando red local desde el host actual...")
+        // Usar IP local como base
+        // TODO: Implementar macro 'escanear_lan' en nini.src
+    sino:
+        info("Escaneando subred desde " + globals.objetivo_actual)
+    
+    hosts = descubrir_red_local()
+    
+    si hosts.len == 0:
+        alerta("No se detectaron otros hosts activos en la subred.")
+    sino:
+        exito("Hosts detectados: " + hosts.len)
+        columnas = ["IP", "Estado"]
+        filas = []
+        recorrer hosts como h:
+            filas.push([h, "ACTIVO"])
+        print(construir_tabla(columnas, filas))
+
+tarea modulo_red_info:
+    info("Topología de red detectada:")
+    // Mostrar saltos y pivotes activos
+    recorrer enjambre como ip:
+        info("Nodo vivo: " + ip + " [" + typeof(enjambre[ip]) + "]")
+
+// --- FIN SUB-MODULO: modulos/red.nini ---
+// --- INICIO SUB-MODULO: modulos/inyeccion.nini ---
+// modulos/inyeccion.nini - Propagación del Enjambre 💉
+
+tarea modulo_inyeccion_replicar:
+    si globals.objetivo_actual == null:
+        error("Fije un objetivo primero.")
+        retornar
+        
+    sesion = enjambre[globals.objetivo_actual]
+    si no sesion o typeof(sesion) != "shell":
+        error("Se requiere una shell activa para inyectar.")
+        retornar
+        
+    info("Inyectando Revenant en " + globals.objetivo_actual + "...")
+    
+    // Rutas de destino comunes
+    rutas = ["/bin", "/usr/bin", "/tmp", "/var", "/home/guest"]
+    
+    // Nini provee 'replicar_binario' que abstrae scp
+    recorrer rutas como r:
+        exito_inj = replicar_binario(sesion, r)
+        si exito_inj:
+            exito("Revenant inyectado y oculto en " + r)
+            retornar
+            
+    error("No se pudo inyectar el binario en ninguna ruta conocida.")
+
+// --- FIN SUB-MODULO: modulos/inyeccion.nini ---
+// --- INICIO SUB-MODULO: modulos/escalada.nini ---
+// modulos/escalada.nini - El Camino hacia Root 🔋
+
+tarea modulo_escalada_analizar:
+    si globals.objetivo_actual == null:
+        info("Escaneando sistema local para escalada de privilegios...")
+        // Usar host local
+    sino:
+        info("Buscando vectores de PrivEsc en " + globals.objetivo_actual)
+    
+    sesion = enjambre[globals.objetivo_actual]
+    si no sesion:
+        error("No hay sesion activa para el análisis.")
+        retornar
+        
+    resultado = buscar_vectores_escalada(sesion)
+    
+    si resultado.len == 0:
+        alerta("No se detectaron vectores de escalada automáticos.")
+    sino:
+        exito("Vectores detectados: " + resultado.len)
+        columnas = ["Ruta", "Tipo", "Severidad"]
+        filas = []
+        recorrer resultado como v:
+            filas.push([v.path, v.type, v.severity])
+        print(construir_tabla(columnas, filas))
+
+// --- FIN SUB-MODULO: modulos/escalada.nini ---
+
+modo ninja:
+inicializar_vault()
+mostrar_banner_revenant()
+info("Cargando REVENANT OS...")
+
+iniciar_repl()

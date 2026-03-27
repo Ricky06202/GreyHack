@@ -1,0 +1,79 @@
+_vault_data = {"creds": {}, "vulns": {}}
+_vault_k = "R3V3N4NT_S3CUR3"
+_version = "STABLE"
+
+tarea inicializar_vault:
+    p = "/var/revenant"
+    si no mirar(p): p = "./"
+    ruta = p + "/vault.db"
+    
+    si mirar(ruta):
+        f = obtener_archivo(ruta)
+        contenido = f.get_content
+        si contenido.len > 0:
+            _vault_data = deserializar_vault(contenido)
+            info("Vault cargado: " + _vault_data.creds.len + " creds, " + _vault_data.vulns.len + " vulns.")
+    sino:
+        info("Iniciando nuevo Vault en: " + ruta)
+
+tarea cifrar(txt):
+    res = ""
+    recorrer txt como i:
+        v = nini_xor(code(txt[i]), code(_vault_k[i % _vault_k.len]))
+        res = res + v.to_str + ","
+    retornar res
+
+tarea descifrar(txt):
+    res = ""
+    partes = txt.split(",")
+    recorrer partes como p:
+        si p == "": continuar
+        res = res + char(nini_xor(val(p), code(_vault_k[res.len % _vault_k.len])))
+    retornar res
+
+tarea serializar_vault(data):
+    // Formato simple: creds|{...} \n vulns|{...}
+    retornar cifrar(str(data))
+
+tarea deserializar_vault(txt):
+    raw = descifrar(txt)
+    retornar val(raw)
+
+tarea guardar_vault:
+    p = "/var/revenant"
+    si no mirar(p): p = "./"
+    ruta = p + "/vault.db"
+    f = obtener_archivo(ruta)
+    si no f:
+        // Crear si no existe
+        tocar(p, "vault.db")
+        f = obtener_archivo(ruta)
+    
+    f.set_content(serializar_vault(_vault_data))
+
+tarea guardar_credencial(ip, usuario, clave, priv, lan):
+    k = (ip + "_" + usuario + "_" + priv).lower()
+    _vault_data.creds[k] = {"ip": ip, "user": usuario, "pass": clave, "priv": priv, "lan": lan}
+    guardar_vault()
+    exito("Vault actualizado: " + usuario + "@" + ip)
+
+tarea listar_credenciales:
+    columnas = ["IP", "Usuario", "Clave", "Priv", "LAN"]
+    filas = []
+    recorrer _vault_data.creds como k:
+        c = _vault_data.creds[k]
+        filas.push([c.ip, c.user, c.pass, c.priv, c.lan])
+    
+    print(construir_tabla(columnas, filas))
+
+tarea cachear_vulnerabilidad(lib, ver, area, vuln):
+    k = (lib + "_" + ver).lower()
+    si no _vault_data.vulns.tiene(k): _vault_data.vulns[k] = []
+    _vault_data.vulns[k].push({"area": area, "vuln": vuln})
+    guardar_vault()
+
+tarea obtener_vulnerabilidades(lib, ver):
+    k = (lib + "_" + ver).lower()
+    si _vault_data.vulns.tiene(k): retornar _vault_data.vulns[k]
+    retornar []
+

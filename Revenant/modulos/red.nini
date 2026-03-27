@@ -1,0 +1,27 @@
+// modulos/red.nini - El Mapa de la Redes Invisibles 🌐
+
+tarea modulo_red_escanear:
+    si globals.objetivo_actual == null:
+        info("Escaneando red local desde el host actual...")
+        // Usar IP local como base
+        // TODO: Implementar macro 'escanear_lan' en nini.src
+    sino:
+        info("Escaneando subred desde " + globals.objetivo_actual)
+    
+    hosts = descubrir_red_local()
+    
+    si hosts.len == 0:
+        alerta("No se detectaron otros hosts activos en la subred.")
+    sino:
+        exito("Hosts detectados: " + hosts.len)
+        columnas = ["IP", "Estado"]
+        filas = []
+        recorrer hosts como h:
+            filas.push([h, "ACTIVO"])
+        print(construir_tabla(columnas, filas))
+
+tarea modulo_red_info:
+    info("Topología de red detectada:")
+    // Mostrar saltos y pivotes activos
+    recorrer enjambre como ip:
+        info("Nodo vivo: " + ip + " [" + typeof(enjambre[ip]) + "]")

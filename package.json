@@ -1,0 +1,10 @@
+{
+  "name": "greyhack-nini",
+  "version": "1.0.0",
+  "description": "Nini OS Transpiler & Revenant Post-Exploitation Framework",
+  "scripts": {
+    "build:revenant": "bun Nini/nini-bundler/bundler.js Revenant/main.nini Revenant/revenant_bundle.nini"
+  },
+  "author": "ricky & antigravity",
+  "license": "MIT"
+}

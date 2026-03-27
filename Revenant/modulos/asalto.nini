@@ -1,0 +1,61 @@
+// modulo asalto.nini - Inyecciones Metaxploit
+
+tarea modulo_asalto_root:
+    si globals.objetivo_actual == null:
+        error("Abotando: No hay ningun objetivo fijado. Usa 'objetivo <ip>'.")
+        retornar
+        
+    puerto = pedir("Ingresa el puerto a vulnerar (dejalo vacio para el router 0): ")
+    port_int = 0
+    si puerto.len > 0: port_int = puerto.to_int
+        
+    info("Analizando " + globals.objetivo_actual + ":" + port_int + " mediante Vault...")
+    
+    // Detección de Router para Bounce
+    es_router = falso
+    r = obtener_router_objetivo(globals.objetivo_actual)
+    si r: es_router = verdadero
+    
+    lan_target = nulo
+    si es_router:
+        alerta("¡ROUTER DETECTADO! Posibilidad de Salto (Bounce).")
+        opcion = pedir("¿Deseas saltar a IP interna? (s/n): ")
+        si opcion == "s":
+            lan_target = pedir("Ingresa la IP interna del objetivo final: ")
+            info("Configurando ataque de salto hacia: " + lan_target)
+
+    // Intento de recuperación de cache
+    lib_info = obtener_info_libreria(globals.objetivo_actual, port_int)
+    
+    vulns_cache = []
+    si lib_info:
+        vulns_cache = obtener_vulnerabilidades(lib_info.lib_name, lib_info.version)
+    
+    si vulns_cache.len > 0:
+        exito("Vulnerabilidades recuperadas del Vault para " + lib_info.lib_name)
+        recorrer vulns_cache como v:
+            info("Explotando via Cache: " + v.area + " | " + v.vuln)
+            sesion = explotar_directo(lib_info.metalib, v.area, v.vuln, lan_target)
+            si typeof(sesion) == "shell" o typeof(sesion) == "computer":
+                exito("Acceso obtenido via Vault Cache.")
+                enjambre[globals.objetivo_actual] = sesion
+                retornar
+    
+    // Si no hay cache or fallo, escaneo tradicional
+    info("No hay cache operativa. Iniciando escaneo profundo...")
+    vuln = buscar_vulnerabilidad(globals.objetivo_actual, port_int)
+    
+    si vuln:
+        exito("Vulnerabilidad detectada: " + vuln.area + " | " + vuln.vuln)
+        cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, vuln.area, vuln.vuln)
+        
+        info("Ejecutando Pipeline de asalto...")
+        sesion = vuln >> explotar("1337_password", lan_target)
+        
+        si typeof(sesion) == "shell" o typeof(sesion) == "computer":
+            exito("Brecha abierta. Objetivo añadido al enjambre.")
+            enjambre[globals.objetivo_actual] = sesion
+        sino:
+            error("Ataque fallido.")
+    sino:
+        error("Objetivo invulnerable.")

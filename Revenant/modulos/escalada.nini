@@ -1,0 +1,25 @@
+// modulos/escalada.nini - El Camino hacia Root 🔋
+
+tarea modulo_escalada_analizar:
+    si globals.objetivo_actual == null:
+        info("Escaneando sistema local para escalada de privilegios...")
+        // Usar host local
+    sino:
+        info("Buscando vectores de PrivEsc en " + globals.objetivo_actual)
+    
+    sesion = enjambre[globals.objetivo_actual]
+    si no sesion:
+        error("No hay sesion activa para el análisis.")
+        retornar
+        
+    resultado = buscar_vectores_escalada(sesion)
+    
+    si resultado.len == 0:
+        alerta("No se detectaron vectores de escalada automáticos.")
+    sino:
+        exito("Vectores detectados: " + resultado.len)
+        columnas = ["Ruta", "Tipo", "Severidad"]
+        filas = []
+        recorrer resultado como v:
+            filas.push([v.path, v.type, v.severity])
+        print(construir_tabla(columnas, filas))

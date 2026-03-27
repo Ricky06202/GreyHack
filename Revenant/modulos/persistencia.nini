@@ -1,0 +1,38 @@
+// modulos/persistencia.nini - Inyección de Demonios
+
+tarea modulo_botnet_persistir:
+    si enjambre.len == 0:
+        error("El enjambre esta vacio.")
+        return
+        
+    info("Inyectando Daemons Backdoor en " + enjambre.len + " subsistemas...")
+    
+    para nodo en enjambre:
+        ip_nodo = nodo.key
+        sesion = nodo.value
+        
+        computer_node = null
+        si typeof(sesion) == "shell":
+            computer_node = sesion.host_computer
+        osi typeof(sesion) == "computer":
+            computer_node = sesion
+            
+        si computer_node:
+            info("Configurando persistencia remota en " + ip_nodo)
+            
+            // Verificamos permisos de Sysadmin
+            carpeta_init = computer_node.File("/lib/")
+                
+            si carpeta_init and carpeta_init.has_permission("w"):
+                exito("Privilegios root confirmados. Modificando cronjobs / Systemd.")
+                
+                // Construyendo archivo demonio malicioso en PC victima
+                computer_node.touch("/lib/systemd/system/", "nrpe_revenant.service")
+                
+                archivo_fake = computer_node.File("/lib/systemd/system/nrpe_revenant.service")
+                si archivo_fake:
+                    archivo_fake.set_content("[Unit]\nDescription=Revenant Keeper\n[Service]\nExecStart=/bin/sh")
+                
+                exito("[INSTALADO] Troyano persistente en latencia sobre " + ip_nodo)
+            sino:
+                error("Proteccion ring-0 en " + ip_nodo + ". Requiere rooteado manual.")

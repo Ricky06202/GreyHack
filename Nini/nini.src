@@ -1,4 +1,4 @@
-// nini.src - v9.0 (Auto-Hacker APIs Edition)
+// nini.src - (Auto-Hacker APIs Edition)
 // Transpilador Nini a MiniScript para Grey Hack
 
 if params.len != 1 or params[0] == "-h" or params[0] == "--help" then
@@ -38,6 +38,26 @@ niniState.requiresAptClient = false
 niniState.ninjaMode = false
 niniState.requiresEnjambre = false
 niniState.requiresExploiter = false
+niniState.requiresTable = false
+niniState.requiresUI = false
+niniState.requiresFS = false
+niniState.requiresWifi = false
+niniState.requiresCracker = false
+niniState.requiresResolver = false
+
+// Motor de Expansión de Macros Nini
+preprocessNiniMacros = function(s)
+	if s.indexOf("resolver_objetivo") >= 0 then; niniState.requiresResolver = true; end if
+	if s.indexOf("crackear_diccionario") >= 0 then; niniState.requiresCracker = true; niniState.requiresCrypto = true; end if
+	if s.indexOf("secuestrar_wifi") >= 0 then; niniState.requiresWifi = true; niniState.requiresCrypto = true; end if
+	if s.indexOf("buscar_recursivo") >= 0 then; niniState.requiresFS = true; end if
+	if s.indexOf("pedir") >= 0 then; niniState.requiresUI = true; end if
+	if s.indexOf("construir_tabla") >= 0 then; niniState.requiresTable = true; end if
+	if s.indexOf("buscar_vulnerabilidad") >= 0 then; niniState.requiresExploiter = true; end if
+	if s.indexOf("explotar") >= 0 then; niniState.requiresExploiter = true; end if
+	return s
+end function
+
 niniState.requiresPersistencia = false
 niniState.requiresFuzzer = false
 niniState.requiresCracker = false
@@ -55,6 +75,14 @@ outputLines = []
 parseCommand = function(lineNum, trimmed, currentIndent)
 	endsWithColon = (trimmed.len > 0 and trimmed[trimmed.len-1] == ":")
 	trimmed = trimmed.replace("rango\(", "range(")
+	trimmed = trimmed.replace("verdad", "true")
+	trimmed = trimmed.replace("falso", "false")
+	trimmed = trimmed.replace("nulo", "null")
+	trimmed = trimmed.replace(" o ", " or ")
+	trimmed = trimmed.replace(" y ", " and ")
+	trimmed = trimmed.replace(" no ", " not ")
+	trimmed = trimmed.replace("verdadero", "true")
+	trimmed = preprocessNiniMacros(trimmed)
 
 	// 0. OPERADOR SPREAD DE ARRAYS (...)
 	if trimmed.indexOf("...") != null and trimmed.indexOf("[") != null then
@@ -92,30 +120,48 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	end if
 
 	// 2. PIPELINES
-	if trimmed.indexOf(">>") != null then
-		parts = trimmed.split(">>")
+	cleanS = ""; inQ = false; for char_idx in range(0, trimmed.len - 1)
+		c = trimmed[char_idx]; if c == char(34) then inQ = not inQ
+		if inQ then cleanS = cleanS + "_" else cleanS = cleanS + c
+	end for
+	
+	if cleanS.indexOf(" >> ") != null then
+		finalVar = ""
+		pipelineData = trimmed
+		cleanPipe = cleanS
+		if cleanPipe.indexOf(" = ") != null and cleanPipe.indexOf(" = ") < cleanPipe.indexOf(" >> ") then
+			eqIdx = cleanPipe.indexOf(" = ")
+			finalVar = trimmed[:eqIdx].trim
+			pipelineData = trimmed[eqIdx + 3:].trim
+			cleanPipe = cleanPipe[eqIdx + 3:].trim
+		end if
+
+		parts = pipelineData.split(" >> ")
 		pipeLines = []
 		for p in range(0, parts.len - 1)
+			part = preprocessNiniMacros(parts[p].trim)
 			if p == 0 then
-				pipeLines.push("_pipe" + p + " = " + parts[p].trim)
+				pipeLines.push("_pipe" + p + " = " + part)
 			else
-				part = parts[p].trim
 				prevPipe = "_pipe" + (p - 1)
 				currPipe = "_pipe" + p
-				if p == parts.len - 1 then prefix = "" else prefix = currPipe + " = "
+				if p == parts.len - 1 then
+					if finalVar != "" then prefix = finalVar + " = " else prefix = ""
+				else
+					prefix = currPipe + " = "
+				end if
 				
+				part = parts[p].trim
 				if part.indexOf("(") == null then
 					pipeLines.push(prefix + part + "(" + prevPipe + ")")
 				else
 					lastParen = part.lastIndexOf(")")
 					before = part[:lastParen]
 					after = part[lastParen:]
-					beforeTrim = before.trim
-					if beforeTrim.len > 0 and beforeTrim[beforeTrim.len - 1] == "(" then
-						pipeLines.push(prefix + before + prevPipe + after)
-					else
-						pipeLines.push(prefix + before + ", " + prevPipe + after)
-					end if
+					bTr = before.trim
+					sep = ", "
+					if bTr.len > 0 and bTr[bTr.len-1] == "(" then sep = ""
+					pipeLines.push(prefix + before + sep + prevPipe + after)
 				end if
 			end if
 		end for
@@ -123,22 +169,48 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	end if
 
 	// 3. ESTRUCTURAS DE CONTROL SINTAXIS NATURAL
-	if trimmed.indexOf("si ") == 0 and endsWithColon then
-		cond = trimmed[3 : trimmed.len-1].trim
-		blockStack.push({"bType": "if", "indent": currentIndent})
-		return "if (" + cond + ") th" + "en"
+	// 3. ESTRUCTURAS DE CONTROL SINTAXIS NATURAL
+	if cleanS.indexOf("si ") == 0 and cleanS.indexOf(":") != null then
+		colIdx = cleanS.indexOf(":")
+		cond = trimmed[3 : colIdx].trim
+		accion = trimmed[colIdx + 1 :].trim
+		if accion.len == 0 then
+			blockStack.push({"bType": "if", "indent": currentIndent})
+			return "if (" + cond + ") then"
+		else
+			return "if (" + cond + ") then; " + accion + "; end if"
+		end if
 	end if
-	if trimmed.indexOf("osi ") == 0 and endsWithColon then
-		cond = trimmed[4 : trimmed.len-1].trim
-		return "else if (" + cond + ") th" + "en"
+	
+	if cleanS.indexOf("osi ") == 0 and cleanS.indexOf(":") != null then
+		colIdx = cleanS.indexOf(":")
+		cond = trimmed[4 : colIdx].trim
+		accion = trimmed[colIdx + 1 :].trim
+		if accion.len == 0 then
+			return "else if (" + cond + ") then"
+		else
+			return "else if (" + cond + ") then; " + accion + "; end if"
+		end if
 	end if
-	if trimmed == "sino:" then
-		return "el" + "se"
+
+	if cleanS == "sino:" or cleanS.indexOf("sino: ") == 0 then
+		colIdx = cleanS.indexOf(":")
+		accion = trimmed[colIdx + 1 :].trim
+		if accion.len == 0 then
+			return "else"
+		else
+			return "else; " + accion
+		end if
 	end if
-	if trimmed.indexOf("para ") == 0 and trimmed.indexOf(" en ") != null and endsWithColon then
-		middle = trimmed.indexOf(" en ")
-		item = trimmed[5 : middle].trim
-		collection = trimmed[middle + 4 : trimmed.len-1].trim
+	if (trimmed.indexOf("recorrer ") == 0 or trimmed.indexOf("para ") == 0) and (trimmed.indexOf(" como ") != null or trimmed.indexOf(" en ") != null) and endsWithColon then
+		middle = trimmed.indexOf(" como ")
+		if middle == null then middle = trimmed.indexOf(" en ")
+		keywordLen = 9 // "recorrer "
+		sepLen = 6 // " como "
+		if trimmed.indexOf("para ") == 0 then; keywordLen = 5; sepLen = 4; end if
+		
+		item = trimmed[keywordLen : middle].trim
+		collection = trimmed[middle + sepLen : trimmed.len-1].trim
 		blockStack.push({"bType": "for", "indent": currentIndent})
 		return "for " + item + " in " + collection
 	end if
@@ -192,36 +264,12 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		return out.join(char(10))
 	end if
 
-	if trimmed.indexOf("resolver_objetivo(") >= 0 then
-		niniState.requiresResolver = true
-		return trimmed.replace("resolver_objetivo", "__nini_resolver")
-	end if
+	// NINI AUTO-HACKER APIs (Pre-procesadas al inicio)
+
 
 	// NINI AUTO-HACKER APIs
-	if trimmed.indexOf("crackear_diccionario(") >= 0 then
-		niniState.requiresCracker = true
-		niniState.requiresCrypto = true
-		return trimmed.replace("crackear_diccionario", "__nini_crack_dic")
-	end if
-	if trimmed.indexOf("secuestrar_wifi(") >= 0 then
-		niniState.requiresWifi = true
-		niniState.requiresCrypto = true
-		return trimmed.replace("secuestrar_wifi", "__nini_wifi")
-	end if
-	if trimmed.indexOf("buscar_recursivo(") >= 0 then
-		niniState.requiresFS = true
-		return trimmed.replace("buscar_recursivo", "__nini_buscar")
-	end if
-	if trimmed.indexOf("pedir(") >= 0 then
-		niniState.requiresUI = true
-		return trimmed.replace("pedir", "__nini_pedir")
-	end if
-	if trimmed.indexOf("construir_tabla(") >= 0 then
-		niniState.requiresTable = true
-		return trimmed.replace("construir_tabla", "__nini_tabla")
-	end if
-
 	// NINI-WRAITH OS (ENJAMBRE)
+
 	if trimmed.indexOf("enjambre.") >= 0 then
 		niniState.requiresEnjambre = true
 		if trimmed.indexOf("enjambre.añadir") >= 0 then return trimmed.replace("enjambre.añadir", "__nini_enjambre.push")
@@ -232,10 +280,8 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	end if
 
 	// EXPLOIT BUILDER y FUZZER
-	if trimmed.indexOf("buscar_vulnerabilidad(") >= 0 then
-		niniState.requiresExploiter = true
-		return trimmed.replace("buscar_vulnerabilidad", "__nini_buscar_vulnerabilidad")
-	end if
+	// EXPLOIT BUILDER y FUZZER
+
 	if trimmed.indexOf("inyectar(") == 0 then
 		niniState.requiresFuzzer = true
 		startIdx = trimmed.indexOf("(") + 1
@@ -285,7 +331,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 			"    shadow = get_shell.host_computer.File(""/etc/shadow"")",
 			"    if shadow then print(""Shadow dump: "" + shadow.get_content) else print(""Sin acceso a shadow"")",
 			"    print(""Limpiando huellas criticas..."")",
-			"    syslog = get_shell.host_computer.File(""/var/syslog"")",
+			"    syslog = get_shell.host_computer.File(""/var/system.log"")",
 			"    if syslog then syslog.set_content("""")",
 			"else",
 			"    __nini_error = true",
@@ -299,10 +345,20 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if trimmed == "salir" then return "break"
 	if trimmed == "siguiente" then return "continue"
 	if trimmed.indexOf("esperar(") == 0 then return trimmed.replace("esperar", "wait")
-	if trimmed.indexOf("exito(") == 0 then return "print(""<color=green>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
-	if trimmed.indexOf("error(") == 0 then return "print(""<color=red>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
-	if trimmed.indexOf("info(") == 0 then return "print(""<color=yellow>"" + " + trimmed[5:trimmed.len-1] + " + ""</color>"")"
-	if trimmed == "limpiar" or trimmed == "clean_house" then return "syslog = get_shell.host_computer.File(" + char(34) + "/var/syslog" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")"
+	if trimmed.indexOf("exito(") == 0 then return "print(""<color=#00ff41>[✔] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
+	if trimmed.indexOf("error(") == 0 then return "print(""<color=#ff1744>[X] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
+	if trimmed.indexOf("info(") == 0 then return "print(""<color=#00e5ff>[#] </color><color=#ffffff>"" + " + trimmed[5:trimmed.len-1] + " + ""</color>"")"
+	if trimmed.indexOf("exito(") == 0 then return "print(""<color=#00e5ff>[+] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
+	if trimmed.indexOf("alerta(") == 0 then return "print(""<color=#ffea00>[!] </color><color=#ffffff>"" + " + trimmed[7:trimmed.len-1] + " + ""</color>"")"
+	if trimmed.indexOf("nini_xor(") != null then return trimmed.replace("nini_xor\(", "__nini_xor(")
+	if trimmed.indexOf("crackear_hash(") != null then return trimmed.replace("crackear_hash\(", "__nini_crackear_hash(")
+	if trimmed.indexOf("obtener_info_libreria(") != null then return trimmed.replace("obtener_info_libreria\(", "__nini_obtener_info_libreria(")
+	if trimmed.indexOf("explotar_directo(") != null then return trimmed.replace("explotar_directo\(", "__nini_explotar_directo(")
+	if trimmed.indexOf("descubrir_red_local(") != null then return trimmed.replace("descubrir_red_local\(", "__nini_descubrir_red_local(")
+	if trimmed.indexOf("obtener_router_objetivo(") != null then return trimmed.replace("obtener_router_objetivo\(", "__nini_obtener_router_objetivo(")
+	if trimmed.indexOf("replicar_binario(") != null then return trimmed.replace("replicar_binario\(", "__nini_replicar_binario(")
+	if trimmed.indexOf("buscar_vectores_escalada(") != null then return trimmed.replace("buscar_vectores_escalada\(", "__nini_buscar_vectores_escalada(")
+	if trimmed == "limpiar" or trimmed == "clean_house" then return "syslog = get_shell.host_computer.File(" + char(34) + "/var/system.log" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")"
 	if trimmed.indexOf("mirar(") == 0 then
 		arg = trimmed[trimmed.indexOf("(")+1:trimmed.lastIndexOf(")")].trim
 		return "router = get_router(" + arg + "); if router then ports = router.used_ports else __nini_error = true"
@@ -349,7 +405,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	return trimmed
 end function
 
-print("Iniciando transpilacion Nini v9.0...")
+print("Iniciando transpilacion Nini...")
 
 for i in range(0, lines.len)
 	if i >= lines.len then break
@@ -454,7 +510,7 @@ if niniState.requiresEnjambre then
 	headers.push("  for sh in __nini_enjambre")
 	headers.push("      if typeof(sh) == ""shell"" then")
 	headers.push("          if cmd == ""limpiar"" then")
-	headers.push("              syslog = sh.host_computer.File(""/var/syslog"")")
+	headers.push("              syslog = sh.host_computer.File(""/var/system.log"")")
 	headers.push("              if syslog then syslog.set_content("""")")
 	headers.push("          else")
 	headers.push("              sh.launch(""/bin/"" + cmd, """")")
@@ -466,23 +522,31 @@ end if
 
 if niniState.requiresExploiter then
 	headers.push("__nini_buscar_vulnerabilidad = function(ip, port)")
-	headers.push("  net_session = metaxploit.net_use(ip, 1*port)")
-	headers.push("  if not net_session then return null")
-	headers.push("  metalib = net_session.dump_lib")
-	headers.push("  mem_list = metaxploit.scan(metalib)")
-	headers.push("  if mem_list.len == 0 then return null")
-	headers.push("  return {""metalib"": metalib, ""mem"": mem_list[0]}")
+	headers.push("  ns = metaxploit.net_use(ip, 1*port); if not ns then return null")
+	headers.push("  lib = ns.dump_lib; mems = metaxploit.scan(lib); v_list = []")
+	headers.push("  for m in mems")
+	headers.push("    rep = metaxploit.scan_address(lib, m); pts = rep.split(""<b>"")")
+	headers.push("    for p in pts")
+	headers.push("      if p.indexOf(""</b>"") == -1 then continue")
+	headers.push("      v_list.push({""mem"": m, ""pass"": p.split(""</b>"")[0]})")
+	headers.push("    end for")
+	headers.push("  end for")
+	headers.push("  if v_list.len == 0 then return null")
+	headers.push("  return {""metalib"": lib, ""v_list"": v_list}")
 	headers.push("end function")
 	
-	headers.push("__nini_explotar = function(arg1, arg2)")
-	headers.push("  if typeof(arg1) == ""map"" then")
-	headers.push("      if not arg1.hasIndex(""metalib"") then return null")
-	headers.push("      res = arg1.metalib.overflow(arg1.mem, arg2)")
-	headers.push("      return res")
-	headers.push("  else")
-	headers.push("      port = arg1; lib = metaxploit")
-	headers.push("      net_session = lib.net_use(target_ip, port); if net_session then return net_session.dump_lib else return null")
+	headers.push("__nini_explotar = function(arg1, arg2, arg3=null)")
+	headers.push("  v_o = null; p_e = """"")
+	headers.push("  if typeof(arg1) == ""map"" and arg1.hasIndex(""v_list"") then; v_o = arg1; p_e = arg2; end if")
+	headers.push("  if typeof(arg2) == ""map"" and arg2.hasIndex(""v_list"") then; v_o = arg2; p_e = arg1; end if")
+	headers.push("  if v_o != null then")
+	headers.push("      for v in v_o.v_list")
+	headers.push("          res = v_o.metalib.overflow(v.mem, v.pass, arg3); if res then return res")
+	headers.push("          if p_e != """" then; res = v_o.metalib.overflow(v.mem, p_e, arg3); if res then return res; end if")
+	headers.push("      end for; return null")
 	headers.push("  end if")
+	headers.push("  ns = metaxploit.net_use(globals.target_ip, str(arg1).to_int)")
+	headers.push("  if ns then return ns.dump_lib else return null")
 	headers.push("end function")
 	
 	headers.push("__nini_obtener_shell = function(obj)")
@@ -550,7 +614,9 @@ if niniState.requiresFS then
 	headers.push("  while stack.len > 0")
 	headers.push("      curr = stack.pop()")
 	headers.push("      if curr.is_folder then")
-	headers.push("          for f in curr.get_folders(); stack.push(f); end for")
+	headers.push("          for f in curr.get_folders()")
+	headers.push("              stack.push(f)")
+	headers.push("          end for")
 	headers.push("          for f in curr.get_files()")
 	headers.push("              if f.name == fileName then return f")
 	headers.push("          end for")
@@ -564,24 +630,111 @@ end if
 
 if niniState.requiresUI then
 	headers.push("__nini_pedir = function(msg)")
-	headers.push("  return user_input(""<color=#00e5ff>[?] "" + msg + "" </color>"")")
+	headers.push("  return user_input(" + char(34) + "<color=#00e5ff>" + char(34) + " + msg + " + char(34) + " </color>" + char(34) + ")")
 	headers.push("end function")
 end if
+
+headers.push("__nini_xor = function(a, b)")
+headers.push("  res = 0; p = 1")
+headers.push("  while a > 0 or b > 0")
+headers.push("    a_bit = a % 2; b_bit = b % 2")
+headers.push("    if a_bit != b_bit then res = res + p")
+headers.push("    a = floor(a / 2); b = floor(b / 2); p = p * 2")
+headers.push("  end while")
+headers.push("  return res")
+headers.push("end function")
+
+headers.push("__nini_crackear_hash = function(h)")
+headers.push("  c = include_lib(" + char(34) + "/lib/crypto.so" + char(34) + ")")
+headers.push("  if not c then return null")
+headers.push("  return c.decipher(h)")
+headers.push("end function")
+
+headers.push("__nini_obtener_info_libreria = function(ip, p)")
+headers.push("  m = include_lib(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
+headers.push("  if not m then return null")
+headers.push("  s = m.net_use(ip, p)")
+headers.push("  if not s then return null")
+headers.push("  l = s.dump_lib")
+headers.push("  if not l then return null")
+headers.push("  return {" + char(34) + "lib_name" + char(34) + ": l.lib_name, " + char(34) + "version" + char(34) + ": l.version, " + char(34) + "metalib" + char(34) + ": l}")
+headers.push("end function")
+
+headers.push("__nini_explotar_directo = function(lib, a, v, lan=null)")
+headers.push("  if lan then return lib.overflow(a, v, lan)")
+headers.push("  return lib.overflow(a, v)")
+headers.push("end function")
+
+headers.push("__nini_descubrir_red_local = function()")
+headers.push("  c = get_shell.host_computer")
+headers.push("  lip = c.local_ip")
+headers.push("  parts = lip.split(" + char(34) + "." + char(34) + ")")
+headers.push("  if parts.len < 3 then return []")
+headers.push("  net = parts[0:3].join(" + char(34) + "." + char(34) + ") + " + char(34) + "." + char(34))
+headers.push("  h = []")
+headers.push("  for i in range(1, 254)")
+headers.push("    ip = net + i")
+headers.push("    if ip == lip then continue")
+headers.push("    if get_shell.ping(ip) == 1 then h.push(ip)")
+headers.push("  end for")
+headers.push("  return h")
+headers.push("end function")
+
+headers.push("__nini_obtener_router_objetivo = function(ip)")
+headers.push("  r = get_router(ip)")
+headers.push("  if r then return r")
+headers.push("  return null")
+headers.push("end function")
+
+headers.push("__nini_replicar_binario = function(s, r)")
+headers.push("  if not s or typeof(s) != " + char(34) + "shell" + char(34) + " then return false")
+headers.push("  p = get_shell.host_computer.File(program_path)")
+headers.push("  if not p then return false")
+headers.push("  res = s.scp(p.path, r, get_shell, 1)")
+headers.push("  if res == 1 or res == true then return true else return false")
+headers.push("end function")
+
+headers.push("__nini_buscar_vectores_escalada = function(s)")
+headers.push("  c = s; if typeof(s) == " + char(34) + "shell" + char(34) + " then c = s.host_computer")
+headers.push("  v = []")
+headers.push("  paths = [" + char(34) + "/etc" + char(34) + ", " + char(34) + "/bin" + char(34) + ", " + char(34) + "/usr/bin" + char(34) + ", " + char(34) + "/lib" + char(34) + "]")
+headers.push("  for p in paths")
+headers.push("    f = c.File(p)")
+headers.push("    if f then")
+headers.push("      items = f.get_files + f.get_folders")
+headers.push("      for i in items")
+headers.push("        if i.has_permission(" + char(34) + "w" + char(34) + ") and not i.has_permission(" + char(34) + "r" + char(34) + ") then v.push({""path"": i.path, ""type"": ""write_only"", ""severity"": ""medium""})")
+headers.push("        if i.permissions.indexOf(" + char(34) + "s" + char(34) + ") != -1 then v.push({""path"": i.path, ""type"": ""setuid"", ""severity"": ""high""})")
+headers.push("      end for")
+headers.push("    end if")
+headers.push("  end for")
+headers.push("  return v")
+headers.push("end function")
 
 if niniState.requiresTable then
 	headers.push("__nini_tabla = function(headers, rows)")
 	headers.push("  strip_tags = function(s)")
-	headers.push("      res = """"; in_tag = false")
+	headers.push("      res = " + char(34) + char(34) + "; in_tag = false; tag_content = " + char(34) + char(34))
 	headers.push("      for i in range(0, s.len - 1)")
 	headers.push("          c = s[i]")
-	headers.push("          if c == ""<"" then in_tag = true")
-	headers.push("          if not in_tag then res = res + c")
-	headers.push("          if c == "">"" then in_tag = false")
+	headers.push("          if c == " + char(34) + "<" + char(34) + " then")
+	headers.push("              in_tag = true; tag_content = " + char(34) + char(34))
+	headers.push("          else if c == " + char(34) + ">" + char(34) + " then")
+	headers.push("              in_tag = false")
+	headers.push("              is_t = (tag_content.indexOf(" + char(34) + "=" + char(34) + ") != null or tag_content.indexOf(" + char(34) + "/" + char(34) + ") == 0 or tag_content.len == 1)")
+	headers.push("              if not is_t then res = res + " + char(34) + "<" + char(34) + " + tag_content + " + char(34) + ">" + char(34))
+	headers.push("          else if in_tag then")
+	headers.push("              tag_content = tag_content + c")
+	headers.push("          else")
+	headers.push("              res = res + c")
+	headers.push("          end if")
 	headers.push("      end for")
 	headers.push("      return res")
 	headers.push("  end function")
 	headers.push("  colWidths = []")
-	headers.push("  for i in range(0, headers.len - 1); colWidths.push(strip_tags(str(headers[i])).len); end for")
+	headers.push("  for i in range(0, headers.len - 1)")
+	headers.push("      colWidths.push(strip_tags(str(headers[i])).len)")
+	headers.push("  end for")
 	headers.push("  for row in rows")
 	headers.push("      for i in range(0, headers.len - 1)")
 	headers.push("          if i >= row.len then continue")
@@ -590,24 +743,32 @@ if niniState.requiresTable then
 	headers.push("      end for")
 	headers.push("  end for")
 	headers.push("  pad = function(s, w)")
-	headers.push("      v_len = strip_tags(str(s)).len")
-	headers.push("      if w - v_len > 0 then return str(s) + ("" "" * (w - v_len))")
+	headers.push("      v_l = strip_tags(str(s)).len")
+	headers.push("      if w - v_l > 0 then return str(s) + (" + char(34) + " " + char(34) + " * (w - v_l))")
 	headers.push("      return str(s)")
 	headers.push("  end function")
-	headers.push("  out = []; sep = []")
-	headers.push("  for w in colWidths; sep.push(""="" * w); end for")
-	headers.push("  h_str = []")
-	headers.push("  for i in range(0, headers.len - 1); h_str.push(pad(headers[i], colWidths[i])); end for")
-	headers.push("  out.push(h_str.join("" | ""))")
-	headers.push("  out.push(sep.join(""-+-""))")
-	headers.push("  for row in rows")
-	headers.push("      r_str = []")
-	headers.push("      for i in range(0, headers.len - 1)")
-	headers.push("          if i >= row.len then r_str.push(pad("""", colWidths[i])) else r_str.push(pad(row[i], colWidths[i]))")
-	headers.push("      end for")
-	headers.push("      out.push(r_str.join("" | ""))")
+	headers.push("  line = " + char(34) + "<color=#00e5ff>" + char(34))
+	headers.push("  for i in range(0, headers.len - 1)")
+	headers.push("      line = line + pad(headers[i], colWidths[i]) + " + char(34) + " | " + char(34))
 	headers.push("  end for")
-	headers.push("  return out.join(char(10))")
+	headers.push("  print(line + " + char(34) + "</color>" + char(34) + ")")
+	headers.push("  sep = " + char(34) + char(34))
+	headers.push("  for i in range(0, headers.len - 1)")
+	headers.push("      sep = sep + (" + char(34) + "=" + char(34) + " * colWidths[i]) + " + char(34) + " + " + char(34))
+	headers.push("  end for")
+	headers.push("  print(" + char(34) + "<color=#424242>" + char(34) + " + sep + " + char(34) + "</color>" + char(34) + ")")
+	headers.push("  for row in rows")
+	headers.push("      line = " + char(34) + char(34))
+	headers.push("      for i in range(0, headers.len - 1)")
+	headers.push("          if i < row.len then")
+	headers.push("              line = line + pad(row[i], colWidths[i]) + " + char(34) + " | " + char(34))
+	headers.push("          else")
+	headers.push("              line = line + (" + char(34) + " " + char(34) + " * colWidths[i]) + " + char(34) + " | " + char(34))
+	headers.push("          end if")
+	headers.push("      end for")
+	headers.push("      print(line)")
+	headers.push("  end for")
+	headers.push("  return " + char(34) + char(34))
 	headers.push("end function")
 end if
 
@@ -623,7 +784,7 @@ end if
 finalOutput = headers + outputLines
 
 if niniState.ninjaMode then
-	finalOutput.push("syslog = get_shell.host_computer.File(" + char(34) + "/var/syslog" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")")
+	finalOutput.push("syslog = get_shell.host_computer.File(" + char(34) + "/var/system.log" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")")
 	finalOutput.push("print(" + char(34) + "<color=gray>[Modo Ninja]</color> Huellas borradas exitosamente." + char(34) + ")")
 end if
 

@@ -1,0 +1,92 @@
+// repl.nini - Bucle Principal Interactivo
+
+// Estado Global (La Memoria Inmortal)
+enjambre = {}
+objetivo_actual = null
+estado_activo = verdadero
+
+tarea iniciar_repl:
+    mientras estado_activo:
+        p = "<color=#ff1744>[#] </color><color=#ffffff>Revenant</color>"
+        si globals.objetivo_actual != nulo:
+            p = p + " <color=#424242>[</color><color=#ffea00>" + globals.objetivo_actual + "</color><color=#424242>]</color>"
+        p = p + " <color=#00e5ff>> </color>"
+        entrada = pedir(p)
+        
+        si entrada == "salir" or entrada == "exit" or entrada == "x" or entrada == "q":
+            info("Apagando nucleo Revenant...")
+            globals.estado_activo = falso
+            
+        osi entrada == "ayuda" or entrada == "help" or entrada == "h":
+            columnas = ["Cmd", "Alias", "Accion"]
+            filas = [
+                ["ayuda", "h", "Muestra este panel"],
+                ["objetivo", "o", "Fija un target en memoria"],
+                ["recon", "r", "Ejecuta nmap automatizado"],
+                ["asalto", "a", "Gana ejecucion (Metaxploit)"],
+                ["vault", "v", "Lista el botin guardado"],
+                ["intel", "i", "Cosecha secretos del target"],
+                ["inject", "inj", "Auto-replica Revenant"],
+                ["privesc", "p", "Busca vectores de Root"],
+                ["red escanear", "re", "Busca hosts en subred"],
+                ["red info", "ri", "Topologia del enjambre"],
+                ["botnet info", "bi", "Estado del enjambre"],
+                ["sesiones", "s", "Muestra shells activas"],
+                ["salir", "x/q", "Apaga el framework"],
+            ]
+            tabla = construir_tabla(columnas, filas)
+            print(tabla)
+            
+        osi entrada.indexOf("objetivo ") == 0 or entrada.indexOf("o ") == 0:
+            partes = entrada.split(" ")
+            si partes.len == 2:
+                ip = resolver_objetivo(partes[1])
+                si ip:
+                    globals.objetivo_actual = ip
+                    exito("Objetivo fijado en memoria: " + globals.objetivo_actual)
+                sino:
+                    error("Dominio/IP Invalida.")
+            sino:
+                error("Uso: o <ip> o objetivo <ip>")
+                
+        osi entrada == "sesiones" or entrada == "s":
+            info("Sesiones activas en enjambre: " + enjambre.len)
+            
+        osi entrada == "recon" or entrada == "r":
+            modulo_espectro_recon()
+            
+        osi entrada == "asalto" or entrada == "a":
+            modulo_asalto_root()
+            
+        osi entrada == "botnet info" or entrada == "bi":
+            modulo_botnet_info()
+            
+        osi entrada == "botnet saquear" or entrada == "bs":
+            modulo_botnet_saquear()
+            
+        osi entrada == "botnet persistir" or entrada == "bp":
+            modulo_botnet_persistir()
+            
+        osi entrada == "vault" or entrada == "v":
+            listar_credenciales()
+            
+        osi entrada == "intel" or entrada == "i":
+            modulo_intel_saquear()
+            
+        osi entrada == "red escanear" or entrada == "re":
+            modulo_red_escanear()
+            
+        osi entrada == "red info" or entrada == "ri":
+            modulo_red_info()
+            
+        osi entrada == "inject" or entrada == "inj":
+            modulo_inyeccion_replicar()
+            
+        osi entrada == "privesc" or entrada == "p":
+            modulo_escalada_analizar()
+            
+        osi entrada == "":
+            continue
+            
+        sino:
+            error("Comando '" + entrada + "' desconocido.")

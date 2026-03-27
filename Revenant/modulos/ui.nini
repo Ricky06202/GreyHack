@@ -1,0 +1,14 @@
+// ui.nini - Identidad Visual y Arte ASCII de Revenant
+
+tarea mostrar_banner_revenant:
+    limpiar
+    print("<color=#ff1744>      :::::::::  :::::::::: :::     ::: :::::::::: ::::    :::     :::     ::::    ::: ::::::::::: </color>")
+    print("<color=#ff5252>     :+:    :+: :+:        :+:     :+: :+:        :+:+:   :+:   :+: :+:   :+:+:   :+:     :+:      </color>")
+    print("<color=#ff8a80>    +:+    +:+ +:+        +:+     +:+ +:+        :+:+:+  +:+  +:+   +:+  :+:+:+  +:+     +:+       </color>")
+    print("<color=#ffffff>   +#++:++#:  +#++:++#  +#+     +:+ +#++:++#  +#+ +:+ +#+ +#++:++#++ +#+ +:+ +#+     +#+        </color>")
+    print("<color=#b0bec5>  +#+    +#+ +#+         +#+   +#+  +#+        +#+  +#+#+# +#+     +#+ +#+  +#+#+#     +#+         </color>")
+    print("<color=#90a4ae> #+#    #+# #+#          #+#+#+#   #+#        #+#   #+#+# #+#     #+# #+#   #+#+#     #+#          </color>")
+    print("<color=#607d8b>###    ### ##########     ###     ########## ###    #### ###     ### ###    ####     ###           </color>")
+    print("")
+    print("<color=#00e5ff>[#] REVENANT FRAMEWORK | Operativo en Enjambre</color>")
+    print("<color=#424242>---------------------------------------------------------------------------</color>")
