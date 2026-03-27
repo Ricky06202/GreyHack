@@ -2,91 +2,102 @@
 
 // Estado Global (La Memoria Inmortal)
 enjambre = {}
-objetivo_actual = null
+globals.objetivo_actual = null
 estado_activo = verdadero
 
 tarea iniciar_repl:
     mientras estado_activo:
-        p = "<color=#00e5ff>[#] </color><color=#ffffff>Revenant</color>"
-        si globals.objetivo_actual != nulo:
-            p = p + " <color=#424242>[</color><color=#ffea00>" + globals.objetivo_actual + "</color><color=#424242>]</color>"
-        p = p + " <color=#00e5ff>> </color>"
-        entrada = pedir(p)
+        dibujar_hud_tactico()
         
-        si entrada == "salir" or entrada == "exit" or entrada == "x" or entrada == "q":
+        p = "<color=#00e5ff>Revenant > </color>"
+        entrada = pedir(p).lower()
+        
+        si entrada == "salir" or entrada == "x" or entrada == "q":
             info("Apagando nucleo Revenant...")
             globals.estado_activo = falso
             
-        osi entrada == "ayuda" or entrada == "help" or entrada == "h":
-            columnas = ["Cmd", "Alias", "Accion"]
+        osi entrada == "ayuda" or entrada == "h":
+            columnas = ["Cmd", "Alias", "Acción"]
             filas = [
-                ["ayuda", "h", "Muestra este panel"],
-                ["objetivo", "o", "Fija un target en memoria"],
-                ["recon", "r", "Ejecuta nmap automatizado"],
-                ["asalto", "a", "Gana ejecucion (Metaxploit)"],
-                ["vault", "v", "Lista el botin guardado"],
-                ["intel", "i", "Cosecha secretos del target"],
-                ["inject", "inj", "Auto-replica Revenant"],
-                ["privesc", "p", "Busca vectores de Root"],
-                ["red escanear", "re", "Busca hosts en subred"],
-                ["red info", "ri", "Topologia del enjambre"],
-                ["botnet info", "bi", "Estado del enjambre"],
-                ["sesiones", "s", "Muestra shells activas"],
-                ["salir", "x/q", "Apaga el framework"],
+                ["ayuda", "h", "Muestra este panel de control"],
+                ["objetivo", "o", "Fija un target (Prompt dinámico si se usa solo)"],
+                ["menu", "m", "Abre el Menú Táctico Principal"],
+                ["recon", "r", "Ejecuta nmap avanzado"],
+                ["asalto", "a", "Gana ejecución (Exploit Guiado)"],
+                ["vault", "v", "Lista el botín (Credenciales/Vulns)"],
+                ["intel", "i", "Cosecha profunda de secretos"],
+                ["sesiones", "s", "Administración del enjambre"],
+                ["salir", "x", "Apaga el núcleo Revenant"],
             ]
             tabla = construir_tabla(columnas, filas)
-            print(tabla)
+            dibujar_ventana("MANUAL DE OPERACIONES TÁCTICAS", tabla)
+            pausa_tactica()
+            
+        osi entrada == "objetivo" or entrada == "o":
+            prompt_objetivo()
             
         osi entrada.indexOf("objetivo ") == 0 or entrada.indexOf("o ") == 0:
             partes = entrada.split(" ")
-            si partes.len == 2:
+            si partes.len >= 2:
                 ip = resolver_objetivo(partes[1])
                 si ip:
                     globals.objetivo_actual = ip
-                    exito("Objetivo fijado en memoria: " + globals.objetivo_actual)
+                    exito("Objetivo fijado: " + globals.objetivo_actual)
                 sino:
-                    error("Dominio/IP Invalida.")
-            sino:
-                error("Uso: o <ip> o objetivo <ip>")
-                
+                    error("Fallo al resolver objetivo.")
+            pausa_tactica()
+
+        osi entrada == "menu" or entrada == "m":
+            opciones = [
+                {"label": "Fijar Objetivo", "cmd": "o"},
+                {"label": "Reconocimiento", "cmd": "r"},
+                {"label": "Asalto (Brecha Metaxploit)", "cmd": "a"},
+                {"label": "Cosecha de Intel", "cmd": "i"},
+                {"label": "Ver Bóveda (Vault)", "cmd": "v"},
+                {"label": "Salir", "cmd": "x"},
+            ]
+            comando = menu_interactivo("MENÚ TÁCTICO REVENANT", opciones)
+            si comando: entrada = comando; continuar
+
         osi entrada == "sesiones" or entrada == "s":
-            info("Sesiones activas en enjambre: " + enjambre.len)
+            modulo_botnet_info()
+            pausa_tactica()
             
         osi entrada == "recon" or entrada == "r":
             modulo_espectro_recon()
+            pausa_tactica()
             
         osi entrada == "asalto" or entrada == "a":
-            modulo_asalto_root()
-            
-        osi entrada == "botnet info" or entrada == "bi":
-            modulo_botnet_info()
-            
-        osi entrada == "botnet saquear" or entrada == "bs":
-            modulo_botnet_saquear()
-            
-        osi entrada == "botnet persistir" or entrada == "bp":
-            modulo_botnet_persistir()
+            modulo_asalto_brecha()
+            pausa_tactica()
             
         osi entrada == "vault" or entrada == "v":
             listar_credenciales()
+            pausa_tactica()
             
         osi entrada == "intel" or entrada == "i":
             modulo_intel_saquear()
+            pausa_tactica()
             
         osi entrada == "red escanear" or entrada == "re":
             modulo_red_escanear()
+            pausa_tactica()
             
         osi entrada == "red info" or entrada == "ri":
             modulo_red_info()
+            pausa_tactica()
             
         osi entrada == "inject" or entrada == "inj":
             modulo_inyeccion_replicar()
+            pausa_tactica()
             
         osi entrada == "privesc" or entrada == "p":
             modulo_escalada_analizar()
+            pausa_tactica()
             
         osi entrada == "":
-            continue
+            continuar
             
         sino:
             error("Comando '" + entrada + "' desconocido.")
+            pausa_tactica()

@@ -12,7 +12,6 @@ importar "modulos/escalada.nini"
 
 modo ninja:
 inicializar_vault()
-mostrar_banner_revenant()
 info("Cargando REVENANT OS...")
 
 iniciar_repl()

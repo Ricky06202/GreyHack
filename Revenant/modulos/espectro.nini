@@ -2,15 +2,28 @@
 
 tarea modulo_espectro_recon:
     si globals.objetivo_actual == null:
-        error("Abotando: No hay ningun objetivo fijado en memoria. Usa 'objetivo <ip>'.")
-        return
-        
-    info("Iniciando Mapeo Nmap Profundo sobre: " + globals.objetivo_actual)
+        ip = prompt_objetivo()
+        si no ip: retornar
     
-    // Inyectamos el router en memoria
+    opciones = [
+        {"label": "Escaneo Rápido (Puertos Estándar)", "cmd": "fast"},
+        {"label": "Escaneo Profundo (Metaxploit Full)", "cmd": "deep"},
+        {"label": "Modo Sigilo (Ping Only)", "cmd": "stealth"},
+    ]
+    
+    modo = menu_interactivo("UNIDAD DE RECONOCIMIENTO ESPECTRO", opciones)
+    si no modo: retornar
+    
+    info("Iniciando Mapeo [" + modo.upper() + "] sobre: " + globals.objetivo_actual)
+    
+    // Configuración según modo
+    si modo == "stealth":
+        h = descubrir_red_local()
+        exito("Hosts detectados en entorno: " + h.len)
+        retornar
+    fin_si
+    
     mirar(globals.objetivo_actual)
-    
-    // La macro automatica 'escanear' de Nini depende internamente de 'target_ip' y 'router'
     globals.target_ip = globals.objetivo_actual
     escanear
     
@@ -18,7 +31,6 @@ tarea modulo_espectro_recon:
     resultado = get_shell.host_computer.File(archivo_log)
     
     si resultado:
-        exito("Matriz de puertos obtenida y guardada localmente.")
-        print(resultado.get_content)
+        dibujar_ventana("MATRIZ DE PUERTOS - REVENANT OS", resultado.get_content)
     sino:
-        error("Fallo critico al generar o leer el archivo de escaneo.")
+        error("Fallo crítico al generar o leer el archivo de escaneo.")

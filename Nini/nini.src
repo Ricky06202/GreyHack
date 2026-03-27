@@ -843,7 +843,7 @@ err = sh.build(targetFolder + "/" + fileName, targetFolder)
 
 binary = fileName.replace(".gs", "")
 if err == "" then
-	// outFile.delete
+	outFile.delete
 	print("<color=green>[SUCCESS] Ejecutable " + binary + " listo para lanzar. (.gs reciclado)</color>")
 else
 	print("<color=red>[ERROR C-Engine]</color> " + err)

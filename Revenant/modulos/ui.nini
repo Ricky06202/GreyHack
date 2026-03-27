@@ -1,14 +1,86 @@
-// ui.nini - Identidad Visual y Arte ASCII de Revenant
+// modulos/ui.nini - Motor de Interfaz Táctica Revenant OS 🖥️💎
 
 tarea mostrar_banner_revenant:
-    limpiar
-    print("<color=#ff1744>      :::::::::  :::::::::: :::     ::: :::::::::: ::::    :::     :::     ::::    ::: ::::::::::: </color>")
-    print("<color=#ff5252>     :+:    :+: :+:        :+:     :+: :+:        :+:+:   :+:   :+: :+:   :+:+:   :+:     :+:      </color>")
-    print("<color=#ff8a80>    +:+    +:+ +:+        +:+     +:+ +:+        :+:+:+  +:+  +:+   +:+  :+:+:+  +:+     +:+       </color>")
-    print("<color=#ffffff>   +#++:++#:  +#++:++#  +#+     +:+ +#++:++#  +#+ +:+ +#+ +#++:++#++ +#+ +:+ +#+     +#+        </color>")
-    print("<color=#b0bec5>  +#+    +#+ +#+         +#+   +#+  +#+        +#+  +#+#+# +#+     +#+ +#+  +#+#+#     +#+         </color>")
-    print("<color=#90a4ae> #+#    #+# #+#          #+#+#+#   #+#        #+#   #+#+# #+#     #+# #+#   #+#+#     #+#          </color>")
-    print("<color=#607d8b>###    ### ##########     ###     ########## ###    #### ###     ### ###    ####     ###           </color>")
-    print("")
-    print("<color=#00e5ff>[#] REVENANT FRAMEWORK | Operativo en Enjambre</color>")
-    print("<color=#424242>---------------------------------------------------------------------------</color>")
+    print("<color=#00e5ff> [ ###################################################### ] </color>")
+    print("<color=#00e5ff> [ # ]                                              [ # ] </color>")
+    print("<color=#ffffff> [ # ]          R  E  V  E  N  A  N  T              [ # ] </color>")
+    print("<color=#ffffff> [ # ]   P O S T - E X P L O I T A T I O N          [ # ] </color>")
+    print("<color=#424242> [ # ]             F R A M E W O R K                [ # ] </color>")
+    print("<color=#424242> [ # ]                                              [ # ] </color>")
+    print("<color=#00e5ff> [ ###################################################### ] </color>")
+    print(" ")
+
+tarea dibujar_separador:
+    print("<color=#424242>======================================================</color>")
+
+tarea limpiar_pantalla:
+    clear_screen
+
+tarea dibujar_hud_tactico:
+    limpiar_pantalla()
+    mostrar_banner_revenant()
+    dibujar_separador()
+    
+    status = "<color=#ff3131>(OFFLINE)</color>"
+    p_obj = "NINGUNO"
+    si globals.objetivo_actual != nulo:
+        status = "<color=#00e5ff>(ONLINE)</color>"
+        p_obj = globals.objetivo_actual
+    
+    p_origin = "<color=#ffffff>ORIGEN: </color><color=#00e5ff>LOCAL</color>"
+    p_target = "<color=#ffffff>OBJETIVO: </color><color=#ffea00>" + p_obj + "</color> " + status
+    p_swarm  = "<color=#ffffff>SESIONES: </color><color=#00ff41>" + enjambre.len + "</color>"
+    
+    print(p_origin + " | " + p_target + " | " + p_swarm)
+    dibujar_separador()
+
+tarea dibujar_ventana(titulo, contenido):
+    dibujar_separador()
+    print("<color=#00e5ff>[#] </color><color=#ffffff><b>" + titulo.upper() + "</b></color>")
+    dibujar_separador()
+    si typeof(contenido) == "string":
+        print(contenido)
+    sino:
+        print(contenido)
+    dibujar_separador()
+
+tarea pausa_tactica:
+    pedir("\n<color=#424242>[ Pulsa ENTER para continuar ]</color>")
+
+tarea menu_interactivo(titulo, opciones):
+    // opciones = [{"label": "Texto", "cmd": "comando"}]
+    columnas = ["#", "Acción"]
+    filas = []
+    i = 1
+    recorrer opciones como opt:
+        filas.push([i, opt.label])
+        i = i + 1
+    
+    tabla = construir_tabla(columnas, filas)
+    dibujar_ventana(titulo, tabla)
+    
+    seleccion = pedir("<color=#ffea00>Selecciona una opción > </color>")
+    val_sel = val(seleccion)
+    
+    si val_sel > 0 y val_sel <= opciones.len:
+        retornar opciones[val_sel - 1].cmd
+    sino:
+        error("Selección inválida.")
+        retornar nulo
+
+tarea prompt_objetivo:
+    si globals.objetivo_actual != nulo:
+        confirm = pedir("¿Cambiar objetivo actual (" + globals.objetivo_actual + ")? [s/n]: ")
+        si confirm.lower() != "s": retornar globals.objetivo_actual
+    
+    t_obj = pedir("<color=#ffea00>Introduce IP o Dominio del objetivo > </color>")
+    si t_obj == "": retornar globals.objetivo_actual
+    
+    res = resolver_objetivo(t_obj)
+    si res:
+        globals.objetivo_actual = res
+        exito("Objetivo fijado: " + globals.objetivo_actual)
+        retornar res
+    sino:
+        error("No se pudo resolver el objetivo: " + t_obj)
+        retornar nulo

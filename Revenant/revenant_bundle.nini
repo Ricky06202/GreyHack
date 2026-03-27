@@ -8,89 +8,100 @@ estado_activo = verdadero
 
 tarea iniciar_repl:
     mientras estado_activo:
-        p = "<color=#00e5ff>[#] </color><color=#ffffff>Revenant</color>"
-        si globals.objetivo_actual != nulo:
-            p = p + " <color=#424242>[</color><color=#ffea00>" + globals.objetivo_actual + "</color><color=#424242>]</color>"
-        p = p + " <color=#00e5ff>> </color>"
-        entrada = pedir(p)
+        dibujar_hud_tactico()
         
-        si entrada == "salir" or entrada == "exit" or entrada == "x" or entrada == "q":
+        p = "<color=#00e5ff>Revenant > </color>"
+        entrada = pedir(p).lower()
+        
+        si entrada == "salir" or entrada == "x" or entrada == "q":
             info("Apagando nucleo Revenant...")
             globals.estado_activo = falso
             
-        osi entrada == "ayuda" or entrada == "help" or entrada == "h":
-            columnas = ["Cmd", "Alias", "Accion"]
+        osi entrada == "ayuda" or entrada == "h":
+            columnas = ["Cmd", "Alias", "Acción"]
             filas = [
-                ["ayuda", "h", "Muestra este panel"],
-                ["objetivo", "o", "Fija un target en memoria"],
-                ["recon", "r", "Ejecuta nmap automatizado"],
-                ["asalto", "a", "Gana ejecucion (Metaxploit)"],
-                ["vault", "v", "Lista el botin guardado"],
-                ["intel", "i", "Cosecha secretos del target"],
-                ["inject", "inj", "Auto-replica Revenant"],
-                ["privesc", "p", "Busca vectores de Root"],
-                ["red escanear", "re", "Busca hosts en subred"],
-                ["red info", "ri", "Topologia del enjambre"],
-                ["botnet info", "bi", "Estado del enjambre"],
-                ["sesiones", "s", "Muestra shells activas"],
-                ["salir", "x/q", "Apaga el framework"],
+                ["ayuda", "h", "Muestra este panel de control"],
+                ["objetivo", "o", "Fija un target (Prompt dinámico si se usa solo)"],
+                ["menu", "m", "Abre el Menú Táctico Principal"],
+                ["recon", "r", "Ejecuta nmap avanzado"],
+                ["asalto", "a", "Gana ejecución (Exploit Guiado)"],
+                ["vault", "v", "Lista el botín (Credenciales/Vulns)"],
+                ["intel", "i", "Cosecha profunda de secretos"],
+                ["sesiones", "s", "Administración del enjambre"],
+                ["salir", "x", "Apaga el núcleo Revenant"],
             ]
             tabla = construir_tabla(columnas, filas)
-            print(tabla)
+            dibujar_ventana("MANUAL DE OPERACIONES TÁCTICAS", tabla)
+            pausa_tactica()
+            
+        osi entrada == "objetivo" or entrada == "o":
+            prompt_objetivo()
             
         osi entrada.indexOf("objetivo ") == 0 or entrada.indexOf("o ") == 0:
             partes = entrada.split(" ")
-            si partes.len == 2:
+            si partes.len >= 2:
                 ip = resolver_objetivo(partes[1])
                 si ip:
                     globals.objetivo_actual = ip
-                    exito("Objetivo fijado en memoria: " + globals.objetivo_actual)
+                    exito("Objetivo fijado: " + globals.objetivo_actual)
                 sino:
-                    error("Dominio/IP Invalida.")
-            sino:
-                error("Uso: o <ip> o objetivo <ip>")
-                
+                    error("Fallo al resolver objetivo.")
+            pausa_tactica()
+
+        osi entrada == "menu" or entrada == "m":
+            opciones = [
+                {"label": "Fijar Objetivo", "cmd": "o"},
+                {"label": "Reconocimiento", "cmd": "r"},
+                {"label": "Asalto (Brecha Metaxploit)", "cmd": "a"},
+                {"label": "Cosecha de Intel", "cmd": "i"},
+                {"label": "Ver Bóveda (Vault)", "cmd": "v"},
+                {"label": "Salir", "cmd": "x"},
+            ]
+            comando = menu_interactivo("MENÚ TÁCTICO REVENANT", opciones)
+            si comando: entrada = comando; continuar
+
         osi entrada == "sesiones" or entrada == "s":
-            info("Sesiones activas en enjambre: " + enjambre.len)
+            modulo_botnet_info()
+            pausa_tactica()
             
         osi entrada == "recon" or entrada == "r":
             modulo_espectro_recon()
+            pausa_tactica()
             
         osi entrada == "asalto" or entrada == "a":
-            modulo_asalto_root()
-            
-        osi entrada == "botnet info" or entrada == "bi":
-            modulo_botnet_info()
-            
-        osi entrada == "botnet saquear" or entrada == "bs":
-            modulo_botnet_saquear()
-            
-        osi entrada == "botnet persistir" or entrada == "bp":
-            modulo_botnet_persistir()
+            modulo_asalto_brecha()
+            pausa_tactica()
             
         osi entrada == "vault" or entrada == "v":
             listar_credenciales()
+            pausa_tactica()
             
         osi entrada == "intel" or entrada == "i":
             modulo_intel_saquear()
+            pausa_tactica()
             
         osi entrada == "red escanear" or entrada == "re":
             modulo_red_escanear()
+            pausa_tactica()
             
         osi entrada == "red info" or entrada == "ri":
             modulo_red_info()
+            pausa_tactica()
             
         osi entrada == "inject" or entrada == "inj":
             modulo_inyeccion_replicar()
+            pausa_tactica()
             
         osi entrada == "privesc" or entrada == "p":
             modulo_escalada_analizar()
+            pausa_tactica()
             
         osi entrada == "":
-            continue
+            continuar
             
         sino:
             error("Comando '" + entrada + "' desconocido.")
+            pausa_tactica()
 
 // --- FIN SUB-MODULO: repl.nini ---
 // --- INICIO SUB-MODULO: modulos/espectro.nini ---
@@ -98,15 +109,28 @@ tarea iniciar_repl:
 
 tarea modulo_espectro_recon:
     si globals.objetivo_actual == null:
-        error("Abotando: No hay ningun objetivo fijado en memoria. Usa 'objetivo <ip>'.")
-        return
-        
-    info("Iniciando Mapeo Nmap Profundo sobre: " + globals.objetivo_actual)
+        ip = prompt_objetivo()
+        si no ip: retornar
     
-    // Inyectamos el router en memoria
+    opciones = [
+        {"label": "Escaneo Rápido (Puertos Estándar)", "cmd": "fast"},
+        {"label": "Escaneo Profundo (Metaxploit Full)", "cmd": "deep"},
+        {"label": "Modo Sigilo (Ping Only)", "cmd": "stealth"},
+    ]
+    
+    modo = menu_interactivo("UNIDAD DE RECONOCIMIENTO ESPECTRO", opciones)
+    si no modo: retornar
+    
+    info("Iniciando Mapeo [" + modo.upper() + "] sobre: " + globals.objetivo_actual)
+    
+    // Configuración según modo
+    si modo == "stealth":
+        h = descubrir_red_local()
+        exito("Hosts detectados en entorno: " + h.len)
+        retornar
+    fin_si
+    
     mirar(globals.objetivo_actual)
-    
-    // La macro automatica 'escanear' de Nini depende internamente de 'target_ip' y 'router'
     globals.target_ip = globals.objetivo_actual
     escanear
     
@@ -114,10 +138,9 @@ tarea modulo_espectro_recon:
     resultado = get_shell.host_computer.File(archivo_log)
     
     si resultado:
-        exito("Matriz de puertos obtenida y guardada localmente.")
-        print(resultado.get_content)
+        dibujar_ventana("MATRIZ DE PUERTOS - REVENANT OS", resultado.get_content)
     sino:
-        error("Fallo critico al generar o leer el archivo de escaneo.")
+        error("Fallo crítico al generar o leer el archivo de escaneo.")
 
 // --- FIN SUB-MODULO: modulos/espectro.nini ---
 // --- INICIO SUB-MODULO: modulos/asalto.nini ---
@@ -187,20 +210,91 @@ tarea modulo_asalto_root:
 
 // --- FIN SUB-MODULO: modulos/asalto.nini ---
 // --- INICIO SUB-MODULO: modulos/ui.nini ---
-// ui.nini - Identidad Visual y Arte ASCII de Revenant
+// modulos/ui.nini - Motor de Interfaz Táctica Revenant OS 🖥️💎
 
 tarea mostrar_banner_revenant:
-    limpiar
-    print("<color=#ff1744>      :::::::::  :::::::::: :::     ::: :::::::::: ::::    :::     :::     ::::    ::: ::::::::::: </color>")
-    print("<color=#ff5252>     :+:    :+: :+:        :+:     :+: :+:        :+:+:   :+:   :+: :+:   :+:+:   :+:     :+:      </color>")
-    print("<color=#ff8a80>    +:+    +:+ +:+        +:+     +:+ +:+        :+:+:+  +:+  +:+   +:+  :+:+:+  +:+     +:+       </color>")
-    print("<color=#ffffff>   +#++:++#:  +#++:++#  +#+     +:+ +#++:++#  +#+ +:+ +#+ +#++:++#++ +#+ +:+ +#+     +#+        </color>")
-    print("<color=#b0bec5>  +#+    +#+ +#+         +#+   +#+  +#+        +#+  +#+#+# +#+     +#+ +#+  +#+#+#     +#+         </color>")
-    print("<color=#90a4ae> #+#    #+# #+#          #+#+#+#   #+#        #+#   #+#+# #+#     #+# #+#   #+#+#     #+#          </color>")
-    print("<color=#607d8b>###    ### ##########     ###     ########## ###    #### ###     ### ###    ####     ###           </color>")
-    print("")
-    print("<color=#00e5ff>[#] REVENANT FRAMEWORK | Operativo en Enjambre</color>")
-    print("<color=#424242>---------------------------------------------------------------------------</color>")
+    print("<color=#00e5ff> [ ###################################################### ] </color>")
+    print("<color=#00e5ff> [ # ]                                              [ # ] </color>")
+    print("<color=#ffffff> [ # ]          R  E  V  E  N  A  N  T              [ # ] </color>")
+    print("<color=#ffffff> [ # ]   P O S T - E X P L O I T A T I O N          [ # ] </color>")
+    print("<color=#424242> [ # ]             F R A M E W O R K                [ # ] </color>")
+    print("<color=#424242> [ # ]                                              [ # ] </color>")
+    print("<color=#00e5ff> [ ###################################################### ] </color>")
+    print(" ")
+
+tarea dibujar_separador:
+    print("<color=#424242>======================================================</color>")
+
+tarea limpiar_pantalla:
+    clear_screen
+
+tarea dibujar_hud_tactico:
+    limpiar_pantalla()
+    mostrar_banner_revenant()
+    dibujar_separador()
+    
+    status = "<color=#ff3131>(OFFLINE)</color>"
+    si globals.objetivo_actual != nulo:
+        // Simulación de ping para estado
+        status = "<color=#00e5ff>(ONLINE)</color>"
+    
+    p_origin = "<color=#ffffff>ORIGEN: </color><color=#00e5ff>LOCAL</color>"
+    p_target = "<color=#ffffff>TARGET: </color><color=#ffea00>" + (globals.objetivo_actual or "NINGUNO") + "</color> " + status
+    p_swarm  = "<color=#ffffff>SESIONES: </color><color=#00ff41>" + enjambre.len + "</color>"
+    
+    print(p_origin + " | " + p_target + " | " + p_swarm)
+    dibujar_separador()
+
+tarea dibujar_ventana(titulo, contenido):
+    dibujar_separador()
+    print("<color=#00e5ff>[#] </color><color=#ffffff><b>" + titulo.upper() + "</b></color>")
+    dibujar_separador()
+    si typeof(contenido) == "string":
+        print(contenido)
+    sino:
+        print(contenido)
+    dibujar_separador()
+
+tarea pausa_tactica:
+    pedir("\n<color=#424242>[ Pulsa ENTER para continuar ]</color>")
+
+tarea menu_interactivo(titulo, opciones):
+    // opciones = [{"label": "Texto", "cmd": "comando"}]
+    columnas = ["#", "Acción"]
+    filas = []
+    i = 1
+    recorrer opciones como opt:
+        filas.push([i, opt.label])
+        i = i + 1
+    
+    tabla = construir_tabla(columnas, filas)
+    dibujar_ventana(titulo, tabla)
+    
+    seleccion = pedir("<color=#ffea00>Selecciona una opción > </color>")
+    val_sel = val(seleccion)
+    
+    si val_sel > 0 y val_sel <= opciones.len:
+        retornar opciones[val_sel - 1].cmd
+    sino:
+        error("Selección inválida.")
+        retornar nulo
+
+tarea prompt_objetivo:
+    si globals.objetivo_actual != nulo:
+        confirm = pedir("¿Cambiar objetivo actual (" + globals.objetivo_actual + ")? [s/n]: ")
+        si confirm.lower() != "s": retornar globals.objetivo_actual
+    
+    t_obj = pedir("<color=#ffea00>Introduce IP o Dominio del objetivo > </color>")
+    si t_obj == "": retornar globals.objetivo_actual
+    
+    res = resolver_objetivo(t_obj)
+    si res:
+        globals.objetivo_actual = res
+        exito("Objetivo fijado: " + globals.objetivo_actual)
+        retornar res
+    sino:
+        error("No se pudo resolver el objetivo: " + t_obj)
+        retornar nulo
 
 // --- FIN SUB-MODULO: modulos/ui.nini ---
 // --- INICIO SUB-MODULO: modulos/botnet.nini ---
@@ -549,7 +643,6 @@ tarea modulo_escalada_analizar:
 
 modo ninja:
 inicializar_vault()
-mostrar_banner_revenant()
 info("Cargando REVENANT OS...")
 
 iniciar_repl()
