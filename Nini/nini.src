@@ -60,12 +60,6 @@ end function
 
 niniState.requiresPersistencia = false
 niniState.requiresFuzzer = false
-niniState.requiresCracker = false
-niniState.requiresWifi = false
-niniState.requiresFS = false
-niniState.requiresUI = false
-niniState.requiresTable = false
-niniState.requiresResolver = false
 niniState.asyncCounter = 0
 
 // Pila Estructural para Indentación
@@ -74,6 +68,9 @@ outputLines = []
 
 parseCommand = function(lineNum, trimmed, currentIndent)
 	endsWithColon = (trimmed.len > 0 and trimmed[trimmed.len-1] == ":")
+	
+	// 1. REGISTRO DE DEPENDENCIAS (MANDATORY FIRST STEP)
+	trimmed = preprocessNiniMacros(trimmed)
 	
 	// PRE-PROCESAMIENTO GLOBAL (Atomic replacements)
 	if (trimmed.indexOf("rango(") != null) then trimmed = trimmed.replace("rango", "range")
@@ -85,6 +82,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	trimmed = trimmed.replace(" y ", " and ")
 	trimmed = trimmed.replace(" no ", " not ")
 	
+	if (trimmed.indexOf("retornar") != null) then trimmed = trimmed.replace("retornar", "return")
 	if (trimmed.indexOf("esperar(") != null) then trimmed = trimmed.replace("esperar", "wait")
 	if (trimmed.indexOf("mirar(") != null) then trimmed = trimmed.replace("mirar", "get_shell.host_computer.File")
 	if (trimmed.indexOf("obtener_archivo(") != null) then trimmed = trimmed.replace("obtener_archivo", "get_shell.host_computer.File")
@@ -109,8 +107,9 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if (trimmed.indexOf("secuestrar_wifi(") != null) then trimmed = trimmed.replace("secuestrar_wifi", "__nini_wifi")
 	if (trimmed.indexOf("buscar_recursivo(") != null) then trimmed = trimmed.replace("buscar_recursivo", "__nini_buscar")
 	if (trimmed.indexOf("instalar_persistencia(") != null) then trimmed = trimmed.replace("instalar_persistencia", "__nini_instalar_persistencia")
+	if (trimmed.indexOf("resolver_objetivo(") != null) then trimmed = trimmed.replace("resolver_objetivo", "__nini_resolver")
 	
-	trimmed = preprocessNiniMacros(trimmed)
+	
 
 	// 0. OPERADOR SPREAD DE ARRAYS (...)
 	if trimmed.indexOf("...") != null and trimmed.indexOf("[") != null then
@@ -167,7 +166,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		parts = pipelineData.split(" >> ")
 		pipeLines = []
 		for p in range(0, parts.len - 1)
-			part = preprocessNiniMacros(parts[p].trim)
+			part = parts[p].trim
 			if p == 0 then
 				pipeLines.push("_pipe" + p + " = " + part)
 			else

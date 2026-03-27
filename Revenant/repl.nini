@@ -7,7 +7,7 @@ estado_activo = verdadero
 
 tarea iniciar_repl:
     mientras estado_activo:
-        p = "<color=#ff1744>[#] </color><color=#ffffff>Revenant</color>"
+        p = "<color=#00e5ff>[#] </color><color=#ffffff>Revenant</color>"
         si globals.objetivo_actual != nulo:
             p = p + " <color=#424242>[</color><color=#ffea00>" + globals.objetivo_actual + "</color><color=#424242>]</color>"
         p = p + " <color=#00e5ff>> </color>"
