@@ -98,6 +98,17 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if (trimmed.indexOf("obtener_router_objetivo(") != null) then trimmed = trimmed.replace("obtener_router_objetivo", "__nini_obtener_router_objetivo")
 	if (trimmed.indexOf("replicar_binario(") != null) then trimmed = trimmed.replace("replicar_binario", "__nini_replicar_binario")
 	if (trimmed.indexOf("buscar_vectores_escalada(") != null) then trimmed = trimmed.replace("buscar_vectores_escalada", "__nini_buscar_vectores_escalada")
+	if (trimmed.indexOf("pedir(") != null) then trimmed = trimmed.replace("pedir", "__nini_pedir")
+	if (trimmed.indexOf("confirmar(") != null) then trimmed = trimmed.replace("confirmar", "user_confirm")
+	if (trimmed.indexOf("construir_tabla(") != null) then trimmed = trimmed.replace("construir_tabla", "__nini_tabla")
+	
+	if (trimmed.indexOf("explotar(") != null) then trimmed = trimmed.replace("explotar", "__nini_explotar")
+	if (trimmed.indexOf("inyectar(") != null) then trimmed = trimmed.replace("inyectar", "__nini_fuzz_inyectar")
+	if (trimmed.indexOf("obtener_shell(") != null) then trimmed = trimmed.replace("obtener_shell", "__nini_obtener_shell")
+	if (trimmed.indexOf("crackear_diccionario(") != null) then trimmed = trimmed.replace("crackear_diccionario", "__nini_crack_dic")
+	if (trimmed.indexOf("secuestrar_wifi(") != null) then trimmed = trimmed.replace("secuestrar_wifi", "__nini_wifi")
+	if (trimmed.indexOf("buscar_recursivo(") != null) then trimmed = trimmed.replace("buscar_recursivo", "__nini_buscar")
+	if (trimmed.indexOf("instalar_persistencia(") != null) then trimmed = trimmed.replace("instalar_persistencia", "__nini_instalar_persistencia")
 	
 	trimmed = preprocessNiniMacros(trimmed)
 
