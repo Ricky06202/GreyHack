@@ -1,0 +1,162 @@
+// modulo lateral.nini - MOVIMIENTO LATERAL v2.0
+
+tarea modulo_lateral_mover:
+    si enjambre.len == 0:
+        error("El enjambre esta vacio.")
+        retornar
+    
+    opciones = [
+        {"label": "Listar nodos del enjambre", "cmd": "list"},
+        {"label": "Cambiar a otro nodo", "cmd": "switch"},
+        {"label": "Escanear red desde pivote", "cmd": "scan"},
+        {"label": "Conectar a nuevo objetivo", "cmd": "connect"},
+    ]
+    
+    modo = menu_interactivo("MOVIMIENTO LATERAL", opciones)
+    si not modo: retornar
+    
+    si modo == "list":
+        lateral_listar_nodos()
+    
+    sino: si modo == "switch":
+        lateral_cambiar_nodo()
+    
+    sino: si modo == "scan":
+        lateral_escanear_desde_pivote()
+    
+    sino: si modo == "connect":
+        lateral_conectar_nuevo()
+
+tarea lateral_listar_nodos:
+    info("NODOS EN EL ENJAMBRE:")
+    info("===================")
+    
+    i = 1
+    para nodo en enjambre:
+        ip = nodo.key
+        sesion = nodo.value
+        tipo = typeof(sesion)
+        
+        // Intentar obtener info
+        comp_info = "Unknown"
+        si typeof(sesion) == "shell":
+            comp = sesion.host_computer
+            comp_info = comp.local_ip
+        sino: si typeof(sesion) == "computer":
+            comp_info = sesion.local_ip
+        
+        estado = "<color=#00ff41>ACTIVO</color>"
+        si globals.objetivo_actual == ip:
+            estado = "<color=#ffea00>ACTUAL</color>"
+        
+        info(str(i) + ". " + ip + " (" + tipo + ") " + estado)
+        i = i + 1
+    
+    pausa_tactica()
+
+tarea lateral_cambiar_nodo:
+    si enjambre.len <= 1:
+        info("Solo hay un nodo en el enjambre.")
+        retornar
+    
+    info("Selecciona un nodo:")
+    i = 1
+    para nodo en enjambre:
+        ip = nodo.key
+        si ip != globals.objetivo_actual:
+            info(str(i) + ". " + ip)
+            i = i + 1
+    
+    sel = pedir("Nodo > ")
+    sel_int = val(sel)
+    
+    // Encontrar el nodo correcto
+    keys = enjambre.keys
+    cont = 0
+    para k en keys:
+        si k != globals.objetivo_actual:
+            cont = cont + 1
+            si cont == sel_int:
+                globals.objetivo_actual = k
+                exito("Cambiado a: " + k)
+                retornar
+    
+    error("Selección inválida.")
+
+tarea lateral_escanear_desde_pivote:
+    info("Escaneando red local desde el objetivo...")
+    
+    comp = obtener_computadora_objetivo()
+    si not comp:
+        error("No hay sesion activa.")
+        retornar
+    
+    // Obtener IP local del objetivo
+    ip_local = comp.local_ip
+    
+    // Escanear red local
+    partes = ip_local.split(".")
+    si partes.len < 3:
+        error("No se pudo determinar red local.")
+        retornar
+    
+    red = partes[0] + "." + partes[1] + "." + partes[2] + "."
+    
+    info("Escaneando red: " + red + "0/24...")
+    
+    hosts = []
+    para i en rango(1, 255):
+        ip = red + str(i)
+        si ip == ip_local: continuar
+        
+        sh = get_shell
+        si sh.ping(ip) == 1:
+            hosts.push(ip)
+    
+    si hosts.len == 0:
+        info("No se encontraron hosts.")
+    sino:
+        info("Hosts encontrados: " + str(hosts.len))
+        para h en hosts:
+            info("  - " + h)
+
+tarea lateral_conectar_nuevo:
+    // Conectar a un nuevo objetivo usando el nodo actual como pivote
+    nuevo_objetivo = pedir("IP del nuevo objetivo: ")
+    si nuevo_objetivo == "": retornar
+    
+    info("Conectando a " + nuevo_objetivo + "...")
+    
+    // Usar metaxploit para conectar
+    metax = include_lib("/lib/metaxploit.so")
+    si not metax:
+        error("Metaxploit no disponible.")
+        retornar
+    
+    // Intentar diferentes puertos
+    puertos = [22, 80, 443, 21, 23, 25, 3306, 3389, 8080]
+    
+    para p en puertos:
+        info("Intentando puerto " + str(p) + "...")
+        sesion = metax.net_use(nuevo_objetivo, p)
+        si sesion:
+            exito("Conexión establecida por puerto " + str(p))
+            enjambre[nuevo_objetivo] = sesion
+            globals.objetivo_actual = nuevo_objetivo
+            retornar
+    
+    error("No se pudo establecer conexión.")
+
+tarea obtener_computadora_objetivo:
+    si globals.objetivo_actual == null o globals.objetivo_actual == nulo:
+        retornar get_shell.host_computer
+    
+    si globals.objetivo_actual == "localhost":
+        retornar get_shell.host_computer
+    
+    si enjambre.tiene(globals.objetivo_actual):
+        sesion = enjambre[globals.objetivo_actual]
+        si typeof(sesion) == "shell": retornar sesion.host_computer
+        sino: si typeof(sesion) == "computer": retornar sesion
+    
+    retornar null

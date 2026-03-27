@@ -1,63 +1,143 @@
-// modulo asalto.nini - Inyecciones Metaxploit
+// modulo asalto.nini - Explotacion con seleccion de puerto
 
 tarea modulo_asalto_root:
     si globals.objetivo_actual == null:
-        error("Abotando: No hay ningun objetivo fijado. Usa 'objetivo <ip>'.")
+        error("No hay objetivo. Usa 'objetivo <ip>'")
         retornar
-        
-    puerto = pedir("Ingresa el puerto a vulnerar (dejalo vacio para el router 0): ")
+    
+    # Ver si hay scan previo
+    si globals.ultimo_scan.len == 0:
+        info("Escaneando objetivo...")
+        modulo_espectro_recon()
+    
+    # Pedir seleccion directamente
+    sel = pedir("Puerto (ID, 0=router, Enter=todos): ")
+    
     port_int = 0
-    si puerto.len > 0: port_int = puerto.to_int
-        
-    info("Analizando " + globals.objetivo_actual + ":" + port_int + " mediante Vault...")
+    puerto_seleccionado = null
     
-    // Detección Inteligente de Salto (Bounce)
-    es_router = falso
-    r = obtener_router_objetivo(globals.objetivo_actual)
-    si r y port_int == 0: es_router = verdadero
+    si sel.len > 0:
+        si sel == "0":
+            port_int = 0
+            info("Atacando router (puerto 0)...")
+        sino:
+            sel_int = val(sel)
+            si sel_int > 0 y sel_int <= globals.ultimo_scan.len:
+                puerto_seleccionado = globals.ultimo_scan[sel_int - 1]
+                port_int = puerto_seleccionado.puerto
+                info("Atacando puerto " + str(port_int) + "...")
+            sino:
+                port_int = val(sel)
+                info("Atacando puerto " + str(port_int) + "...")
+    sino:
+        info("Atacando todos los puertos...")
+        port_int = null
     
-    lan_target = nulo
-    si es_router:
-        alerta("¡ROUTER DETECTADO! Posibilidad de Salto (Bounce).")
-        opcion = pedir("¿Deseas saltar a IP interna? (s/n): ")
-        si opcion == "s":
-            lan_target = pedir("Ingresa la IP interna del objetivo final: ")
-            info("Configurando ataque de salto hacia: " + lan_target)
+    # Verificar modo
+    si globals.modo == "LOCAL":
+        info("Modo LOCAL - escaneando librerias...")
+        ataque_local()
+    sino:
+        ataque_remoto(port_int)
 
-    // Intento de recuperación de cache
-    lib_info = obtener_info_libreria(globals.objetivo_actual, port_int)
+tarea ataque_local:
+    comp = get_shell.host_computer
+    
+    info("Escaneando librerias en /lib...")
+    
+    lib_folder = comp.File("/lib")
+    si not lib_folder:
+        error("No se pudo acceder a /lib")
+        retornar
+    
+    libs = []
+    para f en lib_folder.get_files:
+        si f.name.indexOf(".so") != null:
+            libs.push(f)
+    
+    si libs.len == 0:
+        error("No hay librerias.")
+        retornar
+    
+    info("Librerias: " + str(libs.len))
+    
+    metax = include_lib("/lib/metaxploit.so")
+    si not metax:
+        error("Metaxploit no disponible")
+        retornar
+    
+    para lib_file en libs:
+        info("Probando: " + lib_file.name)
+        
+        lib = metax.load(lib_file.path)
+        si lib:
+            vulns = metax.scan(lib)
+            si vulns.len > 0:
+                info("  Vulns: " + str(vulns.len))
+                para v en vulns:
+                    res = lib.overflow(vulns[0], "")
+                    si res:
+                        exito("ACCESO OBTENIDO!")
+                        enjambre[globals.objetivo_actual] = res
+                        retornar
+    
+    error("Sin vulnerabilidades.")
+
+tarea ataque_remoto(port_int):
+    host = globals.objetivo_actual
+    
+    es_router = falso
+    r = obtener_router_objetivo(host)
+    si r y port_int == 0:
+        es_router = verdadero
+    
+    lan_target = null
+    si es_router:
+        alerta("ROUTER DETECTADO!")
+        opcion = pedir("Saltar a IP interna? [s/n]: ")
+        si opcion.lower() == "s":
+            lan_target = pedir("IP interna: ")
+            info("Saltando a: " + lan_target)
+    
+    # Cache
+    lib_info = obtener_info_libreria(host, port_int)
     
     vulns_cache = []
     si lib_info:
         vulns_cache = obtener_vulnerabilidades(lib_info.lib_name, lib_info.version)
     
     si vulns_cache.len > 0:
-        exito("Vulnerabilidades recuperadas del Vault para " + lib_info.lib_name)
-        recorrer vulns_cache como v:
-            info("Explotando via Cache: " + v.mem + " | " + v.pass)
+        exito("Cache hit: " + lib_info.lib_name)
+        para v en vulns_cache:
+            info("Explotando: " + v.mem)
             sesion = explotar_directo(lib_info.metalib, v.mem, v.pass, lan_target)
             si typeof(sesion) == "shell" o typeof(sesion) == "computer":
-                exito("Acceso obtenido via Vault Cache.")
-                enjambre[globals.objetivo_actual] = sesion
+                exito("ACCESO OBTENIDO!")
+                enjambre[host] = sesion
                 retornar
-        
-    // Si no hay cache or fallo, escaneo tradicional
-    info("No hay cache operativa. Iniciando escaneo profundo...")
-    vuln = buscar_vulnerabilidad(globals.objetivo_actual, port_int)
+    
+    # Normal
+    info("Buscando vulnerabilidades...")
+    vuln = buscar_vulnerabilidad(host, port_int)
     
     si vuln:
-        exito("¡Se detectaron " + vuln.v_list.len + " vectores de ataque! Iniciando brecha...")
+        info("Vulnerabilidades: " + str(vuln.v_list.len))
         
-        recorrer vuln.v_list como v:
+        para v en vuln.v_list:
             cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, v.mem, v.pass)
         
-        info("Ejecutando Pipeline de asalto automatizado...")
-        sesion = explotar(vuln, nulo, lan_target)
+        sesion = explotar(vuln, null, lan_target)
         
         si typeof(sesion) == "shell" o typeof(sesion) == "computer":
-            exito("Brecha abierta. Objetivo añadido al enjambre.")
-            enjambre[globals.objetivo_actual] = sesion
+            exito("ACCESO OBTENIDO!")
+            enjambre[host] = sesion
         sino:
             error("Ataque fallido.")
     sino:
-        error("Objetivo invulnerable.")
+        error("Sin vulnerabilidades.")
+
+tarea obtener_router_objetivo(ip):
+    r = get_router(ip)
+    si r y r.public_ip == ip:
+        retornar r
+    retornar null

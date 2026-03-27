@@ -9,6 +9,9 @@ importar "modulos/intel.nini"
 importar "modulos/red.nini"
 importar "modulos/inyeccion.nini"
 importar "modulos/escalada.nini"
+importar "modulos/lateral.nini"
+importar "modulos/exfil.nini"
+importar "modulos/limpieza.nini"
 
 modo ninja:
 inicializar_vault()

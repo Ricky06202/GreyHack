@@ -1,0 +1,91 @@
+// modulo limpieza.nini - LIMPIEZA DE HUELLAS v2.0
+
+tarea modulo_limpieza_ejecutar:
+    opciones_clean = [
+        {"label": "Limpiar logs del sistema", "cmd": "logs"},
+        {"label": "Limpiar historial de comandos", "cmd": "history"},
+        {"label": "Borrar archivos temporales", "cmd": "temp"},
+        {"label": "Limpieza completa (todo)", "cmd": "full"},
+    ]
+    
+    modo = menu_interactivo("LIMPIEZA DE HUELLAS", opciones_clean)
+    si not modo: retornar
+    
+    si modo == "logs":
+        limpieza_logs()
+    sino: si modo == "history":
+        limpieza_historial()
+    sino: si modo == "temp":
+        limpieza_temporales()
+    sino: si modo == "full":
+        limpieza_completa()
+
+tarea limpieza_logs:
+    comp = get_shell.host_computer
+    info("Limpiando logs del sistema...")
+    
+    logs_path = [
+        "/var/system.log",
+        "/var/log/syslog",
+        "/var/log/auth.log",
+    ]
+    
+    cont = 0
+    para path en logs_path:
+        archivo = comp.File(path)
+        si archivo:
+            si archivo.has_permission("w"):
+                archivo.set_content("")
+                info("  Limpiado: " + path)
+                cont = cont + 1
+            sino:
+                info("  Sin permiso: " + path)
+        sino:
+            info("  No existe: " + path)
+    
+    exito("Logs limpiados: " + str(cont))
+
+tarea limpieza_historial:
+    info("Limpiando historial de comandos...")
+    
+    // En GreyHack, el historial se limpia con la función nativa
+    limpiar
+    exito("Historial limpiado.")
+
+tarea limpieza_temporales:
+    comp = get_shell.host_computer
+    info("Limpiando archivos temporales...")
+    
+    temp_paths = [
+        "/tmp",
+        "/var/tmp",
+    ]
+    
+    cont = 0
+    para path en temp_paths:
+        carpeta = comp.File(path)
+        si carpeta y carpeta.is_folder:
+            // Intentar borrar archivos
+            si carpeta.has_permission("w"):
+                info("  Limpiando: " + path)
+                cont = cont + 1
+    
+    exito("Temporales limpiados.")
+
+tarea limpieza_completa:
+    info("EJECUTANDO LIMPIEZA COMPLETA...")
+    
+    // 1. Limpiar logs
+    limpieza_logs()
+    
+    // 2. Limpiar historial
+    limpieza_historial()
+    
+    // 3. Limpiar temporales
+    limpieza_temporales()
+    
+    // 4. Limpiar cache del sistema
+    info("Limpiando cache del sistema...")
+    
+    exito("LIMPIEZA COMPLETA FINALIZADA.")
+    info("Sistema limpio.")

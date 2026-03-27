@@ -1,40 +1,46 @@
-// repl.nini - Bucle Principal Interactivo
+// repl.nini - Bucle Principal Interactivo Revenant v2.0
 
-// Estado Global (La Memoria Inmortal)
+// Estado Global
 enjambre = {}
 globals.objetivo_actual = null
 estado_activo = verdadero
+_historial = []
+globals.ultimo_scan = []
+globals.modo = "REMOTO"  // LOCAL o REMOTO
 
 tarea iniciar_repl:
     mientras estado_activo:
         dibujar_hud_tactico()
         
-        p = "<color=#00e5ff>Revenant > </color>"
-        entrada = pedir(p).lower()
+        // Prompt
+        p = "<color=#00e5ff>revenant"
+        si globals.objetivo_actual:
+            p = p + ":" + globals.objetivo_actual
+        p = p + ":" + globals.modo + "> "
         
-        si entrada == "salir" or entrada == "x" or entrada == "q":
-            info("Apagando nucleo Revenant...")
+        entrada = pedir(p)
+        
+        // Agregar al historial
+        si entrada.trim.len > 0:
+            _historial.push(entrada.trim)
+        
+        entrada = entrada.trim.lower()
+        
+        // Comandos
+        si entrada == "salir" o entrada == "x" o entrada == "q":
+            info("Saliendo...")
             globals.estado_activo = falso
             
-        osi entrada == "ayuda" or entrada == "h":
-            columnas = ["Cmd", "Alias", "Acción"]
-            filas = [
-                ["ayuda", "h", "Muestra este panel de control"],
-                ["objetivo", "o", "Fija un target (Prompt dinámico si se usa solo)"],
-                ["menu", "m", "Abre el Menú Táctico Principal"],
-                ["recon", "r", "Ejecuta nmap avanzado"],
-                ["asalto", "a", "Gana ejecución (Exploit Guiado)"],
-                ["vault", "v", "Lista el botín (Credenciales/Vulns)"],
-                ["intel", "i", "Cosecha profunda de secretos"],
-                ["sesiones", "s", "Administración del enjambre"],
-                ["salir", "x", "Apaga el núcleo Revenant"],
-            ]
-            tabla = construir_tabla(columnas, filas)
-            dibujar_ventana("MANUAL DE OPERACIONES TÁCTICAS", tabla)
+        osi entrada == "ayuda" o entrada == "h" o entrada == "?":
+            mostrar_ayuda()
             pausa_tactica()
             
         osi entrada == "objetivo" or entrada == "o":
             prompt_objetivo()
+            // Auto-escanear al fijar objetivo
+            si globals.objetivo_actual:
+                modulo_espectro_recon()
+                pausa_tactica()
             
         osi entrada.indexOf("objetivo ") == 0 or entrada.indexOf("o ") == 0:
             partes = entrada.split(" ")
@@ -42,33 +48,25 @@ tarea iniciar_repl:
                 ip = resolver_objetivo(partes[1])
                 si ip:
                     globals.objetivo_actual = ip
-                    exito("Objetivo fijado: " + globals.objetivo_actual)
-                sino:
-                    error("Fallo al resolver objetivo.")
+                    exito("Objetivo: " + globals.objetivo_actual)
+                    # Auto-escanear
+                    modulo_espectro_recon()
             pausa_tactica()
 
         osi entrada == "menu" or entrada == "m":
-            opciones = [
-                {"label": "Fijar Objetivo", "cmd": "o"},
-                {"label": "Reconocimiento", "cmd": "r"},
-                {"label": "Asalto (Brecha Metaxploit)", "cmd": "a"},
-                {"label": "Cosecha de Intel", "cmd": "i"},
-                {"label": "Ver Bóveda (Vault)", "cmd": "v"},
-                {"label": "Salir", "cmd": "x"},
-            ]
-            comando = menu_interactivo("MENÚ TÁCTICO REVENANT", opciones)
-            si comando: entrada = comando; continuar
+            mostrar_menu_principal()
 
-        osi entrada == "sesiones" or entrada == "s":
-            modulo_botnet_info()
+        // Nuevo comando para cambiar modo
+        osi entrada == "modo":
+            cambiar_modo()
             pausa_tactica()
-            
+
         osi entrada == "recon" or entrada == "r":
             modulo_espectro_recon()
             pausa_tactica()
             
         osi entrada == "asalto" or entrada == "a":
-            modulo_asalto_brecha()
+            modulo_asalto_root()
             pausa_tactica()
             
         osi entrada == "vault" or entrada == "v":
@@ -79,25 +77,77 @@ tarea iniciar_repl:
             modulo_intel_saquear()
             pausa_tactica()
             
-        osi entrada == "red escanear" or entrada == "re":
-            modulo_red_escanear()
+        osi entrada == "buscar" or entrada == "b":
+        osi entrada == "brute" or entrada == "br":
+        osi entrada == "inject" or entrada == "inj" or entrada == "i":
+        osi entrada == "privesc" or entrada == "pr" or entrada == "p":
+        osi entrada == "sesiones" or entrada == "ses" or entrada == "s":
+        osi entrada == "lateral" or entrada == "lat" or entrada == "l":
+        osi entrada == "persist" or entrada == "per" or entrada == "pe":
+        osi entrada == "limpiar" or entrada == "clean" or entrada == "c":
+            modulo_limpieza_ejecutar()
             pausa_tactica()
             
-        osi entrada == "red info" or entrada == "ri":
-            modulo_red_info()
-            pausa_tactica()
-            
-        osi entrada == "inject" or entrada == "inj":
-            modulo_inyeccion_replicar()
-            pausa_tactica()
-            
-        osi entrada == "privesc" or entrada == "p":
-            modulo_escalada_analizar()
+        osi entrada == "historial" or entrada == "history":
+            si _historial.len == 0:
+                info("Sin comandos.")
+            sino:
+                i = _historial.len - 1
+                cont = 0
+                mientras i >= 0 y cont < 10:
+                    info("  " + _historial[i])
+                    i = i - 1
+                    cont = cont + 1
             pausa_tactica()
             
         osi entrada == "":
             continuar
             
         sino:
-            error("Comando '" + entrada + "' desconocido.")
+            error("Comando: " + entrada)
             pausa_tactica()
+
+tarea mostrar_ayuda:
+    columnas = ["Comando", "Alias", "Descripcion"]
+    filas = [
+        ["objetivo", "o", "Fijar objetivo + escanear"],
+        ["modo", "", "Cambiar LOCAL/REMOTO"],
+        ["recon", "r", "Escanear"],
+        ["asalto", "a", "Explotar"],
+        ["intel", "i", "Extraer info"],
+        ["buscar", "b", "Buscar archivos"],
+        ["brute", "br", "Fuerza bruta"],
+        ["vault", "v", "Credenciales"],
+        ["sesiones", "ses", "Enjambre"],
+        ["lateral", "lat", "Mov. lateral"],
+        ["persist", "pe", "Persistencia"],
+        ["limpiar", "c", "Limpiar huellas"],
+        ["ayuda", "h", "Ayuda"],
+        ["salir", "x", "Salir"],
+    ]
+    dibujar_tabla_simple("AYUDA", columnas, filas)
+
+tarea cambiar_modo:
+    si globals.modo == "REMOTO":
+        globals.modo = "LOCAL"
+        info("Modo cambiado a: LOCAL")
+    sino:
+        globals.modo = "REMOTO"
+        info("Modo cambiado a: REMOTO")
+
+tarea mostrar_menu_principal:
+    opciones = [
+        {"label": "Fijar Objetivo", "cmd": "o"},
+        {"label": "Cambiar Modo (LOCAL/REMOTO)", "cmd": "modo"},
+        {"label": "Escanear", "cmd": "r"},
+        {"label": "Asaltar", "cmd": "a"},
+        {"label": "Inteligencia", "cmd": "i"},
+        {"label": "Ver Vault", "cmd": "v"},
+        {"label": "Sesiones", "cmd": "s"},
+        {"label": "Limpiar", "cmd": "clean"},
+    ]
+    
+    comando = menu_interactivo("MENU", opciones)
+    si comando:
+        entrada = comando
+        continuar

@@ -3,7 +3,7 @@
 
 // Estado Global (La Memoria Inmortal)
 enjambre = {}
-objetivo_actual = null
+globals.objetivo_actual = null
 estado_activo = verdadero
 
 tarea iniciar_repl:
@@ -128,7 +128,6 @@ tarea modulo_espectro_recon:
         h = descubrir_red_local()
         exito("Hosts detectados en entorno: " + h.len)
         retornar
-    fin_si
     
     mirar(globals.objetivo_actual)
     globals.target_ip = globals.objetivo_actual
@@ -234,12 +233,13 @@ tarea dibujar_hud_tactico:
     dibujar_separador()
     
     status = "<color=#ff3131>(OFFLINE)</color>"
+    p_obj = "NINGUNO"
     si globals.objetivo_actual != nulo:
-        // Simulación de ping para estado
         status = "<color=#00e5ff>(ONLINE)</color>"
+        p_obj = globals.objetivo_actual
     
     p_origin = "<color=#ffffff>ORIGEN: </color><color=#00e5ff>LOCAL</color>"
-    p_target = "<color=#ffffff>TARGET: </color><color=#ffea00>" + (globals.objetivo_actual or "NINGUNO") + "</color> " + status
+    p_target = "<color=#ffffff>OBJETIVO: </color><color=#ffea00>" + p_obj + "</color> " + status
     p_swarm  = "<color=#ffffff>SESIONES: </color><color=#00ff41>" + enjambre.len + "</color>"
     
     print(p_origin + " | " + p_target + " | " + p_swarm)

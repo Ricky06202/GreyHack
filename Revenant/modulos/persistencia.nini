@@ -1,11 +1,126 @@
-// modulos/persistencia.nini - Inyección de Demonios
+// modulo persistencia.nini - PERSISTENCIA Y BACKDOORS v2.0
+
+tarea modulo_persistencia_configurar:
+    si globals.objetivo_actual == null:
+        error("No hay objetivo seleccionado.")
+        retornar
+    
+    opciones = [
+        {"label": "Instalar backdoor (Metaxploit)", "cmd": "backdoor"},
+        {"label": "Configurar cron job", "cmd": "cron"},
+        {"label": "Ver persistencias activas", "cmd": "list"},
+    ]
+    
+    modo = menu_interactivo("CONFIGURADOR DE PERSISTENCIA", opciones)
+    si not modo: retornar
+    
+    si modo == "backdoor":
+        persistencia_instalar_backdoor()
+    sino: si modo == "cron":
+        persistencia_cron()
+    sino: si modo == "list":
+        persistencia_ver()
+
+tarea persistencia_instalar_backdoor:
+    si globals.objetivo_actual == null:
+        error("No hay objetivo.")
+        retornar
+    
+    comp = obtener_computadora_objetivo()
+    si not comp:
+        error("No hay sesion activa.")
+        retornar
+    
+    // Verificar permisos de escritura
+    lib_folder = comp.File("/lib")
+    si not lib_folder:
+        error("No se pudo acceder a /lib")
+        retornar
+    
+    si not lib_folder.has_permission("w"):
+        error("Sin permisos de escritura en /lib")
+        info("Requiere privilegios root.")
+        retornar
+    
+    // Crear archivo de backdoor
+    nombre_backdoor = "revenant_daemon"
+    ruta_backdoor = "/lib/systemd/system/" + nombre_backdoor + ".service"
+    
+    contenido = "[Unit]
+Description=System Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/sh -c 'while true; do wait 60; done'
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target"
+    
+    info("Creando servicio backdoor...")
+    
+    // Intentar crear el archivo
+    comp.touch("/lib/systemd/system/", nombre_backdoor + ".service")
+    archivo = comp.File(ruta_backdoor)
+    
+    si archivo:
+        archivo.set_content(contenido)
+        exito("Backdoor instalado: " + ruta_backdoor)
+        info("Para activar: systemctl enable " + nombre_backdoor)
+    sino:
+        error("No se pudo crear el archivo.")
+
+tarea persistencia_cron:
+    si globals.objetivo_actual == null:
+        error("No hay objetivo.")
+        retornar
+    
+    comp = obtener_computadora_objetivo()
+    si not comp:
+        error("No hay sesion activa.")
+        retornar
+    
+    comando = pedir("Comando a ejecutar: ")
+    si comando == "": retornar
+    
+    // Verificar permisos en /etc
+    cron_file = comp.File("/etc/crontab")
+    si not cron_file:
+        error("No se pudo acceder a /etc/crontab")
+        retornar
+    
+    si not cron_file.has_permission("w"):
+        error("Sin permisos de escritura en crontab")
+        info("Requiere root.")
+        retornar
+    
+    // Agregar al crontab
+    contenido_actual = cron_file.get_content
+    nueva_linea = "@reboot " + comando + char(10)
+    
+    cron_file.set_content(contenido_actual + nueva_linea)
+    exito("Cron job agregado.")
+
+tarea persistencia_ver:
+    info("Persistencia configurada en el objetivo.")
+    info("Usa 'vault' para ver credenciales guardadas.")
+
+tarea modulo_persistencia_keylogger:
+    si globals.objetivo_actual == null:
+        error("No hay objetivo seleccionado.")
+        retornar
+    
+    info("Keylogger no disponible en GreyHack.")
+    info("Usa otras tecnicas de persistencia.")
 
 tarea modulo_botnet_persistir:
     si enjambre.len == 0:
         error("El enjambre esta vacio.")
         return
         
-    info("Inyectando Daemons Backdoor en " + enjambre.len + " subsistemas...")
+    info("Inyectando Daemons en " + enjambre.len + " nodos...")
     
     para nodo en enjambre:
         ip_nodo = nodo.key
@@ -18,21 +133,33 @@ tarea modulo_botnet_persistir:
             computer_node = sesion
             
         si computer_node:
-            info("Configurando persistencia remota en " + ip_nodo)
+            info("Configurando persistencia en " + ip_nodo)
             
-            // Verificamos permisos de Sysadmin
             carpeta_init = computer_node.File("/lib/")
                 
             si carpeta_init and carpeta_init.has_permission("w"):
-                exito("Privilegios root confirmados. Modificando cronjobs / Systemd.")
+                exito("Root confirmado. Instalando en " + ip_nodo)
                 
-                // Construyendo archivo demonio malicioso en PC victima
                 computer_node.touch("/lib/systemd/system/", "nrpe_revenant.service")
                 
                 archivo_fake = computer_node.File("/lib/systemd/system/nrpe_revenant.service")
                 si archivo_fake:
-                    archivo_fake.set_content("[Unit]\nDescription=Revenant Keeper\n[Service]\nExecStart=/bin/sh")
+                    archivo_fake.set_content("[Unit]\nDescription=Revenant\n[Service]\nExecStart=/bin/sh")
                 
-                exito("[INSTALADO] Troyano persistente en latencia sobre " + ip_nodo)
+                exito("[OK] Troyano instalado en " + ip_nodo)
             sino:
-                error("Proteccion ring-0 en " + ip_nodo + ". Requiere rooteado manual.")
+                error("Sin permisos en " + ip_nodo)
+
+tarea obtener_computadora_objetivo:
+    si globals.objetivo_actual == null o globals.objetivo_actual == nulo:
+        retornar get_shell.host_computer
+    
+    si globals.objetivo_actual == "localhost":
+        retornar get_shell.host_computer
+    
+    si enjambre.tiene(globals.objetivo_actual):
+        sesion = enjambre[globals.objetivo_actual]
+        si typeof(sesion) == "shell": retornar sesion.host_computer
+        sino: si typeof(sesion) == "computer": retornar sesion
+    
+    retornar null

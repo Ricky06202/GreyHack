@@ -1,36 +1,143 @@
-// modulo espectro.nini - Reconocimiento Avanzado
+// modulo espectro.nini - RECONOCIMIENTO AVANZADO
+// Automatico con la mejor info
+
+tarea espectro_escaneo_completo(host):
+    si not host o host == "":
+        error("No hay host definido.")
+        retornar null
+    
+    sh = get_shell
+    si sh.ping(host) != 1:
+        error("Host inalcanzable: " + host)
+        retornar null
+    
+    router = get_router(host)
+    si not router:
+        error("No se pudo obtener router.")
+        retornar null
+    
+    es_local = es_ip_local(host)
+    
+    ports = []
+    si es_local:
+        ports = router.device_ports(host)
+    sino:
+        ports = router.used_ports
+    
+    si not ports o ports.len == 0:
+        info("No hay puertos abiertos.")
+        retornar null
+    
+    resultados = []
+    i = 1
+    
+    para port en ports:
+        port_num = port.port_number
+        servicio_completo = router.port_info(port)
+        
+        # Separar servicio y version
+        servicio = servicio_completo
+        version = "N/A"
+        
+        partes_svc = servicio_completo.split(" ")
+        si partes_svc.len > 1:
+            servicio = partes_svc[0]
+            version = partes_svc[1]
+        
+        estado = "open"
+        si port.is_closed y not es_local:
+            estado = "closed"
+        
+        # Obtener IP LAN
+        lan_ip = "N/A"
+        si es_local:
+            lan_ip = host
+        sino:
+            lan_ip = port.get_lan_ip
+        
+        resultados.push({
+            "id": i,
+            "puerto": port_num,
+            "servicio": servicio,
+            "version": version,
+            "estado": estado,
+            "lan_ip": lan_ip
+        })
+        
+        i = i + 1
+    
+    retornar resultados
+
+tarea espectro_mostrar_tabla(resultados):
+    print("")
+    info("RESULTADOS DEL ESCANEO:")
+    print("")
+    
+    # Encabezado
+    print("  ID  Puerto  Estado  Servicio            Version  LAN IP")
+    print("  --- ------  ------  ------------------ -------- ---------------")
+    
+    para r en resultados:
+        id_str = str(r.id)
+        puerto_str = str(r.puerto)
+        estado_str = r.estado
+        servicio_str = r.servicio
+        version_str = r.version
+        lan_str = r.lan_ip
+        
+        # Alinear
+        id_str = id_str + " " * (3 - id_str.len)
+        puerto_str = puerto_str + " " * (6 - puerto_str.len)
+        estado_str = estado_str + " " * (6 - estado_str.len)
+        servicio_str = servicio_str + " " * (18 - servicio_str.len)
+        version_str = version_str + " " * (8 - version_str.len)
+        
+        # Color segun estado
+        color_estado = ""
+        si estado_str == "closed":
+            color_estado = "<color=#ff3131>"
+        
+        print("  " + id_str + "  " + puerto_str + "  " + color_estado + estado_str + "</color>  " + servicio_str + "  " + version_str + "  " + lan_str)
+    
+    print("")
 
 tarea modulo_espectro_recon:
     si globals.objetivo_actual == null:
-        ip = prompt_objetivo()
-        si no ip: retornar
-    
-    opciones = [
-        {"label": "Escaneo Rápido (Puertos Estándar)", "cmd": "fast"},
-        {"label": "Escaneo Profundo (Metaxploit Full)", "cmd": "deep"},
-        {"label": "Modo Sigilo (Ping Only)", "cmd": "stealth"},
-    ]
-    
-    modo = menu_interactivo("UNIDAD DE RECONOCIMIENTO ESPECTRO", opciones)
-    si no modo: retornar
-    
-    info("Iniciando Mapeo [" + modo.upper() + "] sobre: " + globals.objetivo_actual)
-    
-    // Configuración según modo
-    si modo == "stealth":
-        h = descubrir_red_local()
-        exito("Hosts detectados en entorno: " + h.len)
+        error("No hay objetivo. Usa 'objetivo <ip>'")
         retornar
-    fin_si
     
-    mirar(globals.objetivo_actual)
-    globals.target_ip = globals.objetivo_actual
-    escanear
+    host = globals.objetivo_actual
     
-    archivo_log = current_path + "/scan_" + target_ip + ".txt"
-    resultado = get_shell.host_computer.File(archivo_log)
+    info("Escaneando " + host + "...")
     
-    si resultado:
-        dibujar_ventana("MATRIZ DE PUERTOS - REVENANT OS", resultado.get_content)
+    resultados = espectro_escaneo_completo(host)
+    
+    si resultados:
+        globals.ultimo_scan = resultados
+        espectro_mostrar_tabla(resultados)
+        
+        es_local = es_ip_local(host)
+        modo_actual = "REMOTO"
+        si es_local:
+            modo_actual = "LOCAL"
+        
+        info("Modo: " + modo_actual + " | Puertos: " + str(resultados.len))
     sino:
-        error("Fallo crítico al generar o leer el archivo de escaneo.")
+        error("Sin resultados.")
+
+tarea es_ip_local(ip):
+    si not ip: retornar falso
+    si ip == "127.0.0.1": retornar verdadero
+    
+    comp = get_shell.host_computer
+    local_ip = comp.local_ip
+    
+    partes_local = local_ip.split(".")
+    partes_ip = ip.split(".")
+    
+    si partes_local.len < 3 o partes_ip.len < 3: retornar falso
+    
+    red_local = partes_local[0] + "." + partes_local[1] + "." + partes_local[2]
+    red_ip = partes_ip[0] + "." + partes_ip[1] + "." + partes_ip[2]
+    
+    retornar red_local == red_ip
