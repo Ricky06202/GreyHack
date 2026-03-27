@@ -54,7 +54,7 @@ outputLines = []
 
 parseCommand = function(lineNum, trimmed, currentIndent)
 	endsWithColon = (trimmed.len > 0 and trimmed[trimmed.len-1] == ":")
-	trimmed = trimmed.replace("rango(", "range(")
+	trimmed = trimmed.replace("rango\(", "range(")
 
 	// 0. OPERADOR SPREAD DE ARRAYS (...)
 	if trimmed.indexOf("...") != null and trimmed.indexOf("[") != null then
@@ -302,8 +302,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if trimmed.indexOf("exito(") == 0 then return "print(""<color=green>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
 	if trimmed.indexOf("error(") == 0 then return "print(""<color=red>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
 	if trimmed.indexOf("info(") == 0 then return "print(""<color=yellow>"" + " + trimmed[5:trimmed.len-1] + " + ""</color>"")"
-	
-	if trimmed == "limpiar" then return "syslog = get_shell.host_computer.File(""/var/syslog""); if syslog then syslog.set_content("""")"
+	if trimmed == "limpiar" or trimmed == "clean_house" then return "syslog = get_shell.host_computer.File(" + char(34) + "/var/syslog" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")"
 	if trimmed.indexOf("mirar(") == 0 then
 		arg = trimmed[trimmed.indexOf("(")+1:trimmed.lastIndexOf(")")].trim
 		return "router = get_router(" + arg + "); if router then ports = router.used_ports else __nini_error = true"
@@ -346,12 +345,8 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		end if
 	end if
 
-	// Passthrough general
-	if trimmed.indexOf("=") > 0 or trimmed.indexOf("print(") == 0 or trimmed.indexOf("__nini_error") >= 0 then
-		return trimmed
-	end if
-	
-	logger.error(lineNum, "Sintaxis desconocida o mal formada Nini: " + trimmed)
+	// Passthrough general abierto (Variables, llamadas funciones de usuario, APIs nativas)
+	return trimmed
 end function
 
 print("Iniciando transpilacion Nini v9.0...")
@@ -363,9 +358,11 @@ for i in range(0, lines.len)
 	
 	if trimmed == "" or trimmed.indexOf("//") == 0 then continue
 	
-	lenNoTrim = rawLine.len
-	lenTrim = rawLine.ltrim.len
-	currentIndent = lenNoTrim - lenTrim
+	currentIndent = 0
+	for char_idx in range(0, rawLine.len - 1)
+		c = rawLine[char_idx]
+		if c == " " or c == char(9) then currentIndent = currentIndent + 1 else break
+	end for
 	
 	isContinuation = (trimmed.indexOf("osi ") == 0) or (trimmed == "sino:") or (trimmed == "excepto:")
 	
@@ -537,9 +534,10 @@ if niniState.requiresWifi then
 	headers.push("  crypto.airmon(""start"", iface)")
 	headers.push("  networks = computer.wifi_networks(iface)")
 	headers.push("  if not networks or networks.len == 0 then return null")
-	headers.push("  bssid = networks[0].split("" "")[0]")
-	headers.push("  print(""<color=yellow>[WiFi]</color> Inyectando en "" + bssid)")
-	headers.push("  crypto.aireplay(bssid, 300, iface)")
+	headers.push("  parts = networks[0].split(" + char(34) + " " + char(34) + ")")
+	headers.push("  bssid = parts[0]; essid = parts[2]")
+	headers.push("  print(" + char(34) + "<color=yellow>[WiFi]</color> Inyectando en " + char(34) + " + bssid)")
+	headers.push("  crypto.aireplay(bssid, essid, 300000)")
 	headers.push("  res = crypto.aircrack(current_path + ""/file.cap"")")
 	headers.push("  return res")
 	headers.push("end function")
@@ -645,4 +643,16 @@ if not outFile then
 end if
 outFile.set_content(finalOutput.join(char(10)))
 
-print("<color=green>[OK]</color> Transpilacion Nini v9.0 Completada -> " + outputFile)
+print("<color=cyan>[Nini]</color> Codigo transpilado -> " + fileName)
+print("<color=yellow>[Nini]</color> Invocando compilador GreyScript...")
+sh = get_shell
+if not sh then sh = get_shell("guest", "guest")
+err = sh.build(targetFolder + "/" + fileName, targetFolder)
+
+binary = fileName.replace(".gs", "")
+if err == "" then
+	outFile.delete
+	print("<color=green>[SUCCESS] Ejecutable " + binary + " listo para lanzar. (.gs reciclado)</color>")
+else
+	print("<color=red>[ERROR C-Engine]</color> " + err)
+end if
