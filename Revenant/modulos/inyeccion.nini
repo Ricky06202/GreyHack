@@ -5,7 +5,11 @@ tarea modulo_inyeccion_replicar:
         error("Fije un objetivo primero.")
         retornar
         
-    sesion = enjambre[globals.objetivo_actual]
+    si globals.objetivo_actual == nulo:
+        sesion = get_shell
+    sino:
+        sesion = enjambre[globals.objetivo_actual]
+    
     si no sesion o typeof(sesion) != "shell":
         error("Se requiere una shell activa para inyectar.")
         retornar

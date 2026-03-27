@@ -1,13 +1,13 @@
 // modulos/escalada.nini - El Camino hacia Root 🔋
 
 tarea modulo_escalada_analizar:
-    si globals.objetivo_actual == null:
+    si globals.objetivo_actual == nulo:
         info("Escaneando sistema local para escalada de privilegios...")
-        // Usar host local
+        sesion = get_shell
     sino:
         info("Buscando vectores de PrivEsc en " + globals.objetivo_actual)
+        sesion = enjambre[globals.objetivo_actual]
     
-    sesion = enjambre[globals.objetivo_actual]
     si no sesion:
         error("No hay sesion activa para el análisis.")
         retornar

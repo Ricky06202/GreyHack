@@ -8,7 +8,7 @@ estado_activo = verdadero
 
 tarea iniciar_repl:
     mientras estado_activo:
-        p = "<color=#ff1744>[#] </color><color=#ffffff>Revenant</color>"
+        p = "<color=#00e5ff>[#] </color><color=#ffffff>Revenant</color>"
         si globals.objetivo_actual != nulo:
             p = p + " <color=#424242>[</color><color=#ffea00>" + globals.objetivo_actual + "</color><color=#424242>]</color>"
         p = p + " <color=#00e5ff>> </color>"
@@ -134,10 +134,10 @@ tarea modulo_asalto_root:
         
     info("Analizando " + globals.objetivo_actual + ":" + port_int + " mediante Vault...")
     
-    // Detección de Router para Bounce
+    // Detección Inteligente de Salto (Bounce)
     es_router = falso
     r = obtener_router_objetivo(globals.objetivo_actual)
-    si r: es_router = verdadero
+    si r y port_int == 0: es_router = verdadero
     
     lan_target = nulo
     si es_router:
@@ -157,23 +157,25 @@ tarea modulo_asalto_root:
     si vulns_cache.len > 0:
         exito("Vulnerabilidades recuperadas del Vault para " + lib_info.lib_name)
         recorrer vulns_cache como v:
-            info("Explotando via Cache: " + v.area + " | " + v.vuln)
-            sesion = explotar_directo(lib_info.metalib, v.area, v.vuln, lan_target)
+            info("Explotando via Cache: " + v.mem + " | " + v.pass)
+            sesion = explotar_directo(lib_info.metalib, v.mem, v.pass, lan_target)
             si typeof(sesion) == "shell" o typeof(sesion) == "computer":
                 exito("Acceso obtenido via Vault Cache.")
                 enjambre[globals.objetivo_actual] = sesion
                 retornar
-    
+        
     // Si no hay cache or fallo, escaneo tradicional
     info("No hay cache operativa. Iniciando escaneo profundo...")
     vuln = buscar_vulnerabilidad(globals.objetivo_actual, port_int)
     
     si vuln:
-        exito("Vulnerabilidad detectada: " + vuln.area + " | " + vuln.vuln)
-        cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, vuln.area, vuln.vuln)
+        exito("¡Se detectaron " + vuln.v_list.len + " vectores de ataque! Iniciando brecha...")
         
-        info("Ejecutando Pipeline de asalto...")
-        sesion = vuln >> explotar("1337_password", lan_target)
+        recorrer vuln.v_list como v:
+            cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, v.mem, v.pass)
+        
+        info("Ejecutando Pipeline de asalto automatizado...")
+        sesion = explotar(vuln, nulo, lan_target)
         
         si typeof(sesion) == "shell" o typeof(sesion) == "computer":
             exito("Brecha abierta. Objetivo añadido al enjambre.")
@@ -320,15 +322,16 @@ tarea inicializar_vault:
 
 tarea cifrar(txt):
     res = ""
-    recorrer txt como i:
+    recorrer rango(0, txt.len - 1) como i:
         v = nini_xor(code(txt[i]), code(_vault_k[i % _vault_k.len]))
-        res = res + v.to_str + ","
+        res = res + str(v) + ","
     retornar res
 
 tarea descifrar(txt):
     res = ""
     partes = txt.split(",")
-    recorrer partes como p:
+    recorrer rango(0, partes.len - 1) como i:
+        p = partes[i]
         si p == "": continuar
         res = res + char(nini_xor(val(p), code(_vault_k[res.len % _vault_k.len])))
     retornar res
@@ -343,15 +346,17 @@ tarea deserializar_vault(txt):
 
 tarea guardar_vault:
     p = "/var/revenant"
-    si no mirar(p): p = "./"
+    si no mirar(p): p = "/home/" + active_user
     ruta = p + "/vault.db"
     f = obtener_archivo(ruta)
     si no f:
-        // Crear si no existe
         tocar(p, "vault.db")
         f = obtener_archivo(ruta)
     
-    f.set_content(serializar_vault(_vault_data))
+    si f: 
+        f.set_content(serializar_vault(_vault_data))
+    sino:
+        error("Fallo de persistencia: El Vault no puede escribirse en " + p)
 
 tarea guardar_credencial(ip, usuario, clave, priv, lan):
     k = (ip + "_" + usuario + "_" + priv).lower()
@@ -362,8 +367,8 @@ tarea guardar_credencial(ip, usuario, clave, priv, lan):
 tarea listar_credenciales:
     columnas = ["IP", "Usuario", "Clave", "Priv", "LAN"]
     filas = []
-    recorrer _vault_data.creds como k:
-        c = _vault_data.creds[k]
+    recorrer _vault_data.creds como c_entry:
+        c = c_entry.value
         filas.push([c.ip, c.user, c.pass, c.priv, c.lan])
     
     print(construir_tabla(columnas, filas))
@@ -371,7 +376,7 @@ tarea listar_credenciales:
 tarea cachear_vulnerabilidad(lib, ver, area, vuln):
     k = (lib + "_" + ver).lower()
     si no _vault_data.vulns.tiene(k): _vault_data.vulns[k] = []
-    _vault_data.vulns[k].push({"area": area, "vuln": vuln})
+    _vault_data.vulns[k].push({"mem": area, "pass": vuln})
     guardar_vault()
 
 tarea obtener_vulnerabilidades(lib, ver):
@@ -389,10 +394,14 @@ tarea modulo_intel_saquear:
         error("Fije un objetivo primero.")
         retornar
         
-    sesion = enjambre[globals.objetivo_actual]
-    si no sesion:
-        error("No hay sesion activa para " + globals.objetivo_actual + " en el enjambre.")
-        retornar
+    si globals.objetivo_actual == "localhost" o globals.objetivo_actual == nulo:
+        sesion = get_shell
+    sino:
+        si enjambre.tiene(globals.objetivo_actual):
+            sesion = enjambre[globals.objetivo_actual]
+        sino:
+            error("No hay sesión activa para " + globals.objetivo_actual + " en el enjambre.")
+            retornar
         
     info("Iniciando extracción de inteligencia profunda en " + globals.objetivo_actual)
     
@@ -473,8 +482,8 @@ tarea modulo_red_escanear:
 tarea modulo_red_info:
     info("Topología de red detectada:")
     // Mostrar saltos y pivotes activos
-    recorrer enjambre como ip:
-        info("Nodo vivo: " + ip + " [" + typeof(enjambre[ip]) + "]")
+    recorrer enjambre como nodo:
+        info("Nodo vivo: " + nodo.key + " [" + typeof(nodo.value) + "]")
 
 // --- FIN SUB-MODULO: modulos/red.nini ---
 // --- INICIO SUB-MODULO: modulos/inyeccion.nini ---
@@ -485,7 +494,11 @@ tarea modulo_inyeccion_replicar:
         error("Fije un objetivo primero.")
         retornar
         
-    sesion = enjambre[globals.objetivo_actual]
+    si globals.objetivo_actual == nulo:
+        sesion = get_shell
+    sino:
+        sesion = enjambre[globals.objetivo_actual]
+    
     si no sesion o typeof(sesion) != "shell":
         error("Se requiere una shell activa para inyectar.")
         retornar
@@ -509,13 +522,13 @@ tarea modulo_inyeccion_replicar:
 // modulos/escalada.nini - El Camino hacia Root 🔋
 
 tarea modulo_escalada_analizar:
-    si globals.objetivo_actual == null:
+    si globals.objetivo_actual == nulo:
         info("Escaneando sistema local para escalada de privilegios...")
-        // Usar host local
+        sesion = get_shell
     sino:
         info("Buscando vectores de PrivEsc en " + globals.objetivo_actual)
+        sesion = enjambre[globals.objetivo_actual]
     
-    sesion = enjambre[globals.objetivo_actual]
     si no sesion:
         error("No hay sesion activa para el análisis.")
         retornar

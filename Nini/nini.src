@@ -81,6 +81,9 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	trimmed = trimmed.replace(" o ", " or ")
 	trimmed = trimmed.replace(" y ", " and ")
 	trimmed = trimmed.replace(" no ", " not ")
+	trimmed = trimmed.replace(".tiene", ".hasIndex")
+	if (trimmed.indexOf("continuar") != null) then trimmed = trimmed.replace("continuar", "continue")
+	if (trimmed.indexOf("salir") != null) then trimmed = trimmed.replace("salir", "break")
 	
 	if (trimmed.indexOf("retornar") != null) then trimmed = trimmed.replace("retornar", "return")
 	if (trimmed.indexOf("esperar(") != null) then trimmed = trimmed.replace("esperar", "wait")
@@ -108,6 +111,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if (trimmed.indexOf("buscar_recursivo(") != null) then trimmed = trimmed.replace("buscar_recursivo", "__nini_buscar")
 	if (trimmed.indexOf("instalar_persistencia(") != null) then trimmed = trimmed.replace("instalar_persistencia", "__nini_instalar_persistencia")
 	if (trimmed.indexOf("resolver_objetivo(") != null) then trimmed = trimmed.replace("resolver_objetivo", "__nini_resolver")
+	if (trimmed.indexOf("buscar_vulnerabilidad(") != null) then trimmed = trimmed.replace("buscar_vulnerabilidad", "__nini_buscar_vulnerabilidad")
 	
 	
 
@@ -390,7 +394,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if trimmed == "limpiar" or trimmed == "clean_house" then return "syslog = get_shell.host_computer.File(" + char(34) + "/var/system.log" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")"
 	
 	
-	if trimmed.indexOf("exito(") == 0 then return "print(""<color=#00ff41>[✔] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
+	if (trimmed.indexOf("exito(") == 0) then return "print(""<color=#00ff41>[OK] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
 	if trimmed.indexOf("error(") == 0 then return "print(""<color=#ff1744>[X] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
 	if trimmed.indexOf("info(") == 0 then return "print(""<color=#00e5ff>[#] </color><color=#ffffff>"" + " + trimmed[5:trimmed.len-1] + " + ""</color>"")"
 	if trimmed.indexOf("alerta(") == 0 then return "print(""<color=#ffea00>[!] </color><color=#ffffff>"" + " + trimmed[7:trimmed.len-1] + " + ""</color>"")"
@@ -424,18 +428,6 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		return macroCode.join(char(10))
 	end if
 	
-	// NULL-SAFETY (Ghost Objects Wrapper)
-	if trimmed.indexOf("=") == null and trimmed.indexOf(".") != null and trimmed.indexOf("(") != null and trimmed[trimmed.len-1] == ")" and trimmed.indexOf("print(") != 0 then
-		dotIdx = trimmed.indexOf(".")
-		parenIdx = trimmed.indexOf("(")
-		if dotIdx < parenIdx then
-			objName = trimmed[:dotIdx]
-			if objName.indexOf("""") == null and objName.indexOf(" ") == null and objName.indexOf("(") == null then
-				return "if " + objName + " != null then " + trimmed + " else print(""<color=yellow>[Nini]</color> Objeto nulo omitido ("" + """ + objName + """ + "") en linea " + lineNum + """)"
-			end if
-		end if
-	end if
-
 	// Passthrough general abierto (Variables, llamadas funciones de usuario, APIs nativas)
 	return trimmed
 end function
@@ -563,25 +555,28 @@ if niniState.requiresExploiter then
 	headers.push("    rep = metaxploit.scan_address(lib, m); pts = rep.split(""<b>"")")
 	headers.push("    for p in pts")
 	headers.push("      if p.indexOf(""</b>"") == -1 then continue")
-	headers.push("      v_list.push({""mem"": m, ""pass"": p.split(""</b>"")[0]})")
+	headers.push("      val = p.split(""</b>"")[0]")
+      headers.push("      is_bad = (val.indexOf("".so"") != null or val.indexOf(""decompi"") == 0 or val.indexOf(""search"") == 0 or val.indexOf(""check"") == 0 or val.indexOf(""Unsafe"") == 0 or val.indexOf("" "") != null)")
+      headers.push("      if is_bad then continue")
+      headers.push("      v_list.push({""mem"": m, ""pass"": val})")
 	headers.push("    end for")
 	headers.push("  end for")
 	headers.push("  if v_list.len == 0 then return null")
-	headers.push("  return {""metalib"": lib, ""v_list"": v_list}")
+	headers.push("  return {""metalib"": lib, ""v_list"": v_list, ""area"": v_list[0].mem, ""vuln"": v_list[0].pass}")
 	headers.push("end function")
 	
-	headers.push("__nini_explotar = function(arg1, arg2, arg3=null)")
-	headers.push("  v_o = null; p_e = """"")
-	headers.push("  if typeof(arg1) == ""map"" and arg1.hasIndex(""v_list"") then; v_o = arg1; p_e = arg2; end if")
-	headers.push("  if typeof(arg2) == ""map"" and arg2.hasIndex(""v_list"") then; v_o = arg2; p_e = arg1; end if")
+	headers.push("__nini_explotar = function(arg1, arg2=null, arg3=null)")
+	headers.push("  v_o = null; p_e = """"; lan = null")
+	headers.push("  if typeof(arg1) == ""map"" and arg1.hasIndex(""v_list"") then; v_o = arg1; p_e = arg2; lan = arg3; end if")
+	headers.push("  if typeof(arg2) == ""map"" and arg2.hasIndex(""v_list"") then; v_o = arg2; p_e = arg1; lan = arg3; end if")
+	headers.push("  if typeof(arg3) == ""map"" and arg3.hasIndex(""v_list"") then; v_o = arg3; p_e = arg1; lan = arg2; end if")
 	headers.push("  if v_o != null then")
-	headers.push("      for v in v_o.v_list")
-	headers.push("          res = v_o.metalib.overflow(v.mem, v.pass, arg3); if res then return res")
-	headers.push("          if p_e != """" then; res = v_o.metalib.overflow(v.mem, p_e, arg3); if res then return res; end if")
-	headers.push("      end for; return null")
+	headers.push("      for v in v_o[""v_list""]")
+	headers.push("          res = __nini_explotar_directo(v_o[""metalib""], v[""mem""], v[""pass""], lan); if res then return res")
+	headers.push("          if p_e != """" then; res = __nini_explotar_directo(v_o[""metalib""], v[""mem""], v[""pass""], p_e); if res then return res; end if")
+	headers.push("      end for")
 	headers.push("  end if")
-	headers.push("  ns = metaxploit.net_use(globals.target_ip, str(arg1).to_int)")
-	headers.push("  if ns then return ns.dump_lib else return null")
+	headers.push("  return null")
 	headers.push("end function")
 	
 	headers.push("__nini_obtener_shell = function(obj)")
@@ -703,7 +698,7 @@ headers.push("end function")
 headers.push("__nini_descubrir_red_local = function()")
 headers.push("  c = get_shell.host_computer")
 headers.push("  lip = c.local_ip")
-headers.push("  parts = lip.split(" + char(34) + "." + char(34) + ")")
+headers.push("  parts = lip.split(" + char(34) + char(92) + "." + char(34) + ")")
 headers.push("  if parts.len < 3 then return []")
 headers.push("  net = parts[0:3].join(" + char(34) + "." + char(34) + ") + " + char(34) + "." + char(34))
 headers.push("  h = []")
@@ -717,7 +712,7 @@ headers.push("end function")
 
 headers.push("__nini_obtener_router_objetivo = function(ip)")
 headers.push("  r = get_router(ip)")
-headers.push("  if r then return r")
+headers.push("  if r and r.public_ip == ip then return r")
 headers.push("  return null")
 headers.push("end function")
 
@@ -732,14 +727,15 @@ headers.push("end function")
 headers.push("__nini_buscar_vectores_escalada = function(s)")
 headers.push("  c = s; if typeof(s) == " + char(34) + "shell" + char(34) + " then c = s.host_computer")
 headers.push("  v = []")
-headers.push("  paths = [" + char(34) + "/etc" + char(34) + ", " + char(34) + "/bin" + char(34) + ", " + char(34) + "/usr/bin" + char(34) + ", " + char(34) + "/lib" + char(34) + "]")
+headers.push("  paths = [" + char(34) + "/lib" + char(34) + "]")
 headers.push("  for p in paths")
 headers.push("    f = c.File(p)")
 headers.push("    if f then")
 headers.push("      items = f.get_files + f.get_folders")
 headers.push("      for i in items")
-headers.push("        if i.has_permission(" + char(34) + "w" + char(34) + ") and not i.has_permission(" + char(34) + "r" + char(34) + ") then v.push({""path"": i.path, ""type"": ""write_only"", ""severity"": ""medium""})")
-headers.push("        if i.permissions.indexOf(" + char(34) + "s" + char(34) + ") != -1 then v.push({""path"": i.path, ""type"": ""setuid"", ""severity"": ""high""})")
+headers.push("        if i.name.indexOf(" + char(34) + ".so" + char(34) + ") >= 0 then")
+headers.push("            v.push({" + char(34) + "path" + char(34) + ": i.path, " + char(34) + "type" + char(34) + ": " + char(34) + "library (.so)" + char(34) + ", " + char(34) + "severity" + char(34) + ": " + char(34) + "CRITICAL" + char(34) + "})")
+headers.push("        end if")
 headers.push("      end for")
 headers.push("    end if")
 headers.push("  end for")
@@ -847,7 +843,7 @@ err = sh.build(targetFolder + "/" + fileName, targetFolder)
 
 binary = fileName.replace(".gs", "")
 if err == "" then
-	outFile.delete
+	// outFile.delete
 	print("<color=green>[SUCCESS] Ejecutable " + binary + " listo para lanzar. (.gs reciclado)</color>")
 else
 	print("<color=red>[ERROR C-Engine]</color> " + err)

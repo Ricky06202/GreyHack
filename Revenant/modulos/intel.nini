@@ -5,10 +5,14 @@ tarea modulo_intel_saquear:
         error("Fije un objetivo primero.")
         retornar
         
-    sesion = enjambre[globals.objetivo_actual]
-    si no sesion:
-        error("No hay sesion activa para " + globals.objetivo_actual + " en el enjambre.")
-        retornar
+    si globals.objetivo_actual == "localhost" o globals.objetivo_actual == nulo:
+        sesion = get_shell
+    sino:
+        si enjambre.tiene(globals.objetivo_actual):
+            sesion = enjambre[globals.objetivo_actual]
+        sino:
+            error("No hay sesión activa para " + globals.objetivo_actual + " en el enjambre.")
+            retornar
         
     info("Iniciando extracción de inteligencia profunda en " + globals.objetivo_actual)
     

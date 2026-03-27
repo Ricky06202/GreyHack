@@ -23,5 +23,5 @@ tarea modulo_red_escanear:
 tarea modulo_red_info:
     info("Topología de red detectada:")
     // Mostrar saltos y pivotes activos
-    recorrer enjambre como ip:
-        info("Nodo vivo: " + ip + " [" + typeof(enjambre[ip]) + "]")
+    recorrer enjambre como nodo:
+        info("Nodo vivo: " + nodo.key + " [" + typeof(nodo.value) + "]")

@@ -11,10 +11,10 @@ tarea modulo_asalto_root:
         
     info("Analizando " + globals.objetivo_actual + ":" + port_int + " mediante Vault...")
     
-    // Detección de Router para Bounce
+    // Detección Inteligente de Salto (Bounce)
     es_router = falso
     r = obtener_router_objetivo(globals.objetivo_actual)
-    si r: es_router = verdadero
+    si r y port_int == 0: es_router = verdadero
     
     lan_target = nulo
     si es_router:
@@ -34,23 +34,25 @@ tarea modulo_asalto_root:
     si vulns_cache.len > 0:
         exito("Vulnerabilidades recuperadas del Vault para " + lib_info.lib_name)
         recorrer vulns_cache como v:
-            info("Explotando via Cache: " + v.area + " | " + v.vuln)
-            sesion = explotar_directo(lib_info.metalib, v.area, v.vuln, lan_target)
+            info("Explotando via Cache: " + v.mem + " | " + v.pass)
+            sesion = explotar_directo(lib_info.metalib, v.mem, v.pass, lan_target)
             si typeof(sesion) == "shell" o typeof(sesion) == "computer":
                 exito("Acceso obtenido via Vault Cache.")
                 enjambre[globals.objetivo_actual] = sesion
                 retornar
-    
+        
     // Si no hay cache or fallo, escaneo tradicional
     info("No hay cache operativa. Iniciando escaneo profundo...")
     vuln = buscar_vulnerabilidad(globals.objetivo_actual, port_int)
     
     si vuln:
-        exito("Vulnerabilidad detectada: " + vuln.area + " | " + vuln.vuln)
-        cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, vuln.area, vuln.vuln)
+        exito("¡Se detectaron " + vuln.v_list.len + " vectores de ataque! Iniciando brecha...")
         
-        info("Ejecutando Pipeline de asalto...")
-        sesion = vuln >> explotar("1337_password", lan_target)
+        recorrer vuln.v_list como v:
+            cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, v.mem, v.pass)
+        
+        info("Ejecutando Pipeline de asalto automatizado...")
+        sesion = explotar(vuln, nulo, lan_target)
         
         si typeof(sesion) == "shell" o typeof(sesion) == "computer":
             exito("Brecha abierta. Objetivo añadido al enjambre.")

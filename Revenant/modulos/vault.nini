@@ -18,15 +18,16 @@ tarea inicializar_vault:
 
 tarea cifrar(txt):
     res = ""
-    recorrer txt como i:
+    recorrer rango(0, txt.len - 1) como i:
         v = nini_xor(code(txt[i]), code(_vault_k[i % _vault_k.len]))
-        res = res + v.to_str + ","
+        res = res + str(v) + ","
     retornar res
 
 tarea descifrar(txt):
     res = ""
     partes = txt.split(",")
-    recorrer partes como p:
+    recorrer rango(0, partes.len - 1) como i:
+        p = partes[i]
         si p == "": continuar
         res = res + char(nini_xor(val(p), code(_vault_k[res.len % _vault_k.len])))
     retornar res
@@ -41,15 +42,17 @@ tarea deserializar_vault(txt):
 
 tarea guardar_vault:
     p = "/var/revenant"
-    si no mirar(p): p = "./"
+    si no mirar(p): p = "/home/" + active_user
     ruta = p + "/vault.db"
     f = obtener_archivo(ruta)
     si no f:
-        // Crear si no existe
         tocar(p, "vault.db")
         f = obtener_archivo(ruta)
     
-    f.set_content(serializar_vault(_vault_data))
+    si f: 
+        f.set_content(serializar_vault(_vault_data))
+    sino:
+        error("Fallo de persistencia: El Vault no puede escribirse en " + p)
 
 tarea guardar_credencial(ip, usuario, clave, priv, lan):
     k = (ip + "_" + usuario + "_" + priv).lower()
@@ -60,8 +63,8 @@ tarea guardar_credencial(ip, usuario, clave, priv, lan):
 tarea listar_credenciales:
     columnas = ["IP", "Usuario", "Clave", "Priv", "LAN"]
     filas = []
-    recorrer _vault_data.creds como k:
-        c = _vault_data.creds[k]
+    recorrer _vault_data.creds como c_entry:
+        c = c_entry.value
         filas.push([c.ip, c.user, c.pass, c.priv, c.lan])
     
     print(construir_tabla(columnas, filas))
@@ -69,7 +72,7 @@ tarea listar_credenciales:
 tarea cachear_vulnerabilidad(lib, ver, area, vuln):
     k = (lib + "_" + ver).lower()
     si no _vault_data.vulns.tiene(k): _vault_data.vulns[k] = []
-    _vault_data.vulns[k].push({"area": area, "vuln": vuln})
+    _vault_data.vulns[k].push({"mem": area, "pass": vuln})
     guardar_vault()
 
 tarea obtener_vulnerabilidades(lib, ver):
