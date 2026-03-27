@@ -1,0 +1,30 @@
+{
+  "name": "nini-lang",
+  "displayName": "Nini Language Support",
+  "description": "Syntax highlighting and language support for Nini, the Grey Hack transcompiled framework.",
+  "version": "1.0.0",
+  "publisher": "ricky",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "nini",
+        "aliases": ["Nini", "nini"],
+        "extensions": [".nini"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "nini",
+        "scopeName": "source.nini",
+        "path": "./syntaxes/nini.tmLanguage.json"
+      }
+    ]
+  }
+}

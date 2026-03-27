@@ -1,0 +1,32 @@
+// botnet_manager.nini - V9.0 Final Auto-Hacker Concept Test
+
+modo ninja:
+
+info("Nini Auto-Hacker DEMO")
+
+objetivo = pedir("Ingrese nombre de archivo a buscar:")
+
+intentar:
+    info("Buscando en segundo plano...")
+    archivo = buscar_recursivo(objetivo)
+    si archivo:
+        exito("Archivo localizado en la siguiente ruta: " + archivo.path)
+    sino:
+        error("No se encontro el archivo objetivo en el sistema")
+excepto:
+    error("Excepcion disparada en DFS de busqueda del disco")
+
+info("Iniciando suite de ruptura para contraseñas de WiFi locales...")
+clave = secuestrar_wifi("wlan0")
+
+si clave:
+    exito("Exito! Clave WEP/WPA obtenida: " + clave)
+sino:
+    info("Red no encontrada o fuera de alcance.")
+
+info("Iniciando prueba de lectura y descifrado...")
+fake_hash = "root:1a38cf09f:1312\nadmin:b9283f2a:241"
+diccionario = crackear_diccionario(fake_hash)
+
+info("Mostrando diccionario crackeado de usuarios...")
+info(diccionario)

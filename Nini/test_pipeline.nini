@@ -1,0 +1,7 @@
+// test_pipeline.nini
+// Prueba de Operador Pipeline >>
+
+obtener_ip("servidor_utp") >> escanear_puertos >> intentar_root
+
+print("Ruta completada!")
+clean_house
