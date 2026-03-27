@@ -29,22 +29,32 @@ sino:
     info("Puerto misterioso")
 ```
 
-### Bucles e Iteradores
+### Bucles e Iteradores (Sintaxis Dual)
+Nini soporta tanto la sintaxis clásica como una más descriptiva:
+
 ```nini
-// Bucle FOR in y FOR en Rangos numéricos
+// Sintaxis Descriptiva (Recomendada para Revenant)
+recorrer red_local como ip:
+    escanear(ip)
+
+// Sintaxis Clásica
 para ip en red_local:
     escanear(ip)
 
 para intento en rango(0, 10):
     info("Fuzzing " + intento)
 
-// Bucle WHILE
+// Bucle WHILE y Bucle Infinito
 mientras atacando == verdadero:
     esperar(1)
 
 siempre:
     info("Ping constante...")
 ```
+
+### Operadores Lógicos en Español
+Ya no necesitas usar `and/or/not` de GreyScript. Nini los traduce por ti:
+- `si activo y no detectado o forzar:` -> `if (activo and not detectado or forzar) then`
 
 ### Controles y Try-Catch Puros
 - `salir` -> Corta un bucle inmediatamente (`break`).

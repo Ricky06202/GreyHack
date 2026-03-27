@@ -74,14 +74,31 @@ outputLines = []
 
 parseCommand = function(lineNum, trimmed, currentIndent)
 	endsWithColon = (trimmed.len > 0 and trimmed[trimmed.len-1] == ":")
-	trimmed = trimmed.replace("rango\(", "range(")
+	
+	// PRE-PROCESAMIENTO GLOBAL (Atomic replacements)
+	if (trimmed.indexOf("rango(") != null) then trimmed = trimmed.replace("rango", "range")
+	trimmed = trimmed.replace("verdadero", "true")
 	trimmed = trimmed.replace("verdad", "true")
 	trimmed = trimmed.replace("falso", "false")
 	trimmed = trimmed.replace("nulo", "null")
 	trimmed = trimmed.replace(" o ", " or ")
 	trimmed = trimmed.replace(" y ", " and ")
 	trimmed = trimmed.replace(" no ", " not ")
-	trimmed = trimmed.replace("verdadero", "true")
+	
+	if (trimmed.indexOf("esperar(") != null) then trimmed = trimmed.replace("esperar", "wait")
+	if (trimmed.indexOf("mirar(") != null) then trimmed = trimmed.replace("mirar", "get_shell.host_computer.File")
+	if (trimmed.indexOf("obtener_archivo(") != null) then trimmed = trimmed.replace("obtener_archivo", "get_shell.host_computer.File")
+	if (trimmed.indexOf("tocar(") != null) then trimmed = trimmed.replace("tocar", "get_shell.host_computer.touch")
+	
+	if (trimmed.indexOf("nini_xor(") != null) then trimmed = trimmed.replace("nini_xor", "__nini_xor")
+	if (trimmed.indexOf("crackear_hash(") != null) then trimmed = trimmed.replace("crackear_hash", "__nini_crackear_hash")
+	if (trimmed.indexOf("obtener_info_libreria(") != null) then trimmed = trimmed.replace("obtener_info_libreria", "__nini_obtener_info_libreria")
+	if (trimmed.indexOf("explotar_directo(") != null) then trimmed = trimmed.replace("explotar_directo", "__nini_explotar_directo")
+	if (trimmed.indexOf("descubrir_red_local(") != null) then trimmed = trimmed.replace("descubrir_red_local", "__nini_descubrir_red_local")
+	if (trimmed.indexOf("obtener_router_objetivo(") != null) then trimmed = trimmed.replace("obtener_router_objetivo", "__nini_obtener_router_objetivo")
+	if (trimmed.indexOf("replicar_binario(") != null) then trimmed = trimmed.replace("replicar_binario", "__nini_replicar_binario")
+	if (trimmed.indexOf("buscar_vectores_escalada(") != null) then trimmed = trimmed.replace("buscar_vectores_escalada", "__nini_buscar_vectores_escalada")
+	
 	trimmed = preprocessNiniMacros(trimmed)
 
 	// 0. OPERADOR SPREAD DE ARRAYS (...)
@@ -178,7 +195,8 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 			blockStack.push({"bType": "if", "indent": currentIndent})
 			return "if (" + cond + ") then"
 		else
-			return "if (" + cond + ") then; " + accion + "; end if"
+			blockStack.push({"bType": "if_oneline", "indent": currentIndent})
+			return "if (" + cond + ") then; " + accion
 		end if
 	end if
 	
@@ -207,10 +225,17 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		if middle == null then middle = trimmed.indexOf(" en ")
 		keywordLen = 9 // "recorrer "
 		sepLen = 6 // " como "
+		isRecorrer = (trimmed.indexOf("recorrer ") == 0)
 		if trimmed.indexOf("para ") == 0 then; keywordLen = 5; sepLen = 4; end if
 		
-		item = trimmed[keywordLen : middle].trim
-		collection = trimmed[middle + sepLen : trimmed.len-1].trim
+		if isRecorrer then
+			collection = trimmed[keywordLen : middle].trim
+			item = trimmed[middle + sepLen : trimmed.len-1].trim
+		else
+			item = trimmed[keywordLen : middle].trim
+			collection = trimmed[middle + sepLen : trimmed.len-1].trim
+		end if
+		
 		blockStack.push({"bType": "for", "indent": currentIndent})
 		return "for " + item + " in " + collection
 	end if
@@ -312,10 +337,18 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		niniState.ninjaMode = true
 		return "// Modo Ninja Activado"
 	end if
-	if trimmed.indexOf("tarea ") == 0 and endsWithColon then
-		funName = trimmed[6 : trimmed.len-1].trim
+	if (trimmed.indexOf("tarea ") == 0 or trimmed.indexOf("funcion ") == 0) and endsWithColon then
+		kwLen = 6; if trimmed.indexOf("funcion ") == 0 then kwLen = 8
+		decl = trimmed[kwLen : trimmed.len-1].trim
+		if decl.indexOf("(") != null then
+			funName = decl[:decl.indexOf("(")].trim
+			args = decl[decl.indexOf("(") :].trim
+		else
+			funName = decl
+			args = "()"
+		end if
 		blockStack.push({"bType": "function", "indent": currentIndent})
-		return funName + " = func" + "tion()"
+		return funName + " = function" + args
 	end if
 	if trimmed == "saquear_sistema" then
 		return "files = [""/etc/shadow"", ""/etc/passwd"", ""/var/system.log""]; for f in files; file = get_shell.host_computer.File(f); if file then print(""<color=yellow>Robado:</color> "" + f + "" -> "" + file.get_content); end for"
@@ -344,25 +377,13 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	// UTILIDADES Y ABSTRACCIONES
 	if trimmed == "salir" then return "break"
 	if trimmed == "siguiente" then return "continue"
-	if trimmed.indexOf("esperar(") == 0 then return trimmed.replace("esperar", "wait")
+	if trimmed == "limpiar" or trimmed == "clean_house" then return "syslog = get_shell.host_computer.File(" + char(34) + "/var/system.log" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")"
+	
+	
 	if trimmed.indexOf("exito(") == 0 then return "print(""<color=#00ff41>[✔] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
 	if trimmed.indexOf("error(") == 0 then return "print(""<color=#ff1744>[X] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
 	if trimmed.indexOf("info(") == 0 then return "print(""<color=#00e5ff>[#] </color><color=#ffffff>"" + " + trimmed[5:trimmed.len-1] + " + ""</color>"")"
-	if trimmed.indexOf("exito(") == 0 then return "print(""<color=#00e5ff>[+] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
 	if trimmed.indexOf("alerta(") == 0 then return "print(""<color=#ffea00>[!] </color><color=#ffffff>"" + " + trimmed[7:trimmed.len-1] + " + ""</color>"")"
-	if trimmed.indexOf("nini_xor(") != null then return trimmed.replace("nini_xor\(", "__nini_xor(")
-	if trimmed.indexOf("crackear_hash(") != null then return trimmed.replace("crackear_hash\(", "__nini_crackear_hash(")
-	if trimmed.indexOf("obtener_info_libreria(") != null then return trimmed.replace("obtener_info_libreria\(", "__nini_obtener_info_libreria(")
-	if trimmed.indexOf("explotar_directo(") != null then return trimmed.replace("explotar_directo\(", "__nini_explotar_directo(")
-	if trimmed.indexOf("descubrir_red_local(") != null then return trimmed.replace("descubrir_red_local\(", "__nini_descubrir_red_local(")
-	if trimmed.indexOf("obtener_router_objetivo(") != null then return trimmed.replace("obtener_router_objetivo\(", "__nini_obtener_router_objetivo(")
-	if trimmed.indexOf("replicar_binario(") != null then return trimmed.replace("replicar_binario\(", "__nini_replicar_binario(")
-	if trimmed.indexOf("buscar_vectores_escalada(") != null then return trimmed.replace("buscar_vectores_escalada\(", "__nini_buscar_vectores_escalada(")
-	if trimmed == "limpiar" or trimmed == "clean_house" then return "syslog = get_shell.host_computer.File(" + char(34) + "/var/system.log" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")"
-	if trimmed.indexOf("mirar(") == 0 then
-		arg = trimmed[trimmed.indexOf("(")+1:trimmed.lastIndexOf(")")].trim
-		return "router = get_router(" + arg + "); if router then ports = router.used_ports else __nini_error = true"
-	end if
 	
 	if trimmed == "escanear" then
 		niniState.requiresMetaxploit = true
@@ -394,10 +415,14 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	end if
 	
 	// NULL-SAFETY (Ghost Objects Wrapper)
-	if trimmed.indexOf("=") == null and trimmed.indexOf(".") > 0 and trimmed.indexOf("(") > 0 and trimmed[trimmed.len-1] == ")" and trimmed.indexOf("print(") != 0 then
-		objName = trimmed[:trimmed.indexOf(".")]
-		if objName.indexOf("""") == null and objName.indexOf(" ") == null then
-			return "if " + objName + " != null then " + trimmed + " else print(""<color=yellow>[Nini]</color> Objeto nulo omitido ("" + """ + objName + """ + "") en linea " + lineNum + """)"
+	if trimmed.indexOf("=") == null and trimmed.indexOf(".") != null and trimmed.indexOf("(") != null and trimmed[trimmed.len-1] == ")" and trimmed.indexOf("print(") != 0 then
+		dotIdx = trimmed.indexOf(".")
+		parenIdx = trimmed.indexOf("(")
+		if dotIdx < parenIdx then
+			objName = trimmed[:dotIdx]
+			if objName.indexOf("""") == null and objName.indexOf(" ") == null and objName.indexOf("(") == null then
+				return "if " + objName + " != null then " + trimmed + " else print(""<color=yellow>[Nini]</color> Objeto nulo omitido ("" + """ + objName + """ + "") en linea " + lineNum + """)"
+			end if
 		end if
 	end if
 
@@ -420,14 +445,14 @@ for i in range(0, lines.len)
 		if c == " " or c == char(9) then currentIndent = currentIndent + 1 else break
 	end for
 	
-	isContinuation = (trimmed.indexOf("osi ") == 0) or (trimmed == "sino:") or (trimmed == "excepto:")
+	isContinuation = (trimmed.indexOf("osi ") == 0) or (trimmed.indexOf("sino:") == 0) or (trimmed.indexOf("excepto:") == 0)
 	
 	while blockStack.len > 0
 		topBlock = blockStack[-1]
 		if currentIndent < topBlock.indent or (currentIndent == topBlock.indent and not isContinuation) then
 			b = blockStack.pop
-			if b.bType == "if" then 
-				outputLines.push("en" + "d if")
+			if b.bType == "if" or b.bType == "if_oneline" then 
+				outputLines.push("end if")
 			else if b.bType == "while" then 
 				outputLines.push("en" + "d while")
 			else if b.bType == "for" then 
