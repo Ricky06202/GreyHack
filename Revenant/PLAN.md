@@ -26,9 +26,15 @@ osi modo == "enjambre":
 
 ## 3. Hoja de Ruta para Mañana
 
-### Fase 1: Motor CLI y Estructura Múltiple
-- [ ] Hacer que `nini.src` soporte el importado de archivos locales (`importar "modulo.nini"`) para dividir Revenant en pedazos manejables al transpilar.
-- [ ] Construir la interfaz de comandos con nuestra UI `construir_tabla()`.
+### Fase 0: Nini-Bundler (Herramienta Antigravity)
+- [ ] Desarrollar un empaquetador en **JavaScript (Bun)** que corra localmente en esta máquina para leer un `main.nini`.
+- [ ] Este script detectará cualquier `importar "archivo.nini"` y fusionará recursivamente todos los módulos en un solo archivo gigante y plano `revenant_bundle.nini`. 
+- [ ] Así, desarrollarás modularmente en Antigravity, pero solo copiarás y pegarás UNA VEZ un solo archivo monolítico dentro de Grey Hack. ¡Resolviendo el problema logístico de Greybel!
+
+### Fase 1: Consola Interactiva (REPL a lo Metasploit)
+- [ ] Replicar la estructura Lisp de Clojette pero en sintaxis Nini para crear un bucle de consola invulnerable `Manejador_de_Estado = mientras 1: entrada = user_input("Revenant > ")`.
+- [ ] Construir la interfaz de ayuda tabular con `construir_tabla()`.
+- [ ] **NOTA ESTRATÉGICA:** El propósito real de este bucle infinito NO es solo escribir comandos; es para hospedar **Objetos de Shell Remote** en la memoria RAM `enjambre[IP_VICTIMA] = shell()`. Si Revenant termina su ejecución abrupta (como pasaba en el anterior framework), todas las conexiones a los servidores hackeados que hayamos recolectado se desconectarían y la variable se eliminaría por el Garabage Collector de Grey Hack. Este bucle mantiene viva nuestra "Botnet" para que podamos saltar de una IP a otra escribiendo *"usar 1"* o enviando comandos a 50 PCs simultáneamente sin volver a escanear ni compilar.
 
 ### Fase 2: Módulo Espectro (Reconocimiento Remoto)
 - [ ] Usar `resolver_objetivo()` y la macro de puertos para reescribir el `wraith_net.src` en exactamente 5 líneas de Nini.
