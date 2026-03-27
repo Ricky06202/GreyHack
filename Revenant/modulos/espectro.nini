@@ -35,7 +35,7 @@ tarea espectro_escaneo_completo(host):
         port_num = port.port_number
         servicio_completo = router.port_info(port)
         
-        # Separar servicio y version
+        // Separar servicio y version
         servicio = servicio_completo
         version = "N/A"
         
@@ -48,7 +48,7 @@ tarea espectro_escaneo_completo(host):
         si port.is_closed y not es_local:
             estado = "closed"
         
-        # Obtener IP LAN
+        // Obtener IP LAN
         lan_ip = "N/A"
         si es_local:
             lan_ip = host
@@ -73,7 +73,7 @@ tarea espectro_mostrar_tabla(resultados):
     info("RESULTADOS DEL ESCANEO:")
     print("")
     
-    # Encabezado
+    // Encabezado
     print("  ID  Puerto  Estado  Servicio            Version  LAN IP")
     print("  --- ------  ------  ------------------ -------- ---------------")
     
@@ -85,14 +85,14 @@ tarea espectro_mostrar_tabla(resultados):
         version_str = r.version
         lan_str = r.lan_ip
         
-        # Alinear
+        // Alinear
         id_str = id_str + " " * (3 - id_str.len)
         puerto_str = puerto_str + " " * (6 - puerto_str.len)
         estado_str = estado_str + " " * (6 - estado_str.len)
         servicio_str = servicio_str + " " * (18 - servicio_str.len)
         version_str = version_str + " " * (8 - version_str.len)
         
-        # Color segun estado
+        // Color segun estado
         color_estado = ""
         si estado_str == "closed":
             color_estado = "<color=#ff3131>"

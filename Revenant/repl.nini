@@ -49,7 +49,7 @@ tarea iniciar_repl:
                 si ip:
                     globals.objetivo_actual = ip
                     exito("Objetivo: " + globals.objetivo_actual)
-                    # Auto-escanear
+                    // Auto-escanear
                     modulo_espectro_recon()
             pausa_tactica()
 

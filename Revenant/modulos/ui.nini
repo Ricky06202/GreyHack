@@ -41,25 +41,25 @@ tarea dibujar_hud_tactico:
     mostrar_banner_revenant()
     dibujar_separador()
     
-    # Estado del objetivo
+    // Estado del objetivo
     si globals.objetivo_actual == null o globals.objetivo_actual == nulo:
         estado_obj = "<color=#ff3131>NINGUNO</color>"
     sino:
         estado_obj = "<color=#00ff41>" + globals.objetivo_actual + "</color>"
     
-    # Estado del enjambre
+    // Estado del enjambre
     num_sesiones = enjambre.len
     si num_sesiones == 0:
         estado_enjambre = "<color=#424242>0</color>"
     sino:
         estado_enjambre = "<color=#00ff41>" + str(num_sesiones) + "</color>"
     
-    # Modo
+    // Modo
     modo_color = "<color=#ff3131>REMOTO</color>"
     si globals.modo == "LOCAL":
         modo_color = "<color=#00ff41>LOCAL</color>"
     
-    # Mostrar en linea horizontal
+    // Mostrar en linea horizontal
     print("OBJ: " + estado_obj + " | MODO: " + modo_color + " | SES: " + estado_enjambre)
     
     dibujar_separador()
@@ -146,7 +146,7 @@ tarea prompt_objetivo:
     res = resolver_objetivo(t_obj)
     si res:
         globals.objetivo_actual = res
-        globals.ultimo_scan = []  # Limpiar scan anterior
+        globals.ultimo_scan = []  // Limpiar scan anterior
         exito("Objetivo: " + globals.objetivo_actual)
         retornar res
     sino:
