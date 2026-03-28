@@ -116,36 +116,11 @@ blockStack = []
 outputLines = []
 
 parseCommand = function(lineNum, trimmed, currentIndent)
-	// Multilinea: si linea anterior termino con |:, concatenar
-	if niniState.pendingTernaryLine.len > 0 then
-		prevLine = niniState.pendingTernaryLine
-		niniState.pendingTernaryLine = ""
-		
-		// Extraer variable si existe
-		prevVar = ""
-		if prevLine.indexOf(" = ") != null then
-			eqIdx = prevLine.indexOf(" = ")
-			prevVar = prevLine[:eqIdx].trim + " = "
-			//Quitar el =  de prevLine para obtener solo el valor
-			prevLineVal = prevLine[eqIdx + 3:].trim
-		else
-			prevLineVal = prevLine
-		end if
-		
-		//Si la línea actual tiene=JODA’s também, usar la primera 
-		if trimmed.indexOf(" = ") != null then
-			eqIdx2 = trimmed.indexOf(" = ")
-			curVar = trimmed[:eqIdx2].trim + " = "
-			trimmed = curVar + prevLineVal + " " + trimmed[eqIdx2 + 3:].trim
-		else
-			trimmed = prevVar + prevLineVal + " " + trimmed
-		end if
-	end if
-	
+	// TEMPORAL: Multilinea DESACTIVADA, usar una sola línea
 	endsWithColon = (trimmed.len > 0 and trimmed[trimmed.len-1] == ":")
 	
 	// 0. PARSER PARA/RECORRER (antes del preprocesamiento)
-	if (trimmed.indexOf("recorrer ") == 0 or trimmed.indexOf("para ") == 0) and (trimmed.indexOf(" como ") != null or trimmed.indexOf(" en ") != null or trimmed.indexOf(" in ") != null) and endsWithColon then
+	if (trimmed.indexOf("recorrer ") == 0 or trimmed.indexOf("para ") == 0) and (trimmed.indexOf(" como ") != null or trimmed.indexOf(" en ") != null or trimmed.indexOf(" in ") != null) then
 		middle = trimmed.indexOf(" como ")
 		if middle == null then middle = trimmed.indexOf(" en ")
 		if middle == null then middle = trimmed.indexOf(" in ")
@@ -155,16 +130,34 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		if trimmed.indexOf("para ") == 0 then; keywordLen = 5; sepLen = 4; end if
 		if middle != null and trimmed[middle:].indexOf(" in ") == 0 then sepLen = 3 end if
 		
-		if isRecorrer then
-			collection = trimmed[keywordLen : middle].trim
-			item = trimmed[middle + sepLen : trimmed.len-1].trim
-		else
-			item = trimmed[keywordLen : middle].trim
-			collection = trimmed[middle + sepLen : trimmed.len-1].trim
+		// Check if there's action after colon (one-liner)
+		colonIdx = trimmed.indexOf(":")
+		if colonIdx != null and colonIdx > middle then
+			// One-liner: "para item en collection: action"
+			if isRecorrer then
+				collection = trimmed[keywordLen : middle].trim
+				item = trimmed[middle + sepLen : colonIdx].trim
+			else
+				item = trimmed[keywordLen : middle].trim
+				collection = trimmed[middle + sepLen : colonIdx].trim
+			end if
+			action = trimmed[colonIdx + 1:].trim
+			// Process action through parseCommand to handle nested structures
+			processedAction = parseCommand(lineNum, action, currentIndent + 4)
+			// Return complete for block
+			return "for " + item + " in " + collection + char(10) + "    " + processedAction + char(10) + "end for"
+		else if endsWithColon then
+			// Block form: "para item en collection:"
+			if isRecorrer then
+				collection = trimmed[keywordLen : middle].trim
+				item = trimmed[middle + sepLen : trimmed.len-1].trim
+			else
+				item = trimmed[keywordLen : middle].trim
+				collection = trimmed[middle + sepLen : trimmed.len-1].trim
+			end if
+			blockStack.push({"bType": "for", "indent": currentIndent})
+			return "for " + item + " in " + collection
 		end if
-		
-		blockStack.push({"bType": "for", "indent": currentIndent})
-		return "for " + item + " in " + collection
 	end if
 	
 	// 1. REGISTRO DE DEPENDENCIAS (MANDATORY FIRST STEP)
@@ -276,101 +269,156 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		if inQ then cleanS = cleanS + "_" else cleanS = cleanS + c
 	end for
 	
-	// 2.5. OPERADOR TERNARIO (|:) - buscar TODOS los |: fuera de strings
-	ternaryResult = ""
+	// 2.5. OPERADOR TERNARIO (|:) - Handle simple and cascaded ternaries
+	// Check for any ternary operator (|:) in cleanS (strings masked with underscores)
+	ternaryIdx = cleanS.indexOf(" |: ")
+	if ternaryIdx == null then ternaryIdx = cleanS.indexOf("|:")
 	
-	// Encontrar todas las posiciones de |: fuera de strings
-	ternaryPositions = []
-	inQuote = false
-	quoteChar = char(34)
-	for i in range(0, trimmed.len - 1)
-		c = trimmed[i]
-		if c == quoteChar then
-			inQuote = not inQuote
-		end if
-		if c == "|" and not inQuote and i + 1 < trimmed.len and trimmed[i + 1] == ":" then
-			ternaryPositions.push(i)
-		end if
-	end for
-	
-	// Si no hay |:, continuar con pipeline (saltear procesamiento)
-	if ternaryPositions.len > 0 then
-		// Extraer variable si existe
-		ternaryVar = ""
-		remainStr = trimmed
-		if trimmed.indexOf(" = ") != null then
-			eqIdx = trimmed.indexOf(" = ")
-			ternaryVar = trimmed[:eqIdx].trim + " = "
-			remainStr = trimmed[eqIdx + 3:].trim
-		end if
+	if ternaryIdx != null then
+		// Found ternary operator - check if it's a cascaded ternary (multiple |:)
+		// Find all |: positions to detect cascaded ternaries
+		ternaryPositions = []
+		searchStart = 0
+		while true
+			idx = cleanS.indexOf(" |: ", searchStart)
+			if idx == null then idx = cleanS.indexOf("|:", searchStart)
+			if idx == null then break
+			ternaryPositions.push(idx)
+			searchStart = idx + 2  // Move past this |:
+		end while
 		
-		//Buscar ternaryPositions en remainStr (no en trimmed)
-		ternaryPositionsInRemain = []
-		inQuote = false
-		quoteChar = char(34)
-		for i in range(0, remainStr.len - 1)
-			c = remainStr[i]
-			if c == quoteChar then
-				inQuote = not inQuote
+		if ternaryPositions.len > 1 then
+			// CASCADED TERNARY: condition1 >> value1 |: condition2 >> value2 |: ... |: defaultValue
+			// Parse the variable assignment if present
+			ternaryVar = ""
+			exprStart = 0
+			eqIdx = cleanS.indexOf(" = ")
+			if eqIdx != null and eqIdx < ternaryPositions[0] then
+				ternaryVar = trimmed[:eqIdx].trim + " = "
+				exprStart = eqIdx + 3
 			end if
-			if c == "|" and not inQuote and i + 1 < remainStr.len and remainStr[i + 1] == ":" then
-				ternaryPositionsInRemain.push(i)
-			end if
-		end for
-		
-		ternaryCount = ternaryPositionsInRemain.len
-		
-		if ternaryCount >= 1 then
-			// Puede ser 1 o más - manejar según el caso
-			if ternaryCount == 1 then
-				//CADA UNO PROCESAR COMO SINGLE ternario simple
-				idx = ternaryPositionsInRemain[0]
-				beforeColon = remainStr[:idx].trim
-				afterColon = remainStr[idx + 2:].trim
+			
+			// Generate if/else if/else structure
+			output = ""
+			lastIdx = exprStart
+			for j in range(0, ternaryPositions.len - 1)
+				ternaryPos = ternaryPositions[j]
+				// Get the segment before this |:
+				segment = trimmed[lastIdx:ternaryPos].trim
+				cleanSegment = cleanS[lastIdx:ternaryPos].trim
 				
-				hasPipeline = (beforeColon.indexOf(">>") != null)
-				if hasPipeline then
-					idxPipe = beforeColon.indexOf(">>")
-					condition = beforeColon[:idxPipe].trim
-					trueValue = beforeColon[idxPipe + 2:].trim
-					
-					if ternaryVar.len > 0 then
-						ternaryResult = "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue + char(10) + "else" + char(10) + "    " + ternaryVar + afterColon + char(10) + "end if"
-					else
-						ternaryResult = "if " + condition + " then " + trueValue + " else " + afterColon + " end if"
-					end if
+				// Find the >> in this segment to extract condition and value
+				pipeIdx = cleanSegment.indexOf(" >> ")
+				if pipeIdx != null then
+					condition = segment[:pipeIdx].trim
+					trueVal = segment[pipeIdx + 4:].trim
+				else
+					// No >>, use segment as both condition and value
+					condition = segment
+					trueVal = segment
+				end if
+				
+				if j == 0 then
+					output = "if " + condition + " then"
+				else
+					output = output + char(10) + "else if " + condition + " then"
+				end if
+				
+				if ternaryVar.len > 0 then
+					output = output + char(10) + "    " + ternaryVar + trueVal
+				else
+					output = output + char(10) + "    " + trueVal
+				end if
+				
+				// Move past this |:
+				// ternaryPos is the position of the space before |: (from " |: ")
+				// or the position of | itself (from "|:")
+				if ternaryPos + 4 <= cleanS.len and cleanS[ternaryPos:ternaryPos+4] == " |: " then
+					lastIdx = ternaryPos + 4  // Skip space + |: + space
+				else if ternaryPos + 3 <= cleanS.len and cleanS[ternaryPos:ternaryPos+3] == "|: " then
+					lastIdx = ternaryPos + 3  // Skip |: + space
+				else if ternaryPos + 3 <= cleanS.len and cleanS[ternaryPos:ternaryPos+3] == " |:" then
+					lastIdx = ternaryPos + 3  // Skip space + |:
+				else if ternaryPos + 2 <= cleanS.len and cleanS[ternaryPos:ternaryPos+2] == "|:" then
+					lastIdx = ternaryPos + 2  // Skip |:
+				else
+					lastIdx = ternaryPos + 3  // Default fallback (space + |:)
+				end if
+			end for
+			
+			// Add the final else clause with the last value
+			finalValue = trimmed[lastIdx:].trim
+			output = output + char(10) + "else"
+			if ternaryVar.len > 0 then
+				output = output + char(10) + "    " + ternaryVar + finalValue
+			else
+				output = output + char(10) + "    " + finalValue
+			end if
+			output = output + char(10) + "end if"
+			
+			return output
+		else
+			// SIMPLE TERNARY: condition >> value |: defaultValue
+			// Calculate position after the |: operator
+			if ternaryIdx + 3 <= cleanS.len and cleanS[ternaryIdx:ternaryIdx+3] == "|: " then
+				afterColonIdx = ternaryIdx + 3
+			else if ternaryIdx + 2 <= cleanS.len and cleanS[ternaryIdx:ternaryIdx+2] == "|:" then
+				afterColonIdx = ternaryIdx + 2
+			else if ternaryIdx + 4 <= cleanS.len and cleanS[ternaryIdx:ternaryIdx+4] == " |: " then
+				afterColonIdx = ternaryIdx + 4
+			else
+				afterColonIdx = ternaryIdx + 2  // default fallback
+			end if
+			
+			beforeTernary = trimmed[:ternaryIdx].trim
+			afterTernary = trimmed[afterColonIdx:].trim
+			
+			// Remove parentheses if present around false value
+			if afterTernary.indexOf("(") == 0 and afterTernary[-1] == ")" then
+				afterTernary = afterTernary[1:afterTernary.len-1].trim
+			end if
+			
+			// Parse the beforeTernary part to extract condition and trueVal
+			ternaryVar = ""
+			trueVal = beforeTernary
+			condition = beforeTernary
+			
+			// Check for assignment first: "var = ... |: ..."
+			eqIdx = cleanS.indexOf(" = ")
+			if eqIdx != null and eqIdx < ternaryIdx then
+				ternaryVar = trimmed[:eqIdx].trim + " = "
+				// Extract the expression after assignment
+				exprAfterEq = trimmed[eqIdx + 3:ternaryIdx].trim
+				cleanExprAfterEq = cleanS[eqIdx + 3:ternaryIdx].trim
+				
+				// Check for pipeline within the expression: "condition >> value"
+				pipeIdx = cleanExprAfterEq.indexOf(" >> ")
+				if pipeIdx != null then
+					condition = exprAfterEq[:pipeIdx].trim
+					trueVal = exprAfterEq[pipeIdx + 4:].trim
+				else
+					// No pipeline - the expression is both condition and true value
+					condition = exprAfterEq
+					trueVal = exprAfterEq
 				end if
 			else
-				// MÚLTIPLES |: - construir if-else-if encadenado
-				parts = remainStr.split("|:")
-				
-				code = ""
-				for pIdx in range(0, parts.len - 1)
-					leftPart = parts[pIdx].trim
-					
-					condition = leftPart
-					trueValue = leftPart
-					if leftPart.indexOf(">>") != null then
-						idxPipe = leftPart.indexOf(">>")
-						condition = leftPart[:idxPipe].trim
-						trueValue = leftPart[idxPipe + 2:].trim
-					end if
-					
-					if pIdx == 0 then
-						code = code + "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue
-					else
-						code = code + char(10) + "else if " + condition + " then " + trueValue
-					end if
-				end for
-				
-				defaultVal = parts[parts.len - 1].trim
-				code = code + char(10) + "else " + ternaryVar + defaultVal + char(10) + "end if"
-				ternaryResult = code
-end if
+				// No assignment - check for pipeline directly
+				pipeIdx = cleanS.indexOf(" >> ")
+				if pipeIdx != null and pipeIdx < ternaryIdx then
+					condition = trimmed[:pipeIdx].trim
+					trueVal = trimmed[pipeIdx + 4:ternaryIdx].trim
+				end if
+			end if
+			
+			// Generate if/then/else/end if block
+			if ternaryVar.len > 0 then
+				return "if " + condition + " then" + char(10) + "    " + ternaryVar + trueVal + char(10) + "else" + char(10) + "    " + ternaryVar + afterTernary + char(10) + "end if"
+			else
+				// No assignment - just conditional execution
+				return "if " + condition + " then" + char(10) + "    " + trueVal + char(10) + "else" + char(10) + "    " + afterTernary + char(10) + "end if"
+			end if
 		end if
-	
-	// Si hay resultado ternario, retornarlo
-	if ternaryResult.len > 0 then return ternaryResult
+	end if
 	
 	// Pipeline simple (sin ternario)
 	if cleanS.indexOf(" >> ") != null then
@@ -427,7 +475,25 @@ end if
 			return "if (" + cond + ") then"
 		else
 			blockStack.push({"bType": "if_oneline", "indent": currentIndent})
-			return "if (" + cond + ") then; " + accion
+			// Process action to handle nested si statements
+			processedAccion = accion
+			// Handle "si cond: action" patterns in the action
+			while processedAccion.indexOf("si ") != null
+				siIdx = processedAccion.indexOf("si ")
+				// Find the : after si (relative to siIdx)
+				colonRelative = processedAccion[siIdx:].indexOf(":")
+				if colonRelative != null then
+					// colonRelative is relative to siIdx, so absolute position is siIdx + colonRelative
+					absColonIdx = siIdx + colonRelative
+					// Replace "si cond:" with "if (cond) then"
+					processedAccion = processedAccion[:siIdx] + "if (" + processedAccion[siIdx + 3 : absColonIdx] + ") then" + processedAccion[absColonIdx + 1:]
+				else
+					break
+				end if
+			end while
+			// Handle "sino:" patterns
+			processedAccion = processedAccion.replace("sino:", "else")
+			return "if (" + cond + ") then; " + processedAccion
 		end if
 	end if
 	
@@ -654,6 +720,9 @@ end function
 
 print("Iniciando transpilacion Nini...")
 
+// Acumulador para ternarios multilínea
+ternaryAccumulator = ""
+
 for i in range(0, lines.len)
 	if i >= lines.len then break
 	rawLine = lines[i]
@@ -661,6 +730,35 @@ for i in range(0, lines.len)
 	
 	if trimmed == "" or trimmed.indexOf("//") == 0 then continue
 	
+	// Verificar si la línea es continuación de un ternario acumulado
+	// Si hay un ternario acumulado y esta línea NO termina con " |:", combinar
+	// Si esta línea termina con " |:", acumular
+	
+	// Caso 1: Línea termina con " |:" - acumular
+	if trimmed.indexOf(" |:") == trimmed.len - 3 then
+		if ternaryAccumulator.len > 0 then
+			// Add |: separator and the content (without trailing |:)
+			ternaryAccumulator = ternaryAccumulator + " |: " + trimmed[:trimmed.len - 3].trim
+		else
+			ternaryAccumulator = trimmed[:trimmed.len - 3].trim
+		end if
+		continue  // Saltar al siguiente ciclo, esperando más líneas
+	else if ternaryAccumulator.len > 0 then
+		// Caso 2: Hay acumulador y esta línea NO termina con "|:" - combinar y procesar
+		fullTernary = ternaryAccumulator + " |: " + trimmed
+		ternaryAccumulator = ""  // Limpiar acumulador
+		// Procesar el ternario completo usando parseCommand
+		transpiledLine = parseCommand(i + 1, fullTernary, 0)
+		if transpiledLine != "" then
+			linesStr = transpiledLine.split(char(10))
+			for ls in linesStr
+				outputLines.push(ls)
+			end for
+		end if
+		continue
+	end if
+	
+	// Código normal (sin ternario acumulado)
 	currentIndent = 0
 	for char_idx in range(0, rawLine.len - 1)
 		c = rawLine[char_idx]
@@ -690,7 +788,7 @@ for i in range(0, lines.len)
 				outputLines.push("get_shell.launch(current_path + " + char(34) + "/__bg_task_" + bgIdx + char(34) + ", " + char(34) + char(34) + ")")
 				outputLines.push("if bg then bg.delete()")
 				outputLines.push("bgBin = host.File(current_path + " + char(34) + "/__bg_task_" + bgIdx + char(34) + ")")
-				outputLines.push("if bgBin then bgBin.delete()")
+				if bgBin then bgBin.delete()
 			end if
 		else
 			break
@@ -717,6 +815,11 @@ for i in range(0, lines.len)
 		end if
 	end if
 end for
+
+// Procesar ternario acumulado al final (si quedó algo sin procesar)
+if ternaryAccumulator.len > 0 then
+	print("<color=yellow>[Advertencia]</color> Ternario sin completar al final del archivo: " + ternaryAccumulator[:50] + "...")
+end if
 
 // Cierre de bloques restantes
 while blockStack.len > 0

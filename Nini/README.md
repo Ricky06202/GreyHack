@@ -79,17 +79,29 @@ obtener_target >> escanear >> buscar_vulnerabilidad >> explotar
 info_total = [ ...datos_pc1, ...datos_pc2, "extra_info" ]
 ```
 
-**Operador Ternario (`|:)`:** Condicional inline con sintaxis moderna.
+**Operador Ternario (`|:`):** Condicional inline con sintaxis moderna.
 ```nini
 // Sintaxis: condición >> valor_true |: valor_false
 resultado = x == 5 >> "si" |: "no"
 estado = objetivo == ip >> "ACTUAL" |: "DISPONIBLE"
 comp_info = (typeof(sesion) == "shell") >> sesion.host_computer.local_ip |: sesion.local_ip
+
+// Con strings que contienen tags de color
+estado_obj = (not globals.objetivo_actual) >> "<color=#ff3131>NINGUNO</color>" |: "<color=#00ff41>" + globals.objetivo_actual + "</color>"
 ```
 Se traduce a:
 ```miniscript
-if x == 5 then "si" else "no" end if
-if objetivo == ip then "ACTUAL" else "DISPONIBLE" end if
+if x == 5 then
+    resultado = "si"
+else
+    resultado = "no"
+end if
+
+if (not globals.objetivo_actual) then
+    estado_obj = "<color=#ff3131>NINGUNO</color>"
+else
+    estado_obj = "<color=#00ff41>" + globals.objetivo_actual + "</color>"
+end if
 ```
 
 **Tareas/Funciones One-Liner:** Define funciones rápidas en una sola línea.
