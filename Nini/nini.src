@@ -44,6 +44,7 @@ niniState.requiresFS = false
 niniState.requiresWifi = false
 niniState.requiresCracker = false
 niniState.requiresResolver = false
+niniState.pendingTernaryLine = ""
 
 // Motor de Expansión de Macros Nini
 preprocessNiniMacros = function(s)
@@ -115,6 +116,32 @@ blockStack = []
 outputLines = []
 
 parseCommand = function(lineNum, trimmed, currentIndent)
+	// Multilinea: si linea anterior termino con |:, concatenar
+	if niniState.pendingTernaryLine.len > 0 then
+		prevLine = niniState.pendingTernaryLine
+		niniState.pendingTernaryLine = ""
+		
+		// Extraer variable si existe
+		prevVar = ""
+		if prevLine.indexOf(" = ") != null then
+			eqIdx = prevLine.indexOf(" = ")
+			prevVar = prevLine[:eqIdx].trim + " = "
+			//Quitar el =  de prevLine para obtener solo el valor
+			prevLineVal = prevLine[eqIdx + 3:].trim
+		else
+			prevLineVal = prevLine
+		end if
+		
+		//Si la línea actual tiene=JODA’s também, usar la primera 
+		if trimmed.indexOf(" = ") != null then
+			eqIdx2 = trimmed.indexOf(" = ")
+			curVar = trimmed[:eqIdx2].trim + " = "
+			trimmed = curVar + prevLineVal + " " + trimmed[eqIdx2 + 3:].trim
+		else
+			trimmed = prevVar + prevLineVal + " " + trimmed
+		end if
+	end if
+	
 	endsWithColon = (trimmed.len > 0 and trimmed[trimmed.len-1] == ":")
 	
 	// 0. PARSER PARA/RECORRER (antes del preprocesamiento)
@@ -293,56 +320,54 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		
 		ternaryCount = ternaryPositionsInRemain.len
 		
-		if ternaryCount == 1 then
-			// UN SOLO |: - versión simple
-			idx = ternaryPositionsInRemain[0]
-			beforeColon = remainStr[:idx].trim
-			afterColon = remainStr[idx + 2:].trim
-			
-			hasPipeline = (beforeColon.indexOf(">>") != null)
-			if hasPipeline and afterColon.len > 0 then
-				idxPipe = beforeColon.indexOf(">>")
-				condition = beforeColon[:idxPipe].trim
-				trueValue = beforeColon[idxPipe + 2:].trim
+		if ternaryCount >= 1 then
+			// Puede ser 1 o más - manejar según el caso
+			if ternaryCount == 1 then
+				//CADA UNO PROCESAR COMO SINGLE ternario simple
+				idx = ternaryPositionsInRemain[0]
+				beforeColon = remainStr[:idx].trim
+				afterColon = remainStr[idx + 2:].trim
 				
-				if ternaryVar.len > 0 then
-					ternaryResult = "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue + char(10) + "else" + char(10) + "    " + ternaryVar + afterColon + char(10) + "end if"
-				else
-					ternaryResult = "if " + condition + " then " + trueValue + " else " + afterColon + " end if"
+				hasPipeline = (beforeColon.indexOf(">>") != null)
+				if hasPipeline then
+					idxPipe = beforeColon.indexOf(">>")
+					condition = beforeColon[:idxPipe].trim
+					trueValue = beforeColon[idxPipe + 2:].trim
+					
+					if ternaryVar.len > 0 then
+						ternaryResult = "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue + char(10) + "else" + char(10) + "    " + ternaryVar + afterColon + char(10) + "end if"
+					else
+						ternaryResult = "if " + condition + " then " + trueValue + " else " + afterColon + " end if"
+					end if
 				end if
-			end if
-		end if
-		
-		if ternaryResult.len == 0 and ternaryCount > 1 then
-			// MÚLTIPLES |: - construir if-else-if encadenado
-			code = ""
-			
-			// Dividir remainStr por |:
-			parts = remainStr.split("|:")
-		
-		for pIdx in range(0, parts.len - 1)
-			leftPart = parts[pIdx].trim
-			
-			condition = leftPart
-			trueValue = leftPart
-			if leftPart.indexOf(">>") != null then
-				idxPipe = leftPart.indexOf(">>")
-				condition = leftPart[:idxPipe].trim
-				trueValue = leftPart[idxPipe + 2:].trim
-			end if
-			
-			if pIdx == 0 then
-				code = code + "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue
 			else
-				code = code + char(10) + "else if " + condition + " then " + trueValue
-			end if
-		end for
-		
-		defaultVal = parts[parts.len - 1].trim
-		code = code + char(10) + "else " + ternaryVar + defaultVal + char(10) + "end if"
-		ternaryResult = code
-	end if
-	end if
+				// MÚLTIPLES |: - construir if-else-if encadenado
+				parts = remainStr.split("|:")
+				
+				code = ""
+				for pIdx in range(0, parts.len - 1)
+					leftPart = parts[pIdx].trim
+					
+					condition = leftPart
+					trueValue = leftPart
+					if leftPart.indexOf(">>") != null then
+						idxPipe = leftPart.indexOf(">>")
+						condition = leftPart[:idxPipe].trim
+						trueValue = leftPart[idxPipe + 2:].trim
+					end if
+					
+					if pIdx == 0 then
+						code = code + "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue
+					else
+						code = code + char(10) + "else if " + condition + " then " + trueValue
+					end if
+				end for
+				
+				defaultVal = parts[parts.len - 1].trim
+				code = code + char(10) + "else " + ternaryVar + defaultVal + char(10) + "end if"
+				ternaryResult = code
+end if
+		end if
 	
 	// Si hay resultado ternario, retornarlo
 	if ternaryResult.len > 0 then return ternaryResult
