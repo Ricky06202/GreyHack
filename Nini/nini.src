@@ -58,6 +58,54 @@ preprocessNiniMacros = function(s)
 	return s
 end function
 
+parseTernarySimple = function(trimmed, cleanS, ternaryVar)
+	ternaryIdxS = cleanS.indexOf(" |: ")
+	cmdLen = 4
+	if ternaryIdxS == null then 
+		ternaryIdxS = cleanS.indexOf("|:")
+		cmdLen = 3
+	end if
+	if ternaryIdxS != null then
+		trimIdx = trimmed.indexOf(" |: ")
+		if trimIdx == null then trimIdx = trimmed.indexOf("|:")
+		if trimIdx == null then trimIdx = ternaryIdxS
+		
+		beforeColon = trimmed[:trimIdx].trim
+		afterColon = trimmed[trimIdx + cmdLen:].trim
+		if afterColon.indexOf("(") == 0 then afterColon = afterColon[1:afterColon.len-1].trim
+		
+		ternaryV = ""
+		if cleanS.indexOf(" = ") != null and cleanS.indexOf(" = ") < ternaryIdxS then
+			eqIdx = cleanS.indexOf(" = ")
+			ternaryV = trimmed[:eqIdx].trim + " = "
+			beforeColon = beforeColon[eqIdx + 3:].trim
+			cleanBefore = cleanS[eqIdx + 3:].trim
+		else
+			cleanBefore = beforeColon
+		end if
+		
+		if cleanBefore.indexOf(" >> ") != null then
+			pipeParts = beforeColon.split(" >> ")
+			condition = pipeParts[0].trim
+			trueValue = pipeParts[pipeParts.len - 1].trim
+			if ternaryV.len > 0 then
+				return "if " + condition + " then" + char(10) + "    " + ternaryV + trueValue + char(10) + "else" + char(10) + "    " + ternaryV + afterColon + char(10) + "end if"
+			else
+				return "if " + condition + " then " + trueValue + " else " + afterColon + " end if"
+			end if
+		else
+			condition = beforeColon
+			trueValue = beforeColon
+			if ternaryV.len > 0 then
+				return "if " + condition + " then" + char(10) + "    " + ternaryV + trueValue + char(10) + "else" + char(10) + "    " + ternaryV + afterColon + char(10) + "end if"
+			else
+				return "if " + condition + " then " + trueValue + " else " + afterColon + " end if"
+			end if
+		end if
+	end if
+	return ""
+end function
+
 niniState.requiresPersistencia = false
 niniState.requiresFuzzer = false
 niniState.asyncCounter = 0
@@ -68,6 +116,29 @@ outputLines = []
 
 parseCommand = function(lineNum, trimmed, currentIndent)
 	endsWithColon = (trimmed.len > 0 and trimmed[trimmed.len-1] == ":")
+	
+	// 0. PARSER PARA/RECORRER (antes del preprocesamiento)
+	if (trimmed.indexOf("recorrer ") == 0 or trimmed.indexOf("para ") == 0) and (trimmed.indexOf(" como ") != null or trimmed.indexOf(" en ") != null or trimmed.indexOf(" in ") != null) and endsWithColon then
+		middle = trimmed.indexOf(" como ")
+		if middle == null then middle = trimmed.indexOf(" en ")
+		if middle == null then middle = trimmed.indexOf(" in ")
+		keywordLen = 9 // "recorrer "
+		sepLen = 6 // " como " or " en "
+		isRecorrer = (trimmed.indexOf("recorrer ") == 0)
+		if trimmed.indexOf("para ") == 0 then; keywordLen = 5; sepLen = 4; end if
+		if middle != null and trimmed[middle:].indexOf(" in ") == 0 then sepLen = 3 end if
+		
+		if isRecorrer then
+			collection = trimmed[keywordLen : middle].trim
+			item = trimmed[middle + sepLen : trimmed.len-1].trim
+		else
+			item = trimmed[keywordLen : middle].trim
+			collection = trimmed[middle + sepLen : trimmed.len-1].trim
+		end if
+		
+		blockStack.push({"bType": "for", "indent": currentIndent})
+		return "for " + item + " in " + collection
+	end if
 	
 	// 1. REGISTRO DE DEPENDENCIAS (MANDATORY FIRST STEP)
 	trimmed = preprocessNiniMacros(trimmed)
@@ -178,40 +249,103 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		if inQ then cleanS = cleanS + "_" else cleanS = cleanS + c
 	end for
 	
-	// 2.5. OPERADOR TERNARIO (|:) - primero que el pipeline
-	if cleanS.indexOf(" |: ") != null then
-		colonIdx = cleanS.indexOf(" |: ")
-		beforeColon = trimmed[:colonIdx].trim
-		afterColon = trimmed[colonIdx + 4:].trim
-		
+	// 2.5. OPERADOR TERNARIO (|:) - buscar TODOS los |: fuera de strings
+	ternaryResult = ""
+	
+	// Encontrar todas las posiciones de |: fuera de strings
+	ternaryPositions = []
+	inQuote = false
+	quoteChar = char(34)
+	for i in range(0, trimmed.len - 1)
+		c = trimmed[i]
+		if c == quoteChar then
+			inQuote = not inQuote
+		end if
+		if c == "|" and not inQuote and i + 1 < trimmed.len and trimmed[i + 1] == ":" then
+			ternaryPositions.push(i)
+		end if
+	end for
+	
+	// Si no hay |:, continuar con pipeline (saltear procesamiento)
+	if ternaryPositions.len > 0 then
+		// Extraer variable si existe
 		ternaryVar = ""
-		if cleanS.indexOf(" = ") != null and cleanS.indexOf(" = ") < colonIdx then
-			eqIdx = cleanS.indexOf(" = ")
+		remainStr = trimmed
+		if trimmed.indexOf(" = ") != null then
+			eqIdx = trimmed.indexOf(" = ")
 			ternaryVar = trimmed[:eqIdx].trim + " = "
-			beforeColon = beforeColon[eqIdx + 3:].trim
-			cleanBefore = cleanS[eqIdx + 3:].trim
-		else
-			cleanBefore = beforeColon
+			remainStr = trimmed[eqIdx + 3:].trim
 		end if
 		
-		if cleanBefore.indexOf(" >> ") != null then
-			pipeParts = beforeColon.split(" >> ")
-			condition = pipeParts[0].trim
-			trueValue = pipeParts[pipeParts.len - 1].trim
-			if ternaryVar.len > 0 then
-				varName = ternaryVar.replace(" = ", "")
-				return "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue + char(10) + "else" + char(10) + "    " + ternaryVar + afterColon + char(10) + "end if"
-			else
-				return "if " + condition + " then " + trueValue + " else " + afterColon + " end if"
+		//Buscar ternaryPositions en remainStr (no en trimmed)
+		ternaryPositionsInRemain = []
+		inQuote = false
+		quoteChar = char(34)
+		for i in range(0, remainStr.len - 1)
+			c = remainStr[i]
+			if c == quoteChar then
+				inQuote = not inQuote
 			end if
-		else
-			if ternaryVar.len > 0 then
-				return "if " + beforeColon + " then" + char(10) + "    " + ternaryVar + beforeColon + char(10) + "else" + char(10) + "    " + ternaryVar + afterColon + char(10) + "end if"
-			else
-				return "if " + beforeColon + " then " + beforeColon + " else " + afterColon + " end if"
+			if c == "|" and not inQuote and i + 1 < remainStr.len and remainStr[i + 1] == ":" then
+				ternaryPositionsInRemain.push(i)
+			end if
+		end for
+		
+		ternaryCount = ternaryPositionsInRemain.len
+		
+		if ternaryCount == 1 then
+			// UN SOLO |: - versión simple
+			idx = ternaryPositionsInRemain[0]
+			beforeColon = remainStr[:idx].trim
+			afterColon = remainStr[idx + 2:].trim
+			
+			hasPipeline = (beforeColon.indexOf(">>") != null)
+			if hasPipeline and afterColon.len > 0 then
+				idxPipe = beforeColon.indexOf(">>")
+				condition = beforeColon[:idxPipe].trim
+				trueValue = beforeColon[idxPipe + 2:].trim
+				
+				if ternaryVar.len > 0 then
+					ternaryResult = "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue + char(10) + "else" + char(10) + "    " + ternaryVar + afterColon + char(10) + "end if"
+				else
+					ternaryResult = "if " + condition + " then " + trueValue + " else " + afterColon + " end if"
+				end if
 			end if
 		end if
+		
+		if ternaryResult.len == 0 and ternaryCount > 1 then
+			// MÚLTIPLES |: - construir if-else-if encadenado
+			code = ""
+			
+			// Dividir remainStr por |:
+			parts = remainStr.split("|:")
+		
+		for pIdx in range(0, parts.len - 1)
+			leftPart = parts[pIdx].trim
+			
+			condition = leftPart
+			trueValue = leftPart
+			if leftPart.indexOf(">>") != null then
+				idxPipe = leftPart.indexOf(">>")
+				condition = leftPart[:idxPipe].trim
+				trueValue = leftPart[idxPipe + 2:].trim
+			end if
+			
+			if pIdx == 0 then
+				code = code + "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue
+			else
+				code = code + char(10) + "else if " + condition + " then " + trueValue
+			end if
+		end for
+		
+		defaultVal = parts[parts.len - 1].trim
+		code = code + char(10) + "else " + ternaryVar + defaultVal + char(10) + "end if"
+		ternaryResult = code
 	end if
+	end if
+	
+	// Si hay resultado ternario, retornarlo
+	if ternaryResult.len > 0 then return ternaryResult
 	
 	// Pipeline simple (sin ternario)
 	if cleanS.indexOf(" >> ") != null then
@@ -293,25 +427,6 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		else
 			return "else; " + accion
 		end if
-	end if
-	if (trimmed.indexOf("recorrer ") == 0 or trimmed.indexOf("para ") == 0) and (trimmed.indexOf(" como ") != null or trimmed.indexOf(" en ") != null) and endsWithColon then
-		middle = trimmed.indexOf(" como ")
-		if middle == null then middle = trimmed.indexOf(" en ")
-		keywordLen = 9 // "recorrer "
-		sepLen = 6 // " como "
-		isRecorrer = (trimmed.indexOf("recorrer ") == 0)
-		if trimmed.indexOf("para ") == 0 then; keywordLen = 5; sepLen = 4; end if
-		
-		if isRecorrer then
-			collection = trimmed[keywordLen : middle].trim
-			item = trimmed[middle + sepLen : trimmed.len-1].trim
-		else
-			item = trimmed[keywordLen : middle].trim
-			collection = trimmed[middle + sepLen : trimmed.len-1].trim
-		end if
-		
-		blockStack.push({"bType": "for", "indent": currentIndent})
-		return "for " + item + " in " + collection
 	end if
 	if trimmed.indexOf("mientras ") == 0 and endsWithColon then
 		cond = trimmed[9 : trimmed.len-1].trim
