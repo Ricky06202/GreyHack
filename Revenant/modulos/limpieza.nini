@@ -2,90 +2,82 @@
 
 tarea modulo_limpieza_ejecutar:
     opciones_clean = [
-        {"label": "Limpiar logs del sistema", "cmd": "logs"},
-        {"label": "Limpiar historial de comandos", "cmd": "history"},
-        {"label": "Borrar archivos temporales", "cmd": "temp"},
-        {"label": "Limpieza completa (todo)", "cmd": "full"},
+        {"label": "Limpiar logs del sistema", "cmd": "logs"}
+        {"label": "Limpiar historial de comandos", "cmd": "history"}
+        {"label": "Limpieza completa (todo)", "cmd": "full"}
     ]
     
     modo = menu_interactivo("LIMPIEZA DE HUELLAS", opciones_clean)
-    si not modo: retornar
+    si not modo: return
     
     si modo == "logs":
         limpieza_logs()
-    sino: si modo == "history":
+    osi modo == "history":
         limpieza_historial()
-    sino: si modo == "temp":
-        limpieza_temporales()
-    sino: si modo == "full":
+    osi modo == "full":
         limpieza_completa()
 
 tarea limpieza_logs:
-    comp = get_shell.host_computer
-    info("Limpiando logs del sistema...")
+    info("LIMPIANDO LOGS (metodo touch)...")
     
-    logs_path = [
+    comp = obtener_computadora_objetivo()
+    si not comp:
+        info("Usando equipo local...")
+        comp = get_shell.host_computer
+    
+    // Logs a limpiar
+    logs = [
         "/var/system.log",
         "/var/log/syslog",
         "/var/log/auth.log",
     ]
     
     cont = 0
-    para path en logs_path:
-        archivo = comp.File(path)
+    para ruta en logs:
+        // Obtener la carpeta padre y el nombre del archivo
+        partes = ruta.split("/")
+        nombre = partes[-1]
+        carpeta = "/"
+        si partes.len > 2:
+            carpeta = partes[0:partes.len-1].join("/")
+        
+        archivo = comp.File(ruta)
         si archivo:
-            si archivo.has_permission("w"):
-                archivo.set_content("")
-                info("  Limpiado: " + path)
-                cont = cont + 1
-            sino:
-                info("  Sin permiso: " + path)
+            // Eliminar y recrear con touch
+            archivo.delete
+            comp.touch(carpeta, nombre)
+            info("  [BLANCO] " + ruta)
+            cont = cont + 1
         sino:
-            info("  No existe: " + path)
+            // Si no existe, crear vacio
+            comp.touch(carpeta, nombre)
+            info("  [CREADO] " + ruta)
+            cont = cont + 1
     
     exito("Logs limpiados: " + str(cont))
+    info("Archivos en blanco - sin rastros de conexión/desconexión.")
 
 tarea limpieza_historial:
     info("Limpiando historial de comandos...")
     
-    // En GreyHack, el historial se limpia con la función nativa
-    limpiar
+    comp = obtener_computadora_objetivo()
+    si not comp:
+        comp = get_shell.host_computer
+    
+    // Limpiar system.log desde el objetivo
+    archivo = comp.File("/var/system.log")
+    si archivo:
+        archivo.delete
+        comp.touch("/var", "system.log")
+        info("  Historial limpiado: /var/system.log")
+    
     exito("Historial limpiado.")
 
-tarea limpieza_temporales:
-    comp = get_shell.host_computer
-    info("Limpiando archivos temporales...")
-    
-    temp_paths = [
-        "/tmp",
-        "/var/tmp",
-    ]
-    
-    cont = 0
-    para path en temp_paths:
-        carpeta = comp.File(path)
-        si carpeta y carpeta.is_folder:
-            // Intentar borrar archivos
-            si carpeta.has_permission("w"):
-                info("  Limpiando: " + path)
-                cont = cont + 1
-    
-    exito("Temporales limpiados.")
-
 tarea limpieza_completa:
-    info("EJECUTANDO LIMPIEZA COMPLETA...")
+    info("=== LIMPIEZA COMPLETA ===")
     
-    // 1. Limpiar logs
     limpieza_logs()
-    
-    // 2. Limpiar historial
     limpieza_historial()
     
-    // 3. Limpiar temporales
-    limpieza_temporales()
-    
-    // 4. Limpiar cache del sistema
-    info("Limpiando cache del sistema...")
-    
-    exito("LIMPIEZA COMPLETA FINALIZADA.")
-    info("Sistema limpio.")
+    exito("=== LIMPIEZA COMPLETA ===")
+    info("Sistema limpio. Sin rastros.")

@@ -1,4 +1,4 @@
-// modulos/ui.nini - Motor de Interfaz Tactica Revenant OS
+// modulo ui.nini - INTERFAZ
 
 tarea mostrar_banner_revenant:
     clear_screen
@@ -11,165 +11,76 @@ tarea mostrar_banner_revenant:
     print("<color=#00e5ff> [ ###################################################### ] </color>")
     print("")
 
-tarea dibujar_separador:
-    print("<color=#424242>======================================================</color>")
-
-tarea dibujar_separador_doble:
-    print("<color=#b537f2>======================================================</color>")
-
-tarea limpiar_pantalla:
-    clear_screen
-
-tarea obtener_admin_email:
-    router = get_router
-    si router:
-        pub_ip = router.public_ip
-        si pub_ip y pub_ip != "unknown":
-            resultado = whois(pub_ip)
-            si resultado:
-                lineas = resultado.split(char(10))
-                para linea en lineas:
-                    si linea.indexOf("@") != null:
-                        partes = linea.split(" ")
-                        para p en partes:
-                            si p.indexOf("@") != null:
-                                retornar p.trim
-    retornar "N/A"
+tarea dibujar_separador: print("<color=#424242>======================================================</color>")
+tarea dibujar_separador_doble: print("<color=#b537f2>======================================================</color>")
+tarea limpiar_pantalla: clear_screen
 
 tarea dibujar_hud_tactico:
     limpiar_pantalla()
     mostrar_banner_revenant()
     dibujar_separador()
     
-    // Estado del objetivo
-    si globals.objetivo_actual == null o globals.objetivo_actual == nulo:
-        estado_obj = "<color=#ff3131>NINGUNO</color>"
-    sino:
-        estado_obj = "<color=#00ff41>" + globals.objetivo_actual + "</color>"
+    estado_obj = (not globals.objetivo_actual) >> "<color=#ff3131>NINGUNO</color>" |: "<color=#00ff41>" + globals.objetivo_actual + "</color>"
+    estado_enjambre = (enjambre.len == 0) >> "<color=#424242>" + str(enjambre.len) + "</color>" |: "<color=#00ff41>" + str(enjambre.len) + "</color>"
+    modo_color = (globals.modo == "LOCAL") >> "<color=#00ff41>LOCAL</color>" |: "<color=#ff3131>REMOTO</color>"
     
-    // Estado del enjambre
-    num_sesiones = enjambre.len
-    si num_sesiones == 0:
-        estado_enjambre = "<color=#424242>0</color>"
-    sino:
-        estado_enjambre = "<color=#00ff41>" + str(num_sesiones) + "</color>"
-    
-    // Modo
-    modo_color = "<color=#ff3131>REMOTO</color>"
-    si globals.modo == "LOCAL":
-        modo_color = "<color=#00ff41>LOCAL</color>"
-    
-    // Mostrar en linea horizontal
     print("OBJ: " + estado_obj + " | MODO: " + modo_color + " | SES: " + estado_enjambre)
-    
     dibujar_separador()
 
 tarea dibujar_ventana(titulo, contenido):
     dibujar_separador()
     print("[#] " + titulo.upper())
     dibujar_separador()
-    si typeof(contenido) == "string":
-        print(contenido)
-    sino:
-        print(contenido)
+    print(contenido)
     dibujar_separador()
 
 tarea dibujar_ventana_centrada(titulo, contenido):
     dibujar_separador_doble()
     print("[ " + titulo.upper() + " ]")
     dibujar_separador_doble()
-    si typeof(contenido) == "string":
-        print(contenido)
-    sino:
-        print(contenido)
+    print(contenido)
     dibujar_separador_doble()
 
-tarea pausa_tactica:
-    pedir("<color=#424242>[ Enter ]</color>")
-
-tarea pausa_rapida:
-    pedir("<color=#424242>[ Enter ]</color>")
+tarea pausa_tactica: pedir("<color=#424242>[ Enter ]</color>")
 
 tarea menu_interactivo(titulo, opciones):
     dibujar_separador_doble()
     print("[ " + titulo.upper() + " ]")
     dibujar_separador()
     
-    columnas = ["#", "Accion"]
     filas = []
     i = 1
-    recorrer opciones como opt:
+    para opt en opciones:
         filas.push([i, opt.label])
         i = i + 1
     
-    tabla = construir_tabla(columnas, filas)
-    print(tabla)
-    
+    print(construir_tabla(["#", "Accion"], filas))
     dibujar_separador()
     
-    seleccion = pedir("<color=#ffea00>Selecciona > </color>")
-    val_sel = val(seleccion)
-    
-    si val_sel > 0 y val_sel <= opciones.len:
-        retornar opciones[val_sel - 1].cmd
-    sino:
-        error("Seleccion invalida.")
-        retornar null
-
-tarea menu_seleccion(titulo, opciones):
-    dibujar_separador()
-    print("[ " + titulo.upper() + " ]")
-    dibujar_separador()
-    
-    i = 1
-    recorrer opciones como opt:
-        print("  " + str(i) + ". " + opt)
-        i = i + 1
-    
-    dibujar_separador()
-    sel = pedir("<color=#ffea00>Selecciona > </color>")
-    val_sel = val(sel)
-    
-    si val_sel > 0 y val_sel <= opciones.len:
-        retornar val_sel
-    sino:
-        retornar 0
+    sel = val(pedir("<color=#ffea00>Selecciona > </color>"))
+    si sel > 0 y sel <= opciones.len: return opciones[sel - 1].cmd
+    error("Selección inválida.")
+    return null
 
 tarea prompt_objetivo:
-    si globals.objetivo_actual != null y globals.objetivo_actual != nulo:
-        confirm = pedir("Cambiar objetivo (" + globals.objetivo_actual + ")? [s/n]: ")
-        si confirm.lower() != "s": retornar globals.objetivo_actual
+    si globals.objetivo_actual:
+        confirm = pedir("Cambiar (" + globals.objetivo_actual + ")? [s/n]: ")
+        si confirm.lower() != "s": return globals.objetivo_actual
     
     t_obj = pedir("<color=#ffea00>IP o Dominio > </color>")
-    si t_obj == "": retornar globals.objetivo_actual
+    si t_obj == "": return globals.objetivo_actual
     
     res = resolver_objetivo(t_obj)
     si res:
         globals.objetivo_actual = res
-        globals.ultimo_scan = []  // Limpiar scan anterior
-        exito("Objetivo: " + globals.objetivo_actual)
-        retornar res
-    sino:
-        error("No se pudo resolver: " + t_obj)
-        retornar null
+        globals.ultimo_scan = []
+        exito("Objetivo: " + res)
+        return res
+    error("No se pudo resolver: " + t_obj)
+    return null
 
-tarea mostrar_cargando(texto):
-    print("<color=#00e5ff>Cargando " + texto + "...</color>")
-
-tarea dibujar_panel_info(titulo, datos):
-    dibujar_separador()
-    print("[ " + titulo.upper() + " ]")
-    dibujar_separador()
-    
-    recorrer datos como fila:
-        label = fila[0]
-        valor = fila[1]
-        print("  " + label + ": " + valor)
-    
-    dibujar_separador()
+tarea mostrar_cargando(texto): print("<color=#00e5ff>Cargando " + texto + "...</color>")
 
 tarea confirmar_accion(pregunta):
     resp = pedir("<color=#ffea00>" + pregunta + " [s/n]: </color>")
-    si resp.lower() == "s" o resp.lower() == "si" o resp.lower() == "y" o resp.lower() == "yes":
-        retornar verdadero
-    retornar falso
+    return (resp.lower() == "s" o resp.lower() == "si" o resp.lower() == "y")

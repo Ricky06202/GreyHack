@@ -1,258 +1,149 @@
-// modulos/intel.nini - OPERACIÓN DE INTELIGENCIA v2.0
+// modulo intel.nini - INTELIGENCIA
 
 tarea modulo_intel_saquear:
-    si globals.objetivo_actual == null:
-        error("Fije un objetivo primero.")
-        retornar
-        
-    si globals.objetivo_actual == "localhost" o globals.objetivo_actual == null:
-        sesion = get_shell
-    sino:
-        si enjambre.tiene(globals.objetivo_actual):
-            sesion = enjambre[globals.objetivo_actual]
-        sino:
-            error("No hay sesion activa para " + globals.objetivo_actual + ".")
-            retornar
-        
-    info("Iniciando extraccion de inteligencia en " + globals.objetivo_actual)
+    si not globals.objetivo_actual: error("Fije un objetivo primero."); return
     
-    comp = null
-    si typeof(sesion) == "shell": comp = sesion.host_computer
-    sino: comp = sesion
+    comp = obtener_computadora_objetivo()
+    si not comp: error("No hay sesión activa."); return
     
-    // 1. Cosechar /etc/passwd
+    info("Extrayendo intel de: " + globals.objetivo_actual)
+    
+    // 1. /etc/passwd
     passwd = comp.File("/etc/passwd")
     si passwd y not passwd.is_binary:
         info("Procesando /etc/passwd...")
-        lineas = passwd.get_content.split(char(10))
         cont = 0
-        recorrer lineas como l:
+        para l en passwd.get_content.split(char(10)):
             si l.indexOf(":") == null: continuar
             partes = l.split(":")
-            usuario = partes[0]
             hash = partes[1]
             si hash == "x" o hash == "*": continuar
-            
-            info("Descifrando hash: " + usuario)
             clave = crackear_hash(hash)
             si clave:
-                guardar_credencial(globals.objetivo_actual, usuario, clave, "linux", comp.local_ip)
+                guardar_credencial(globals.objetivo_actual, partes[0], clave, "linux", comp.local_ip)
                 cont = cont + 1
-        
-        info("Credenciales guardadas: " + str(cont))
+        info("Credenciales: " + str(cont))
     
-    // 2. Cosechar /home (Bancos y Correos)
+    // 2. /home (Bancos y Correos)
     home = comp.File("/home")
     si home:
-        info("Explorando directorios de usuarios...")
-        cont_bancos = 0
-        cont_correos = 0
-        
-        recorrer home.get_folders como user_dir:
+        info("Explorando usuarios...")
+        cont_bancos = 0; cont_correos = 0
+        para user_dir en home.get_folders:
             usr = user_dir.name
-            info("Usuario: " + usr)
-            
             // Bancos
-            banco_file = comp.File("/home/" + usr + "/Config/Bank.txt")
-            si banco_file:
-                info("  - Bank.txt encontrado")
-                recorrer banco_file.get_content.split(char(10)) como l:
+            banco = comp.File("/home/" + usr + "/Config/Bank.txt")
+            si banco:
+                para l en banco.get_content.split(char(10)):
                     si l.indexOf(":") == null: continuar
                     p = l.split(":")
-                    acc = p[0]; h = p[1]
-                    pass_dec = crackear_hash(h)
-                    si pass_dec: 
-                        guardar_credencial(globals.objetivo_actual, acc, pass_dec, "banco", comp.local_ip)
+                    pass_dec = crackear_hash(p[1])
+                    si pass_dec:
+                        guardar_credencial(globals.objetivo_actual, p[0], pass_dec, "banco", comp.local_ip)
                         cont_bancos = cont_bancos + 1
-            
             // Correos
-            mail_file = comp.File("/home/" + usr + "/Config/Mail.txt")
-            si mail_file:
-                info("  - Mail.txt encontrado")
-                recorrer mail_file.get_content.split(char(10)) como l:
+            mail = comp.File("/home/" + usr + "/Config/Mail.txt")
+            si mail:
+                para l en mail.get_content.split(char(10)):
                     si l.indexOf(":") == null: continuar
                     p = l.split(":")
-                    acc = p[0]; h = p[1]
-                    pass_dec = crackear_hash(h)
-                    si pass_dec: 
-                        guardar_credencial(globals.objetivo_actual, acc, pass_dec, "correo", comp.local_ip)
+                    pass_dec = crackear_hash(p[1])
+                    si pass_dec:
+                        guardar_credencial(globals.objetivo_actual, p[0], pass_dec, "correo", comp.local_ip)
                         cont_correos = cont_correos + 1
-        
-        info("Bancos encontrados: " + str(cont_bancos))
-        info("Correos encontrados: " + str(cont_correos))
+        info("Bancos: " + str(cont_bancos) + " | Correos: " + str(cont_correos))
     
-    exito("Intel extraido. Revisa el vault.")
+    exito("Intel extraido.")
 
-tarea intel_buscar_en_directorio(comp, ruta, extensiones, profundidad):
-    // Buscar archivos con extensiones específicas
+tarea intel_buscar_en_directorio(comp, ruta, exts, prof):
     resultados = []
-    
     carpeta = comp.File(ruta)
-    si not carpeta o not carpeta.is_folder:
-        retornar resultados
+    si not carpeta o not carpeta.is_folder: return resultados
     
-    // Buscar en archivos actuales
+    // Subcarpetas
     si carpeta.get_folders:
         para fd en carpeta.get_folders:
-            si profundidad > 0:
-                subresultados = intel_buscar_en_directorio(comp, fd.path, extensiones, profundidad - 1)
-                resultados = resultados + subresultados
+            si prof > 0: resultados = resultados + intel_buscar_en_directorio(comp, fd.path, exts, prof - 1)
     
+    // Archivos
     si carpeta.get_files:
         para f en carpeta.get_files:
-            nombre = f.name
-            para ext en extensiones:
-                si nombre.indexOf(ext) != null:
-                    resultados.push({"ruta": f.path, "nombre": nombre, "tamano": f.size})
+            para ext in exts:
+                si f.name.indexOf(ext) != null:
+                    resultados.push({"ruta": f.path, "nombre": f.name, "tamano": f.size})
                     break
-    
-    retornar resultados
+    return resultados
 
 tarea modulo_intel_buscar_archivos:
-    si globals.objetivo_actual == null:
-        error("No hay objetivo seleccionado.")
-        retornar
-    
+    si not globals.objetivo_actual: error("No hay objetivo."); return
     comp = obtener_computadora_objetivo()
-    si not comp:
-        error("No hay sesion activa.")
-        retornar
+    si not comp: error("No hay sesión."); return
     
-    opciones_buscar = [
-        {"label": "Buscar claves SSH", "cmd": "keys"},
-        {"label": "Buscar archivos de contrasenas", "cmd": "passwords"},
-        {"label": "Buscar configuraciones", "cmd": "configs"},
-        {"label": "Buscar backups", "cmd": "backup"},
+    opciones = [
+        {"label": "Claves SSH", "cmd": "keys"},
+        {"label": "Contrasenas", "cmd": "passwords"},
+        {"label": "Configuraciones", "cmd": "configs"},
+        {"label": "Backups", "cmd": "backup"},
     ]
     
-    modo = menu_interactivo("BUSCADOR DE ARCHIVOS", opciones_buscar)
-    si not modo: retornar
+    modo = menu_interactivo("BUSCAR ARCHIVOS", opciones)
+    si not modo: return
     
-    extensiones = []
-    si modo == "keys":
-        extensiones = [".pem", ".key", ".ppk", ".crt", ".cer"]
-        info("Buscando claves SSH...")
+    // Definir extensiones
+    exts = (modo == "keys") >> [".pem", ".key", ".ppk", ".crt", ".cer"] |:
+           (modo == "passwords") >> [".kdb", ".kdbx", ".1pif", ".psafe3"] |:
+           (modo == "configs") >> [".conf", ".config", ".cfg", ".ini"] |:
+           [".bak", ".backup", ".old", ".save", ".swp"]
     
-    sino: si modo == "passwords":
-        extensiones = [".kdb", ".kdbx", ".1pif", ".psafe3"]
-        info("Buscando archivos de contrasenas...")
+    info("Buscando...")
+    resultados = []
+    para ruta en ["/home", "/root", "/etc", "/var"]:
+        resultados = resultados + intel_buscar_en_directorio(comp, ruta, exts, 2)
     
-    sino: si modo == "configs":
-        extensiones = [".conf", ".config", ".cfg", ".ini"]
-        info("Buscando configuraciones...")
-    
-    sino: si modo == "backup":
-        extensiones = [".bak", ".backup", ".old", ".save", ".swp"]
-        info("Buscando backups...")
-    
-    // Rutas a buscar
-    rutas = ["/home", "/root", "/etc", "/var"]
-    
-    todos_resultados = []
-    info("Escaneando directorios...")
-    
-    para ruta en rutas:
-        info("  - " + ruta)
-        resultados = intel_buscar_en_directorio(comp, ruta, extensiones, 2)
-        todos_resultados = todos_resultados + resultados
-    
-    si todos_resultados.len == 0:
-        info("No se encontraron archivos.")
-    sino:
-        info("Archivos encontrados: " + str(todos_resultados.len))
-        dibujar_ventana("RESULTADOS DE BUSQUEDA", str(todos_resultados))
+    si resultados.len == 0: info("No se encontraron archivos.")
+    sino: info("Encontrados: " + str(resultados.len)); dibujar_ventana("RESULTADOS", str(resultados))
 
 tarea modulo_intel_brute_force:
-    opciones_brute = [
-        {"label": "SSH Brute Force", "cmd": "ssh"},
-        {"label": "FTP Brute Force", "cmd": "ftp"},
-        {"label": "Crackear /etc/passwd", "cmd": "passwd"},
+    opciones = [
+        {"label": "SSH", "cmd": "ssh"},
+        {"label": "FTP", "cmd": "ftp"},
+        {"label": "Crack passwd", "cmd": "passwd"},
     ]
     
-    modo = menu_interactivo("ATAQUE DE FUERZA BRUTA", opciones_brute)
-    si not modo: retornar
+    modo = menu_interactivo("FUERZA BRUTA", opciones)
+    si not modo: return
     
-    si modo == "ssh":
-        intel_brute_force_ssh()
-    sino: si modo == "ftp":
-        intel_brute_force_ftp()
-    sino: si modo == "passwd":
-        intel_crack_passwd()
+    si modo == "ssh": info("SSH brute no disponible en GH. Usa Metaxploit.")
+    osi modo == "ftp": intel_ftp_anonimo()
+    osi modo == "passwd": intel_crack_passwd()
 
-tarea intel_brute_force_ssh:
+tarea intel_ftp_anonimo:
     host = globals.objetivo_actual
-    si not host:
-        host = pedir("Host objetivo: ")
-        si host == "": retornar
+    si not host: host = pedir("Host FTP: "); si host == "": return
     
-    usuario = pedir("Usuario: ")
-    si usuario == "": retornar
-    
-    info("Ataque SSH a " + host + " usuario " + usuario)
-    info("GreyHack no permite brute force directo de SSH.")
-    info("Usa Metaxploit para explotar vulnerabilidades.")
-
-tarea intel_brute_force_ftp:
-    host = globals.objetivo_actual
-    si not host:
-        host = pedir("Host FTP: ")
-        si host == "": retornar
-    
-    info("Ataque FTP a " + host)
-    info("Intenta acceso anonimo...")
-    
-    // Intentar acceso anonimo
+    info("Intentando acceso anonimo...")
     metax = include_lib("/lib/metaxploit.so")
     si metax:
         sesion = metax.net_use(host, 21)
-        si sesion:
-            exito("Acceso anonimo logrado!")
-            enjambre[host] = sesion
-        sino:
-            error("Acceso anonimo fallido.")
-    sino:
-        error("Metaxploit no disponible.")
+        si sesion: enjambre[host] = sesion; exito("Acceso anonimo!"); return
+    error("Acceso fallido.")
 
 tarea intel_crack_passwd:
     comp = obtener_computadora_objetivo()
-    si not comp:
-        error("No hay sesion activa.")
-        retornar
+    si not comp: error("No hay sesión."); return
     
     passwd = comp.File("/etc/passwd")
-    si not passwd o passwd.is_binary:
-        error("No se pudo leer /etc/passwd")
-        retornar
+    si not passwd o passwd.is_binary: error("No se pudo leer."); return
     
-    info("Crackeando /etc/passwd...")
-    lineas = passwd.get_content.split(char(10))
+    info("Crackeando...")
     cont = 0
-    
-    para l en lineas:
+    para l en passwd.get_content.split(char(10)):
         si l.indexOf(":") == null: continuar
-        partes = l.split(":")
-        usuario = partes[0]
-        hash = partes[1]
+        p = l.split(":")
+        hash = p[1]
         si hash == "x" o hash == "*": continuar
-        
         clave = crackear_hash(hash)
         si clave:
-            info("  " + usuario + ": " + clave)
-            guardar_credencial(globals.objetivo_actual, usuario, clave, "linux", comp.local_ip)
+            guardar_credencial(globals.objetivo_actual, p[0], clave, "linux", comp.local_ip)
             cont = cont + 1
-    
-    exito("Crackeadas " + str(cont) + " contrasenas.")
-
-tarea obtener_computadora_objetivo:
-    si globals.objetivo_actual == null o globals.objetivo_actual == nulo:
-        retornar get_shell.host_computer
-    
-    si globals.objetivo_actual == "localhost":
-        retornar get_shell.host_computer
-    
-    si enjambre.tiene(globals.objetivo_actual):
-        sesion = enjambre[globals.objetivo_actual]
-        si typeof(sesion) == "shell": retornar sesion.host_computer
-        sino: si typeof(sesion) == "computer": retornar sesion
-    
-    retornar null
+    exito("Crackeadas: " + str(cont))

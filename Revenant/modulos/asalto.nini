@@ -5,12 +5,12 @@ tarea modulo_asalto_root:
         error("No hay objetivo. Usa 'objetivo <ip>'")
         retornar
     
-    # Ver si hay scan previo
+    // Ver si hay scan previo
     si globals.ultimo_scan.len == 0:
         info("Escaneando objetivo...")
         modulo_espectro_recon()
     
-    # Pedir seleccion directamente
+    // Pedir seleccion directamente
     sel = pedir("Puerto (ID, 0=router, Enter=todos): ")
     
     port_int = 0
@@ -33,7 +33,7 @@ tarea modulo_asalto_root:
         info("Atacando todos los puertos...")
         port_int = null
     
-    # Verificar modo
+    // Verificar modo
     si globals.modo == "LOCAL":
         info("Modo LOCAL - escaneando librerias...")
         ataque_local()
@@ -99,7 +99,7 @@ tarea ataque_remoto(port_int):
             lan_target = pedir("IP interna: ")
             info("Saltando a: " + lan_target)
     
-    # Cache
+    // Cache
     lib_info = obtener_info_libreria(host, port_int)
     
     vulns_cache = []
@@ -116,7 +116,7 @@ tarea ataque_remoto(port_int):
                 enjambre[host] = sesion
                 retornar
     
-    # Normal
+    // Normal
     info("Buscando vulnerabilidades...")
     vuln = buscar_vulnerabilidad(host, port_int)
     

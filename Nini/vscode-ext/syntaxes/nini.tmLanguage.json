@@ -73,7 +73,11 @@
             "patterns": [
                 {
                     "match": ">>",
-                    "name": "keyword.operator.logical.nini"
+                    "name": "keyword.operator.pipeline.nini"
+                },
+                {
+                    "match": "\\|:",
+                    "name": "keyword.operator.ternary.nini"
                 },
                 {
                     "match": "\\.\\.\\.",

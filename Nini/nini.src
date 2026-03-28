@@ -113,8 +113,30 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if (trimmed.indexOf("resolver_objetivo(") != null) then trimmed = trimmed.replace("resolver_objetivo", "__nini_resolver")
 	if (trimmed.indexOf("buscar_vulnerabilidad(") != null) then trimmed = trimmed.replace("buscar_vulnerabilidad", "__nini_buscar_vulnerabilidad")
 	
+	// Macros de conexion remota
+	if (trimmed.indexOf("conectar_ssh(") != null) then trimmed = trimmed.replace("conectar_ssh", "__nini_conectar_ssh")
+	if (trimmed.indexOf("conectar_ftp(") != null) then trimmed = trimmed.replace("conectar_ftp", "__nini_conectar_ftp")
+	if (trimmed.indexOf("conectar_net(") != null) then trimmed = trimmed.replace("conectar_net", "__nini_conectar_net")
+	if (trimmed.indexOf("obtener_router(") != null) then trimmed = trimmed.replace("obtener_router", "__nini_get_router")
+	if (trimmed.indexOf("escanear_puerto(") != null) then trimmed = trimmed.replace("escanear_puerto", "__nini_ping_port")
+	if (trimmed.indexOf("escanear_ip(") != null) then trimmed = trimmed.replace("escanear_ip", "__nini_scan_ip")
+	if (trimmed.indexOf("puertos_usados(") != null) then trimmed = trimmed.replace("puertos_usados", "__nini_used_ports")
+	if (trimmed.indexOf("puertos_dispositivo(") != null) then trimmed = trimmed.replace("puertos_dispositivo", "__nini_device_ports")
+	if (trimmed.indexOf("info_puerto(") != null) then trimmed = trimmed.replace("info_puerto", "__nini_port_info")
+	if (trimmed.indexOf("libreria_red(") != null) then trimmed = trimmed.replace("libreria_red", "__nini_dump_lib")
+	if (trimmed.indexOf("buscar_exploits(") != null) then trimmed = trimmed.replace("buscar_exploits", "__nini_scan_lib")
+	if (trimmed.indexOf("escanear_direccion(") != null) then trimmed = trimmed.replace("escanear_direccion", "__nini_scan_address")
+	if (trimmed.indexOf("ejecutar_exploit(") != null) then trimmed = trimmed.replace("ejecutar_exploit", "__nini_overflow")
+	if (trimmed.indexOf("limpiar_logs(") != null) then trimmed = trimmed.replace("limpiar_logs", "__nini_limpiar_logs")
 	
-
+	// Macros de PIVOTING (desde nodo comprometido)
+	if (trimmed.indexOf("obtener_ip_local_nodo(") != null) then trimmed = trimmed.replace("obtener_ip_local_nodo", "__nini_get_local_ip")
+	if (trimmed.indexOf("escanear_red_desde_nodo(") != null) then trimmed = trimmed.replace("escanear_red_desde_nodo", "__nini_scan_from_node")
+	if (trimmed.indexOf("obtener_computadora_nodo(") != null) then trimmed = trimmed.replace("obtener_computadora_nodo", "__nini_get_computer")
+	if (trimmed.indexOf("ejecutar_comando_nodo(") != null) then trimmed = trimmed.replace("ejecutar_comando_nodo", "__nini_exec_from_node")
+	if (trimmed.indexOf("obtener_router_nodo(") != null) then trimmed = trimmed.replace("obtener_router_nodo", "__nini_get_router_from_node")
+	if (trimmed.indexOf("dispositivos_red_nodo(") != null) then trimmed = trimmed.replace("dispositivos_red_nodo", "__nini_lan_ips_from_node")
+	
 	// 0. OPERADOR SPREAD DE ARRAYS (...)
 	if trimmed.indexOf("...") != null and trimmed.indexOf("[") != null then
 		cleanLine = trimmed
@@ -150,12 +172,48 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		return "target_ip = " + val
 	end if
 
-	// 2. PIPELINES
+	// 2. PIPELINES + TERNARIO COMBINADO
 	cleanS = ""; inQ = false; for char_idx in range(0, trimmed.len - 1)
 		c = trimmed[char_idx]; if c == char(34) then inQ = not inQ
 		if inQ then cleanS = cleanS + "_" else cleanS = cleanS + c
 	end for
 	
+	// 2.5. OPERADOR TERNARIO (|:) - primero que el pipeline
+	if cleanS.indexOf(" |: ") != null then
+		colonIdx = cleanS.indexOf(" |: ")
+		beforeColon = trimmed[:colonIdx].trim
+		afterColon = trimmed[colonIdx + 4:].trim
+		
+		ternaryVar = ""
+		if cleanS.indexOf(" = ") != null and cleanS.indexOf(" = ") < colonIdx then
+			eqIdx = cleanS.indexOf(" = ")
+			ternaryVar = trimmed[:eqIdx].trim + " = "
+			beforeColon = beforeColon[eqIdx + 3:].trim
+			cleanBefore = cleanS[eqIdx + 3:].trim
+		else
+			cleanBefore = beforeColon
+		end if
+		
+		if cleanBefore.indexOf(" >> ") != null then
+			pipeParts = beforeColon.split(" >> ")
+			condition = pipeParts[0].trim
+			trueValue = pipeParts[pipeParts.len - 1].trim
+			if ternaryVar.len > 0 then
+				varName = ternaryVar.replace(" = ", "")
+				return "if " + condition + " then" + char(10) + "    " + ternaryVar + trueValue + char(10) + "else" + char(10) + "    " + ternaryVar + afterColon + char(10) + "end if"
+			else
+				return "if " + condition + " then " + trueValue + " else " + afterColon + " end if"
+			end if
+		else
+			if ternaryVar.len > 0 then
+				return "if " + beforeColon + " then" + char(10) + "    " + ternaryVar + beforeColon + char(10) + "else" + char(10) + "    " + ternaryVar + afterColon + char(10) + "end if"
+			else
+				return "if " + beforeColon + " then " + beforeColon + " else " + afterColon + " end if"
+			end if
+		end if
+	end if
+	
+	// Pipeline simple (sin ternario)
 	if cleanS.indexOf(" >> ") != null then
 		finalVar = ""
 		pipelineData = trimmed
@@ -219,9 +277,11 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		cond = trimmed[4 : colIdx].trim
 		accion = trimmed[colIdx + 1 :].trim
 		if accion.len == 0 then
+			blockStack.push({"bType": "elseif", "indent": currentIndent})
 			return "else if (" + cond + ") then"
 		else
-			return "else if (" + cond + ") then; " + accion + "; end if"
+			blockStack.push({"bType": "elseif_oneline", "indent": currentIndent})
+			return "else if (" + cond + ") then; " + accion
 		end if
 	end if
 
@@ -351,6 +411,26 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		niniState.ninjaMode = true
 		return "// Modo Ninja Activado"
 	end if
+	
+	// TAREA/FUNCION ONE-LINER: tarea nombre: codigo
+	if (trimmed.indexOf("tarea ") == 0 or trimmed.indexOf("funcion ") == 0) and trimmed.indexOf(":") != null then
+		colonIdx = trimmed.indexOf(":")
+		afterColon = trimmed[colonIdx + 1:].trim
+		// Si hay código después del colon en la misma línea, es one-liner
+		if afterColon.len > 0 and endsWithColon == false then
+			kwLen = 6; if trimmed.indexOf("funcion ") == 0 then kwLen = 8
+			decl = trimmed[kwLen : colonIdx].trim
+			if decl.indexOf("(") != null then
+				funName = decl[:decl.indexOf("(")].trim
+				args = decl[decl.indexOf("(") :].trim
+			else
+				funName = decl
+				args = "()"
+			end if
+			return funName + " = function" + args + "; " + afterColon + "; end function"
+		end if
+	end if
+	
 	if (trimmed.indexOf("tarea ") == 0 or trimmed.indexOf("funcion ") == 0) and endsWithColon then
 		kwLen = 6; if trimmed.indexOf("funcion ") == 0 then kwLen = 8
 		decl = trimmed[kwLen : trimmed.len-1].trim
@@ -391,7 +471,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	// UTILIDADES Y ABSTRACCIONES
 	if trimmed == "salir" then return "break"
 	if trimmed == "siguiente" then return "continue"
-	if trimmed == "limpiar" or trimmed == "clean_house" then return "syslog = get_shell.host_computer.File(" + char(34) + "/var/system.log" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")"
+	if trimmed == "limpiar" or trimmed == "clean_house" then return "__nini_clean_logs()"
 	
 	
 	if (trimmed.indexOf("exito(") == 0) then return "print(""<color=#00ff41>[OK] </color><color=#ffffff>"" + " + trimmed[6:trimmed.len-1] + " + ""</color>"")"
@@ -612,11 +692,13 @@ end if
 if niniState.requiresCracker then
 	headers.push("__nini_crack_dic = function(content)")
 	headers.push("  lines = content.split(char(10))")
+	headers.push("  c = include_lib(" + char(34) + "/lib/crypto.so" + char(34) + ")")
+	headers.push("  if not c then return {}")
 	headers.push("  res = {}")
 	headers.push("  for line in lines")
 	headers.push("      if line == """" then continue")
 	headers.push("      parts = line.split("":"")")
-	headers.push("      if parts.len == 2 then res[parts[0]] = crypto.decipher(parts[1])")
+	headers.push("      if parts.len == 2 then res[parts[0]] = c.decipher(parts[0], parts[1])")
 	headers.push("  end for")
 	headers.push("  return res")
 	headers.push("end function")
@@ -674,10 +756,24 @@ headers.push("  end while")
 headers.push("  return res")
 headers.push("end function")
 
-headers.push("__nini_crackear_hash = function(h)")
+// Funcion de limpieza de logs (metodo delete + touch)
+headers.push("__nini_clean_logs = function()")
+headers.push("  comp = get_shell.host_computer")
+headers.push("  logs = " + char(34) + "/var/system.log" + char(34))
+headers.push("  log = comp.File(logs)")
+headers.push("  if log then")
+headers.push("    log.delete")
+headers.push("    comp.touch(" + char(34) + "/var" + char(34) + ", " + char(34) + "system.log" + char(34) + ")")
+headers.push("  end if")
+headers.push("end function")
+
+headers.push("__nini_crackear_hash = function(user_or_hash, h=null)")
 headers.push("  c = include_lib(" + char(34) + "/lib/crypto.so" + char(34) + ")")
 headers.push("  if not c then return null")
-headers.push("  return c.decipher(h)")
+headers.push("  // Soporta: crackear_hash(usuario, hash) o crackear_hash(hash)")
+headers.push("  if h != null then return c.decipher(user_or_hash, h)")
+headers.push("  // Si solo se pasa un argumento, asumir que es hash y usar usuario vacio")
+headers.push("  return c.decipher(" + char(34) + char(34) + ", user_or_hash)")
 headers.push("end function")
 
 headers.push("__nini_obtener_info_libreria = function(ip, p)")
@@ -812,10 +908,190 @@ if niniState.requiresResolver then
 	headers.push("end function")
 end if
 
+// ==================== MACROS DE CONEXION REMOTA ====================
+headers.push("// --- MACROS DE CONEXION REMOTA ---")
+
+headers.push("__nini_conectar_ssh = function(ip, user, pass, port=22)")
+headers.push("  return get_shell.connect_service(ip, port, user, pass)")
+headers.push("end function")
+
+headers.push("__nini_conectar_ftp = function(ip, user, pass)")
+headers.push("  return get_shell.connect_service(ip, 21, user, pass, " + char(34) + "ftp" + char(34) + ")")
+headers.push("end function")
+
+headers.push("__nini_conectar_net = function(ip, port=1)")
+headers.push("  m = include_lib(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
+headers.push("  if not m then return null")
+headers.push("  return m.net_use(ip, port)")
+headers.push("end function")
+
+headers.push("__nini_get_router = function(ip=null)")
+headers.push("  return get_router(ip)")
+headers.push("end function")
+
+headers.push("__nini_ping_port = function(ip, port)")
+headers.push("  r = get_router(ip)")
+headers.push("  if not r then return null")
+headers.push("  return r.ping_port(port)")
+headers.push("end function")
+
+headers.push("__nini_scan_ip = function(ip)")
+headers.push("  r = get_router(ip)")
+headers.push("  if not r then return null")
+headers.push("  return r.computers_lan_ip")
+headers.push("end function")
+
+headers.push("__nini_used_ports = function(ip=null)")
+headers.push("  r = get_router(ip)")
+headers.push("  if not r then return null")
+headers.push("  return r.used_ports")
+headers.push("end function")
+
+headers.push("__nini_device_ports = function(ip)")
+headers.push("  r = get_router(ip)")
+headers.push("  if not r then return null")
+headers.push("  return r.device_ports(ip)")
+headers.push("end function")
+
+headers.push("__nini_port_info = function(port)")
+headers.push("  r = get_router")
+headers.push("  if not r then return null")
+headers.push("  return r.port_info(port)")
+headers.push("end function")
+
+headers.push("__nini_dump_lib = function(netsession)")
+headers.push("  if not netsession then return null")
+headers.push("  return netsession.dump_lib")
+headers.push("end function")
+
+headers.push("__nini_scan_lib = function(metalib)")
+headers.push("  m = include_lib(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
+headers.push("  if not m then return null")
+headers.push("  if not metalib then return null")
+headers.push("  return m.scan(metalib)")
+headers.push("end function")
+
+headers.push("__nini_scan_address = function(metalib, address)")
+headers.push("  m = include_lib(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
+headers.push("  if not m then return null")
+headers.push("  return m.scan_address(metalib, address)")
+headers.push("end function")
+
+headers.push("__nini_overflow = function(metalib, address, value, extra=null)")
+headers.push("  if extra then return metalib.overflow(address, value, extra)")
+headers.push("  return metalib.overflow(address, value)")
+headers.push("end function")
+
+headers.push("__nini_launch = function(shell, program, params=" + char(34) + char(34) + ")")
+headers.push("  if not shell or typeof(shell) != " + char(34) + "shell" + char(34) + " then return null")
+headers.push("  return shell.launch(program, params)")
+headers.push("end function")
+
+headers.push("__nini_scp_upload = function(shell, filePath, remotePath)")
+headers.push("  if not shell or typeof(shell) != " + char(34) + "shell" + char(34) + " then return false")
+headers.push("  local = get_shell.host_computer.File(filePath)")
+headers.push("  if not local then return false")
+headers.push("  return shell.scp(filePath, remotePath, get_shell, 1)")
+headers.push("end function")
+
+headers.push("__nini_scp_download = function(shell, remotePath, localPath)")
+headers.push("  if not shell or typeof(shell) != " + char(34) + "shell" + char(34) + " then return false")
+headers.push("  return shell.scp(remotePath, localPath, get_shell, 1)")
+headers.push("end function")
+
+// ==================== MACROS DE PIVOTING (desde nodo comprometido) ====================
+headers.push("// --- MACROS DE PIVOTING (desde nodo comprometido) ---")
+
+headers.push("__nini_get_local_ip = function(shell)")
+headers.push("  if not shell then return null")
+headers.push("  comp = shell.host_computer")
+headers.push("  if not comp then return null")
+headers.push("  return comp.local_ip")
+headers.push("end function")
+
+headers.push("__nini_get_computer = function(shell)")
+headers.push("  if not shell then return null")
+headers.push("  return shell.host_computer")
+headers.push("end function")
+
+headers.push("__nini_exec_from_node = function(shell, command)")
+headers.push("  if not shell or typeof(shell) != " + char(34) + "shell" + char(34) + " then return null")
+headers.push("  // Ejecuta comando en el nodo y retorna el resultado")
+headers.push("  return shell.launch(" + char(34) + "/bin/sh" + char(34) + ", " + char(34) + "-c " + char(34) + " + command)")
+headers.push("end function")
+
+headers.push("__nini_scan_from_node = function(shell)")
+headers.push("  // Escanea la red local DESDE el nodo comprometido")
+headers.push("  if not shell then return []")
+headers.push("  comp = shell.host_computer")
+headers.push("  if not comp then return []")
+headers.push("  local_ip = comp.local_ip")
+headers.push("  if not local_ip then return []")
+headers.push("  partes = local_ip.split(" + char(34) + "." + char(34) + ")")
+headers.push("  if partes.len < 3 then return []")
+headers.push("  net = partes[0] + " + char(34) + "." + char(34) + " + partes[1] + " + char(34) + "." + char(34) + " + partes[2] + " + char(34) + "." + char(34))
+headers.push("  hosts = []")
+headers.push("  for i in range(1, 254)")
+headers.push("    ip = net + str(i)")
+headers.push("    if ip == local_ip then continue")
+headers.push("    if shell.ping(ip) == 1 then hosts.push(ip)")
+headers.push("  end for")
+headers.push("  return hosts")
+headers.push("end function")
+
+// Router desde nodo pivot (red interna)
+headers.push("__nini_get_router_from_node = function(shell)")
+headers.push("  // Obtiene el router de la red del nodo comprometido")
+headers.push("  if not shell then return null")
+headers.push("  comp = shell.host_computer")
+headers.push("  if not comp then return null")
+headers.push("  local_ip = comp.local_ip")
+headers.push("  if not local_ip then return null")
+headers.push("  return get_router(local_ip)")
+headers.push("end function")
+
+headers.push("__nini_lan_ips_from_node = function(shell)")
+headers.push("  // Obtiene todas las IPs en la red del nodo (desde su router)")
+headers.push("  if not shell then return []")
+headers.push("  router = __nini_get_router_from_node(shell)")
+headers.push("  if not router then return []")
+headers.push("  return router.computers_lan_ip")
+headers.push("end function")
+
+// ==================== LIMPIEZA DE HUELLAS ====================
+headers.push("// --- LIMPIEZA DE HUELLAS (metodo touch) ---")
+headers.push("__nini_limpiar_logs = function(shell=null)")
+headers.push("  // Limpia logs borrando y recreando con touch (archivo en blanco sin rastros)")
+headers.push("  if not shell then shell = get_shell")
+headers.push("  comp = shell.host_computer")
+headers.push("  if not comp then return 0")
+headers.push("  logs = [")
+headers.push("    " + char(34) + "/var/system.log" + char(34) + ",")
+headers.push("    " + char(34) + "/var/log/syslog" + char(34) + ",")
+headers.push("    " + char(34) + "/var/log/auth.log" + char(34) + ",")
+headers.push("  ]")
+headers.push("  cont = 0")
+headers.push("  for ruta in logs")
+headers.push("    partes = ruta.split(" + char(34) + "/" + char(34) + ")")
+headers.push("    nombre = partes[-1]")
+headers.push("    carpeta = " + char(34) + "/" + char(34))
+headers.push("    if partes.len > 2 then carpeta = partes[0:partes.len-1].join(" + char(34) + "/" + char(34) + ")")
+headers.push("    archivo = comp.File(ruta)")
+headers.push("    if archivo then")
+headers.push("      archivo.delete")
+headers.push("      comp.touch(carpeta, nombre)")
+headers.push("      cont = cont + 1")
+headers.push("    end if")
+headers.push("  end for")
+headers.push("  return cont")
+headers.push("end function")
+
+// ==================== FIN MACROS REMOTAS ====================
+
 finalOutput = headers + outputLines
 
 if niniState.ninjaMode then
-	finalOutput.push("syslog = get_shell.host_computer.File(" + char(34) + "/var/system.log" + char(34) + "); if syslog then syslog.set_content(" + char(34) + char(34) + ")")
+	finalOutput.push("__nini_clean_logs()")
 	finalOutput.push("print(" + char(34) + "<color=gray>[Modo Ninja]</color> Huellas borradas exitosamente." + char(34) + ")")
 end if
 

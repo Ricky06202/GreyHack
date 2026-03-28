@@ -59,7 +59,11 @@ const niniDocs = {
     },
     "tarea": {
         title: "Declaración de Tarea (Función Nini)",
-        body: "Define un bloque de código estructurado que el transpilador convertirá a `nombre = function() ... end function`. ¡Puedes presionar F12 en su nombre para navegar a la definición en cualquier archivo de tu repositorio!"
+        body: "Define una función. Sintaxis: `tarea nombre:` (multilínea) o `tarea nombre: codigo` (one-liner). Se convierte a `nombre = function() ... end function`."
+    },
+    "funcion": {
+        title: "Declaración de Función",
+        body: "Alias de tarea. Sintaxis: `funcion nombre:` o `funcion nombre: return valor`."
     },
     // ---- [GREYSCRIPT RETROCOMPATIBILIDAD] ----
     "print": {
@@ -97,6 +101,10 @@ const niniDocs = {
     "nslookup": {
         title: "GreyScript Red: nslookup(dominio)",
         body: "Resuelve DNS. Empleado nativamente adentro de la función maestra `resolver_objetivo` de nuestro framework Revenant."
+    },
+    "|=": {
+        title: "Operador Ternario (|:)",
+        body: "Condicional inline moderno. Sintaxis: `condición >> valor_true |: valor_false`. Ejemplo: `x == 5 >> \"si\" |: \"no\"` se traduce a `if x == 5 then \"si\" else \"no\" end if`."
     }
 };
 

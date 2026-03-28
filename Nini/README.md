@@ -79,6 +79,26 @@ obtener_target >> escanear >> buscar_vulnerabilidad >> explotar
 info_total = [ ...datos_pc1, ...datos_pc2, "extra_info" ]
 ```
 
+**Operador Ternario (`|:)`:** Condicional inline con sintaxis moderna.
+```nini
+// Sintaxis: condición >> valor_true |: valor_false
+resultado = x == 5 >> "si" |: "no"
+estado = objetivo == ip >> "ACTUAL" |: "DISPONIBLE"
+comp_info = (typeof(sesion) == "shell") >> sesion.host_computer.local_ip |: sesion.local_ip
+```
+Se traduce a:
+```miniscript
+if x == 5 then "si" else "no" end if
+if objetivo == ip then "ACTUAL" else "DISPONIBLE" end if
+```
+
+**Tareas/Funciones One-Liner:** Define funciones rápidas en una sola línea.
+```nini
+tarea dibujar_separador: print("==================================")
+tarea saludar(nombre): print("Hola " + nombre)
+funcion suma(a, b): return a + b
+```
+
 ## 4. GreyScript Supercharged: Asincronía
 Nini emula procesos Multihilo (Background Workers) en un juego Single-Thread.
 ```nini

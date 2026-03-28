@@ -61,7 +61,7 @@ tarea espectro_escaneo_completo(host):
             "servicio": servicio,
             "version": version,
             "estado": estado,
-            "lan_ip": lan_ip
+            "lan_ip": lan_ip,
         })
         
         i = i + 1

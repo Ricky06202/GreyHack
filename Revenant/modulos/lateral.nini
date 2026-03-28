@@ -1,162 +1,141 @@
-// modulo lateral.nini - MOVIMIENTO LATERAL v2.0
+// modulo lateral.nini - MOVIMIENTO LATERAL
 
 tarea modulo_lateral_mover:
-    si enjambre.len == 0:
-        error("El enjambre esta vacio.")
-        retornar
-    
     opciones = [
         {"label": "Listar nodos del enjambre", "cmd": "list"},
         {"label": "Cambiar a otro nodo", "cmd": "switch"},
-        {"label": "Escanear red desde pivote", "cmd": "scan"},
-        {"label": "Conectar a nuevo objetivo", "cmd": "connect"},
+        {"label": "Escanear red DESDE pivote", "cmd": "scan"},
+        {"label": "Conectar via SSH/FTP", "cmd": "connect"},
+        {"label": "Conectar via Metaxploit", "cmd": "net"},
     ]
     
     modo = menu_interactivo("MOVIMIENTO LATERAL", opciones)
-    si not modo: retornar
+    si not modo: return
     
-    si modo == "list":
-        lateral_listar_nodos()
-    
-    sino: si modo == "switch":
-        lateral_cambiar_nodo()
-    
-    sino: si modo == "scan":
-        lateral_escanear_desde_pivote()
-    
-    sino: si modo == "connect":
-        lateral_conectar_nuevo()
+    si modo == "list": lateral_listar_nodos()
+    osi modo == "switch": lateral_cambiar_nodo()
+    osi modo == "scan": lateral_escanear_desde_pivote()
+    osi modo == "connect": lateral_conectar_servicio()
+    osi modo == "net": lateral_conectar_metaxploit()
 
 tarea lateral_listar_nodos:
     info("NODOS EN EL ENJAMBRE:")
-    info("===================")
-    
     i = 1
     para nodo en enjambre:
         ip = nodo.key
         sesion = nodo.value
         tipo = typeof(sesion)
-        
-        // Intentar obtener info
-        comp_info = "Unknown"
-        si typeof(sesion) == "shell":
-            comp = sesion.host_computer
-            comp_info = comp.local_ip
-        sino: si typeof(sesion) == "computer":
-            comp_info = sesion.local_ip
-        
-        estado = "<color=#00ff41>ACTIVO</color>"
-        si globals.objetivo_actual == ip:
-            estado = "<color=#ffea00>ACTUAL</color>"
-        
-        info(str(i) + ". " + ip + " (" + tipo + ") " + estado)
+        comp_info = (typeof(sesion) == "shell") >> sesion.host_computer.local_ip |: sesion.local_ip
+        estado = (globals.objetivo_actual == ip) >> "<color=#ffea00>ACTUAL</color>" |: "<color=#00ff41>ACTIVO</color>"
+        info(str(i) + ". " + ip + " (" + tipo + ") " + estado + " | " + comp_info)
         i = i + 1
-    
     pausa_tactica()
 
 tarea lateral_cambiar_nodo:
-    si enjambre.len <= 1:
-        info("Solo hay un nodo en el enjambre.")
-        retornar
+    si enjambre.len <= 1: info("Solo hay un nodo."); return
     
-    info("Selecciona un nodo:")
-    i = 1
+    // Mostrar nodos disponibles
     para nodo en enjambre:
         ip = nodo.key
-        si ip != globals.objetivo_actual:
-            info(str(i) + ". " + ip)
-            i = i + 1
+        si ip != globals.objetivo_actual: info(str(i) + ". " + ip); i = i + 1
     
-    sel = pedir("Nodo > ")
-    sel_int = val(sel)
+    sel = val(pedir("Nodo > "))
+    si sel <= 0: return
     
-    // Encontrar el nodo correcto
-    keys = enjambre.keys
+    // Encontrar nodo seleccionado
     cont = 0
-    para k en keys:
+    para k en enjambre.keys:
         si k != globals.objetivo_actual:
             cont = cont + 1
-            si cont == sel_int:
+            si cont == sel:
                 globals.objetivo_actual = k
                 exito("Cambiado a: " + k)
-                retornar
-    
+                return
     error("Selección inválida.")
 
 tarea lateral_escanear_desde_pivote:
-    info("Escaneando red local desde el objetivo...")
+    info("ESCANEANDO RED DESDE EL NODO...")
     
-    comp = obtener_computadora_objetivo()
-    si not comp:
-        error("No hay sesion activa.")
-        retornar
+    sesion = obtener_shell_nodo()
+    si not sesion: error("No hay shell activa."); return
     
-    // Obtener IP local del objetivo
-    ip_local = comp.local_ip
+    ip_local = obtener_ip_local_nodo(sesion)
+    si not ip_local: error("No se pudo obtener IP local."); return
     
-    // Escanear red local
-    partes = ip_local.split(".")
-    si partes.len < 3:
-        error("No se pudo determinar red local.")
-        retornar
+    info("IP local: " + ip_local)
     
-    red = partes[0] + "." + partes[1] + "." + partes[2] + "."
+    // Obtener router y dispositivos
+    router_nodo = obtener_router_nodo(sesion)
+    dispositivos = (router_nodo) >> dispositivos_red_nodo(sesion)
     
-    info("Escaneando red: " + red + "0/24...")
-    
-    hosts = []
-    para i en rango(1, 255):
-        ip = red + str(i)
-        si ip == ip_local: continuar
-        
-        sh = get_shell
-        si sh.ping(ip) == 1:
-            hosts.push(ip)
-    
-    si hosts.len == 0:
-        info("No se encontraron hosts.")
+    si dispositivos y dispositivos.len > 0:
+        exito("Dispositivos: " + str(dispositivos.len))
+        para ip en dispositivos: info("  - " + ip + ((ip == ip_local) >> " (TU NODO)" |: ""))
     sino:
-        info("Hosts encontrados: " + str(hosts.len))
-        para h en hosts:
-            info("  - " + h)
+        // Fallback: escaneo manual
+        red = ip_local.split(".")[0:3].join(".") + "."
+        info("Escaneando: " + red + "0/24...")
+        hosts = []
+        para i en rango(1, 255):
+            ip = red + str(i)
+            si ip != ip_local y sesion.ping(ip) == 1: hosts.push(ip)
+        
+        si hosts.len == 0: info("No se encontraron hosts.")
+        sino: para h en hosts: info("  - " + h)
 
-tarea lateral_conectar_nuevo:
-    // Conectar a un nuevo objetivo usando el nodo actual como pivote
-    nuevo_objetivo = pedir("IP del nuevo objetivo: ")
-    si nuevo_objetivo == "": retornar
+tarea lateral_conectar_servicio:
+    tipo = (pedir("Tipo (ssh/ftp): ")).lower()
+    si tipo != "ssh" y tipo != "ftp": error("Usa 'ssh' o 'ftp'"); return
     
-    info("Conectando a " + nuevo_objetivo + "...")
+    ip = pedir("IP: "); usuario = pedir("Usuario: "); pass = pedir("Pass: ")
+    si ip == "" o usuario == "": return
     
-    // Usar metaxploit para conectar
-    metax = include_lib("/lib/metaxploit.so")
-    si not metax:
-        error("Metaxploit no disponible.")
-        retornar
+    info("Conectando a " + ip + "...")
+    sesion = (tipo == "ssh") >> conectar_ssh(ip, usuario, pass) |: conectar_ftp(ip, usuario, pass)
     
-    // Intentar diferentes puertos
-    puertos = [22, 80, 443, 21, 23, 25, 3306, 3389, 8080]
-    
-    para p en puertos:
-        info("Intentando puerto " + str(p) + "...")
-        sesion = metax.net_use(nuevo_objetivo, p)
-        si sesion:
-            exito("Conexión establecida por puerto " + str(p))
-            enjambre[nuevo_objetivo] = sesion
-            globals.objetivo_actual = nuevo_objetivo
-            retornar
-    
-    error("No se pudo establecer conexión.")
+    si sesion:
+        enjambre[ip] = sesion
+        globals.objetivo_actual = ip
+        exito("Conectado: " + usuario + "@" + ip)
+        modulo_espectro_recon()
+    sino: error("No se pudo conectar.")
 
-tarea obtener_computadora_objetivo:
-    si globals.objetivo_actual == null o globals.objetivo_actual == nulo:
-        retornar get_shell.host_computer
+tarea lateral_conectar_metaxploit:
+    ip = pedir("IP objetivo: ")
+    si ip == "": return
     
-    si globals.objetivo_actual == "localhost":
-        retornar get_shell.host_computer
+    puertos = puertos_dispositivo(ip)
     
+    si not puertos o puertos.len == 0:
+        info("Sin forwarding. Intentando directo...")
+        sesion = conectar_net(ip, 22)
+        si sesion: enjambre[ip] = sesion; globals.objetivo_actual = ip; exito("Conexión directa!"); modulo_espectro_recon()
+        sino: error("No se pudo.")
+        return
+    
+    // Mostrar puertos
+    info("Puertos: " + str(puertos.len))
+    para p en puertos: info("  [" + str(p.port_number) + "] " + info_puerto(p))
+    
+    sel = val(pedir("Puerto a explotar: "))
+    si sel <= 0: return
+    
+    sesion = conectar_net(ip, sel)
+    si sesion:
+        enjambre[ip] = sesion
+        globals.objetivo_actual = ip
+        exito("ACCESO OBTENIDO!")
+        modulo_espectro_recon()
+    sino: error("Explotación fallida.")
+
+tarea obtener_shell_nodo:
+    si not globals.objetivo_actual o globals.objetivo_actual == "localhost": return get_shell
     si enjambre.tiene(globals.objetivo_actual):
         sesion = enjambre[globals.objetivo_actual]
-        si typeof(sesion) == "shell": retornar sesion.host_computer
-        sino: si typeof(sesion) == "computer": retornar sesion
-    
-    retornar null
+        return (typeof(sesion) == "shell") >> sesion |: null
+    return null
+
+tarea obtener_computadora_objetivo:
+    sesion = obtener_shell_nodo()
+    si sesion: return sesion.host_computer
+    return get_shell.host_computer

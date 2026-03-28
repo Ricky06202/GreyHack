@@ -1,165 +1,74 @@
-// modulo persistencia.nini - PERSISTENCIA Y BACKDOORS v2.0
+// modulo persistencia.nini - PERSISTENCIA
 
 tarea modulo_persistencia_configurar:
-    si globals.objetivo_actual == null:
-        error("No hay objetivo seleccionado.")
-        retornar
+    si not globals.objetivo_actual: error("No hay objetivo."); return
     
     opciones = [
-        {"label": "Instalar backdoor (Metaxploit)", "cmd": "backdoor"},
-        {"label": "Configurar cron job", "cmd": "cron"},
-        {"label": "Ver persistencias activas", "cmd": "list"},
+        {"label": "Backdoor (Metaxploit)", "cmd": "backdoor"},
+        {"label": "Cron job", "cmd": "cron"},
+        {"label": "Ver persistencias", "cmd": "list"},
     ]
     
-    modo = menu_interactivo("CONFIGURADOR DE PERSISTENCIA", opciones)
-    si not modo: retornar
+    modo = menu_interactivo("PERSISTENCIA", opciones)
+    si not modo: return
     
-    si modo == "backdoor":
-        persistencia_instalar_backdoor()
-    sino: si modo == "cron":
-        persistencia_cron()
-    sino: si modo == "list":
-        persistencia_ver()
+    si modo == "backdoor": persistencia_instalar_backdoor()
+    osi modo == "cron": persistencia_cron()
+    osi modo == "list": persistencia_ver()
 
 tarea persistencia_instalar_backdoor:
-    si globals.objetivo_actual == null:
-        error("No hay objetivo.")
-        retornar
-    
+    si not globals.objetivo_actual: error("No hay objetivo."); return
     comp = obtener_computadora_objetivo()
-    si not comp:
-        error("No hay sesion activa.")
-        retornar
+    si not comp: error("No hay sesión."); return
     
-    // Verificar permisos de escritura
     lib_folder = comp.File("/lib")
-    si not lib_folder:
-        error("No se pudo acceder a /lib")
-        retornar
+    si not lib_folder o not lib_folder.has_permission("w"): error("Sin permisos root."); return
     
-    si not lib_folder.has_permission("w"):
-        error("Sin permisos de escritura en /lib")
-        info("Requiere privilegios root.")
-        retornar
+    nombre = "revenant_daemon"
+    ruta = "/lib/systemd/system/" + nombre + ".service"
     
-    // Crear archivo de backdoor
-    nombre_backdoor = "revenant_daemon"
-    ruta_backdoor = "/lib/systemd/system/" + nombre_backdoor + ".service"
+    contenido = "[Unit]\nDescription=System Service\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=/bin/sh -c 'while true; do wait 60; done'\nRestart=always\nUser=root\n\n[Install]\nWantedBy=multi-user.target"
     
-    contenido = "[Unit]
-Description=System Service
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/bin/sh -c 'while true; do wait 60; done'
-Restart=always
-User=root
-
-[Install]
-WantedBy=multi-user.target"
-    
-    info("Creando servicio backdoor...")
-    
-    // Intentar crear el archivo
-    comp.touch("/lib/systemd/system/", nombre_backdoor + ".service")
-    archivo = comp.File(ruta_backdoor)
+    comp.touch("/lib/systemd/system/", nombre + ".service")
+    archivo = comp.File(ruta)
     
     si archivo:
         archivo.set_content(contenido)
-        exito("Backdoor instalado: " + ruta_backdoor)
-        info("Para activar: systemctl enable " + nombre_backdoor)
-    sino:
-        error("No se pudo crear el archivo.")
+        exito("Backdoor instalado: " + ruta)
+    sino: error("No se pudo crear.")
 
 tarea persistencia_cron:
-    si globals.objetivo_actual == null:
-        error("No hay objetivo.")
-        retornar
-    
+    si not globals.objetivo_actual: error("No hay objetivo."); return
     comp = obtener_computadora_objetivo()
-    si not comp:
-        error("No hay sesion activa.")
-        retornar
+    si not comp: error("No hay sesión."); return
     
-    comando = pedir("Comando a ejecutar: ")
-    si comando == "": retornar
+    cmd = pedir("Comando: ")
+    si cmd == "": return
     
-    // Verificar permisos en /etc
-    cron_file = comp.File("/etc/crontab")
-    si not cron_file:
-        error("No se pudo acceder a /etc/crontab")
-        retornar
+    cron = comp.File("/etc/crontab")
+    si not cron o not cron.has_permission("w"): error("Sin permisos."); return
     
-    si not cron_file.has_permission("w"):
-        error("Sin permisos de escritura en crontab")
-        info("Requiere root.")
-        retornar
-    
-    // Agregar al crontab
-    contenido_actual = cron_file.get_content
-    nueva_linea = "@reboot " + comando + char(10)
-    
-    cron_file.set_content(contenido_actual + nueva_linea)
+    cron.set_content(cron.get_content + char(10) + "@reboot " + cmd)
     exito("Cron job agregado.")
 
 tarea persistencia_ver:
-    info("Persistencia configurada en el objetivo.")
-    info("Usa 'vault' para ver credenciales guardadas.")
-
-tarea modulo_persistencia_keylogger:
-    si globals.objetivo_actual == null:
-        error("No hay objetivo seleccionado.")
-        retornar
-    
-    info("Keylogger no disponible en GreyHack.")
-    info("Usa otras tecnicas de persistencia.")
+    info("Persistencia activa en el objetivo.")
+    info("Usa 'vault' para ver credenciales.")
 
 tarea modulo_botnet_persistir:
-    si enjambre.len == 0:
-        error("El enjambre esta vacio.")
-        return
-        
-    info("Inyectando Daemons en " + enjambre.len + " nodos...")
+    si enjambre.len == 0: error("Enjambre vacío."); return
+    
+    info("Instalando en " + str(enjambre.len) + " nodos...")
     
     para nodo en enjambre:
-        ip_nodo = nodo.key
+        ip = nodo.key
         sesion = nodo.value
+        computer_node = (typeof(sesion) == "shell") >> sesion.host_computer |: sesion
         
-        computer_node = null
-        si typeof(sesion) == "shell":
-            computer_node = sesion.host_computer
-        osi typeof(sesion) == "computer":
-            computer_node = sesion
-            
-        si computer_node:
-            info("Configurando persistencia en " + ip_nodo)
-            
-            carpeta_init = computer_node.File("/lib/")
-                
-            si carpeta_init and carpeta_init.has_permission("w"):
-                exito("Root confirmado. Instalando en " + ip_nodo)
-                
-                computer_node.touch("/lib/systemd/system/", "nrpe_revenant.service")
-                
-                archivo_fake = computer_node.File("/lib/systemd/system/nrpe_revenant.service")
-                si archivo_fake:
-                    archivo_fake.set_content("[Unit]\nDescription=Revenant\n[Service]\nExecStart=/bin/sh")
-                
-                exito("[OK] Troyano instalado en " + ip_nodo)
-            sino:
-                error("Sin permisos en " + ip_nodo)
-
-tarea obtener_computadora_objetivo:
-    si globals.objetivo_actual == null o globals.objetivo_actual == nulo:
-        retornar get_shell.host_computer
-    
-    si globals.objetivo_actual == "localhost":
-        retornar get_shell.host_computer
-    
-    si enjambre.tiene(globals.objetivo_actual):
-        sesion = enjambre[globals.objetivo_actual]
-        si typeof(sesion) == "shell": retornar sesion.host_computer
-        sino: si typeof(sesion) == "computer": retornar sesion
-    
-    retornar null
+        si computer_node y computer_node.has_permission("w"):
+            computer_node.touch("/lib/systemd/system/", "revenant.service")
+            archivo = computer_node.File("/lib/systemd/system/revenant.service")
+            si archivo:
+                archivo.set_content("[Unit]\nDescription=Revenant\n[Service]\nExecStart=/bin/sh")
+                exito("Instalado en " + ip)
+        sino: error("Sin permisos en " + ip)
