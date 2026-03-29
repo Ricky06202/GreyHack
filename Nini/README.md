@@ -30,16 +30,24 @@ sino:
 ```
 
 ### Bucles e Iteradores (Sintaxis Dual)
-Nini soporta tanto la sintaxis clásica como una más descriptiva:
+Nini soporta múltiples sintaxis para bucles:
 
 ```nini
-// Sintaxis Descriptiva (Recomendada para Revenant)
+// Sintaxis Descriptiva
 recorrer red_local como ip:
     escanear(ip)
 
-// Sintaxis Clásica
+// Sintaxis Clásica con "para" + "en"
 para ip en red_local:
     escanear(ip)
+
+// Sintaxis con "for" + "in" (MiniScript compatible)
+for ip in red_local:
+    escanear(ip)
+
+// One-liners de bucle (solo para bucles simples)
+para x en coleccion: info(x)
+for x in coleccion: info(x)
 
 para intento en rango(0, 10):
     info("Fuzzing " + intento)
@@ -115,6 +123,16 @@ else
     exts = [".conf"]
 end if
 ```
+
+> **⚠️ Limitación:** Los ternarios NO pueden usarse dentro de funciones como `info()`, `print()`, etc. Usa variables temporales:
+> ```nini
+> // ❌ NO Funciona
+> info("Resultado: " + (x > 5 >> "mayor" |: "menor"))
+>
+> // ✅ Correcto
+> resultado = x > 5 >> "mayor" |: "menor"
+> info("Resultado: " + resultado)
+> ```
 
 **Tareas/Funciones One-Liner:** Define funciones rápidas en una sola línea.
 ```nini

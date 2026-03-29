@@ -55,5 +55,28 @@ Al ejecutar `intel` (o `i`), el framework buscará en todos los usuarios:
 `Revenant > inject` copiará el binario actual a `/bin` o `/tmp` del target, permitiéndote ejecutar el framework remotamente sin subir archivos manualmente.
 
 ---
+
+## 📝 Sintaxis Nini
+Revenant está escrito en **Nini**, un lenguaje que se transpila a MiniScript. Sintaxis rápida:
+
+| Nini | MiniScript | Nota |
+|------|------------|------|
+| `si cond:` | `if cond then` | One-liner |
+| `osi cond:` | `else if cond then` | |
+| `sino:` | `else` | |
+| `para x en col:` | `for x in col` | `for x in col:` también funciona |
+| `recorrer col como x:` | `for x in col` | |
+| `retornar` | `return` | |
+| `mientras cond:` | `while cond` | |
+| `intentar:` / `excepto:` | try/catch | |
+| `>>` | Pipeline | `a >> b()` = `b(a)` |
+| `x >> val1 \|: val2` | Ternario | Genera `if/else` |
+
+**Ternarios:** `cond >> valor_si_verdadero |: valor_si_falso`
+
+**One-liners:** `si cond: accion` / `para x en col: accion`
+
+---
+
 **"No somos errores en el sistema. Somos el sistema recuperando su memoria."**
 *Desarrollado sobre Nini Engine.*
