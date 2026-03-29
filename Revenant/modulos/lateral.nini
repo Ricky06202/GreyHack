@@ -76,7 +76,7 @@ tarea lateral_escanear_desde_pivote:
             info("  - " + ip + nodo_tag)
     sino:
         // Fallback: escaneo manual
-        red = ip_local.split(".")[0:3].join(".") + "."
+        red = ip_local.split("\.")[0:3].join("\.") + "."
         info("Escaneando: " + red + "0/24...")
         hosts = []
         para i en rango(1, 255):

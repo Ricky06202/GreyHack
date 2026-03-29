@@ -268,8 +268,8 @@ tarea es_ip_local(ip):
     comp = get_shell.host_computer
     local_ip = comp.local_ip
     
-    partes_local = local_ip.split(".")
-    partes_ip = ip.split(".")
+    partes_local = local_ip.split("\.")
+    partes_ip = ip.split("\.")
     
     si partes_local.len < 3 o partes_ip.len < 3: retornar falso
     
@@ -1151,7 +1151,7 @@ tarea lateral_escanear_desde_pivote:
             info("  - " + ip + nodo_tag)
     sino:
         // Fallback: escaneo manual
-        red = ip_local.split(".")[0:3].join(".") + "."
+        red = ip_local.split("\.")[0:3].join("\.") + "."
         info("Escaneando: " + red + "0/24...")
         hosts = []
         para i en rango(1, 255):
