@@ -111,20 +111,20 @@ tarea iniciar_repl:
 tarea mostrar_ayuda:
     columnas = ["Comando", "Alias", "Que hace"]
     filas = [
-        ["objetivo", "o", "Fija un objetivo y escanea automatico"],
-        ["modo", "", "Cambia entre LOCAL o REMOTO"],
-        ["recon", "r", "Escanea puertos y servicios"],
-        ["asalto", "a", "Explota vulnerabilidades y gana acceso"],
-        ["vault", "v", "Muestra credenciales guardadas"],
-        ["intel", "i", "Extrae info del objetivo (passwd, bancos, etc)"],
+        ["objetivo", "o", "Fija un objetivo"],
+        ["modo", "m", "LOCAL/REMOTO"],
+        ["recon", "r", "Escanea puertos"],
+        ["asalto", "a", "Explotar y ganar acceso"],
+        ["vault", "v", "Ver credenciales"],
+        ["intel", "i", "Extraer info del objetivo"],
         ["sesiones", "ses", "Ver nodos comprometidos"],
-        ["lateral", "lat", "Moverse a otros equipos de la red"],
+        ["lateral", "lat", "Moverse en la red"],
         ["persist", "pe", "Instalar backdoor"],
-        ["limpiar", "c", "Borrar logs e huellas"],
+        ["limpiar", "c", "Borrar logs"],
         ["ayuda", "h", "Esta ayuda"],
         ["salir", "x", "Salir del framework"],
     ]
-    dibujar_tabla_simple("AYUDA - COMANDOS UTILES", columnas, filas)
+    print(construir_tabla(columnas, filas))
 
 tarea cambiar_modo:
     si globals.modo == "REMOTO":
@@ -449,7 +449,6 @@ tarea obtener_router_objetivo(ip):
 // modulo ui.nini - INTERFAZ
 
 tarea mostrar_banner_revenant:
-    clear_screen
     print("<color=#00e5ff> [ ###################################################### ] </color>")
     print("<color=#00e5ff> [ # ]                                              [ # ] </color>")
     print("<color=#ffffff> [ # ]          R  E  V  E  N  A  N  T              [ # ] </color>")
