@@ -47,12 +47,8 @@ tarea iniciar_repl:
                     exito("Objetivo: " + globals.objetivo_actual)
                     modulo_espectro_recon()
 
-        osi entrada == "menu" or entrada == "m":
-            mostrar_menu_principal()
-
         osi entrada == "modo" or entrada == "m":
             cambiar_modo()
-            pausa_tactica()
 
         osi entrada == "recon" or entrada == "r":
             modulo_espectro_recon()
