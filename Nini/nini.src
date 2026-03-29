@@ -119,6 +119,9 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	// TEMPORAL: Multilinea DESACTIVADA, usar una sola línea
 	endsWithColon = (trimmed.len > 0 and trimmed[trimmed.len-1] == ":")
 	
+	// PRE-PROCESAMIENTO RAPIDO (antes de todo)
+	if (trimmed.indexOf("rango(") != null) then trimmed = trimmed.replace("rango", "range")
+	
 	// 0. PARSER PARA/RECORRER/FOR (handles both start-of-line and after ;)
 	// Check for for/recorrer/para pattern anywhere in the line
 	forStartIdx = 0
@@ -180,7 +183,6 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	trimmed = preprocessNiniMacros(trimmed)
 	
 	// PRE-PROCESAMIENTO GLOBAL (Atomic replacements)
-	if (trimmed.indexOf("rango(") != null) then trimmed = trimmed.replace("rango", "range")
 	// Convert "para x en collection" to "for x in collection" (for inline usage)
 	if (trimmed.indexOf("para ") != null) then
 		trimmed = trimmed.replace("para ", "for ")
@@ -236,8 +238,9 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if (trimmed.indexOf("pedir(") != null) then trimmed = trimmed.replace("pedir", "__nini_pedir")
 	if (trimmed.indexOf("confirmar(") != null) then trimmed = trimmed.replace("confirmar", "user_confirm")
 	if (trimmed.indexOf("construir_tabla(") != null) then trimmed = trimmed.replace("construir_tabla", "__nini_tabla")
-	
-	if (trimmed.indexOf("explotar(") != null) then trimmed = trimmed.replace("explotar", "__nini_explotar")
+
+	// Reemplazar funciones solo si no tienen el prefijo ya
+	if (trimmed.indexOf("__nini_explotar") == null and trimmed.indexOf("explotar(") != null) then trimmed = trimmed.replace("explotar", "__nini_explotar")
 	if (trimmed.indexOf("inyectar(") != null) then trimmed = trimmed.replace("inyectar", "__nini_fuzz_inyectar")
 	if (trimmed.indexOf("obtener_shell(") != null) then trimmed = trimmed.replace("obtener_shell", "__nini_obtener_shell")
 	if (trimmed.indexOf("crackear_diccionario(") != null) then trimmed = trimmed.replace("crackear_diccionario", "__nini_crack_dic")
@@ -659,7 +662,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		if args.len > 1 then req = args[1].trim else req = """"""
 		return "__nini_fuzz_inyectar(" + lib + ", " + req + ")"
 	end if
-	if trimmed.indexOf("explotar(") >= 0 then
+	if trimmed.indexOf("__nini_explotar") == null and trimmed.indexOf("explotar(") >= 0 then
 		niniState.requiresExploiter = true
 		return trimmed.replace("explotar", "__nini_explotar")
 	end if

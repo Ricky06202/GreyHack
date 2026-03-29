@@ -25,6 +25,19 @@ tarea dibujar_hud_tactico:
     
     print("OBJ: " + estado_obj + " | MODO: " + modo_color + " | SES: " + estado_enjambre)
     dibujar_separador()
+    
+    // Mostrar tabla de puertos si hay scan reciente
+    si globals.ultimo_scan.len > 0:
+        print("<color=#00e5ff>[#] PUERTOS ESCANEADOS:</color>")
+        columnas = ["ID", "Puerto", "Estado", "Servicio", "Version"]
+        filas = []
+        para r in globals.ultimo_scan:
+            estado_col = r.estado
+            si r.estado == "closed": estado_col = "<color=#ff3131>" + r.estado + "</color>"
+            si r.estado == "open": estado_col = "<color=#00ff41>" + r.estado + "</color>"
+            filas.push([r.id, r.puerto, estado_col, r.servicio, r.version])
+        print(construir_tabla(columnas, filas))
+        dibujar_separador()
 
 tarea dibujar_ventana(titulo, contenido):
     dibujar_separador()

@@ -37,7 +37,6 @@ tarea iniciar_repl:
             prompt_objetivo()
             si globals.objetivo_actual:
                 modulo_espectro_recon()
-                pausa_tactica()
             
         osi entrada.indexOf("objetivo ") == 0 or entrada.indexOf("o ") == 0:
             partes = entrada.split(" ")
@@ -47,7 +46,6 @@ tarea iniciar_repl:
                     globals.objetivo_actual = ip
                     exito("Objetivo: " + globals.objetivo_actual)
                     modulo_espectro_recon()
-            pausa_tactica()
 
         osi entrada == "menu" or entrada == "m":
             mostrar_menu_principal()
@@ -58,7 +56,6 @@ tarea iniciar_repl:
 
         osi entrada == "recon" or entrada == "r":
             modulo_espectro_recon()
-            pausa_tactica()
             
         osi entrada == "asalto" or entrada == "a":
             modulo_asalto_root()
