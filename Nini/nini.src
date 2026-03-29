@@ -520,33 +520,40 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	end if
 
 	// 3. ESTRUCTURAS DE CONTROL SINTAXIS NATURAL
-	// 3. ESTRUCTURAS DE CONTROL SINTAXIS NATURAL
 	if cleanS.indexOf("si ") == 0 and cleanS.indexOf(":") != null then
 		colIdx = cleanS.indexOf(":")
 		cond = trimmed[3 : colIdx].trim
 		accion = trimmed[colIdx + 1 :].trim
-		if accion.len == 0 then
+		// Check if action is only whitespace (means it's a block, not one-liner)
+		accionIsOnlyWhitespace = true
+		if accion.len > 0 then
+			for ci in range(0, accion.len - 1)
+				if accion[ci] != " " and accion[ci] != char(9) then
+					accionIsOnlyWhitespace = false
+					break
+				end if
+			end for
+		end if
+		if accion.len == 0 or accionIsOnlyWhitespace then
+			// Block form: "si cond:" with content on following lines
 			blockStack.push({"bType": "if", "indent": currentIndent})
 			return "if (" + cond + ") then"
 		else
+			// One-liner: "si cond: action"
 			blockStack.push({"bType": "if_oneline", "indent": currentIndent})
 			// Process action to handle nested si statements
 			processedAccion = accion
 			// Handle "si cond: action" patterns in the action
 			while processedAccion.indexOf("si ") != null
 				siIdx = processedAccion.indexOf("si ")
-				// Find the : after si (relative to siIdx)
 				colonRelative = processedAccion[siIdx:].indexOf(":")
 				if colonRelative != null then
-					// colonRelative is relative to siIdx, so absolute position is siIdx + colonRelative
 					absColonIdx = siIdx + colonRelative
-					// Replace "si cond:" with "if (cond) then"
 					processedAccion = processedAccion[:siIdx] + "if (" + processedAccion[siIdx + 3 : absColonIdx] + ") then" + processedAccion[absColonIdx + 1:]
 				else
 					break
 				end if
 			end while
-			// Handle "sino:" patterns
 			processedAccion = processedAccion.replace("sino:", "else")
 			return "if (" + cond + ") then; " + processedAccion
 		end if
@@ -690,6 +697,23 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 			end if
 			return funName + " = function" + args + "; " + afterColon + "; end function"
 		end if
+	end if
+	
+	// END FOR / END IF / END WHILE - pasar sin generar output (blockStack lo maneja)
+	if trimmed == "end for" or trimmed == "end if" or trimmed == "end while" then
+		// Sacar el bloque correspondiente del blockStack
+		if blockStack.len > 0 then
+			blockStack.pop
+		end if
+		return ""  // No generar output - el blockStack ya lo generó
+	end if
+	
+	// END FUNCTION - generar output y sacar del blockStack solo si es function
+	if trimmed == "end function" then
+		if blockStack.len > 0 and blockStack[-1].bType == "function" then
+			blockStack.pop
+		end if
+		return "end function"
 	end if
 	
 	if (trimmed.indexOf("tarea ") == 0 or trimmed.indexOf("funcion ") == 0) and endsWithColon then
@@ -1138,34 +1162,53 @@ headers.push("end function")
 
 if niniState.requiresTable then
 	headers.push("__nini_tabla = function(headers, rows)")
+	headers.push("  // Strip tags para calcular anchos visibles")
+	headers.push("  strip = function(s)")
+	headers.push("      res = " + char(34) + char(34))
+	headers.push("      in_tag = false")
+	headers.push("      if s.len == 0 then return res")
+	headers.push("      for i in range(0, s.len - 1)")
+	headers.push("          c = s[i]")
+	headers.push("          if c == " + char(34) + "<" + char(34) + " then")
+	headers.push("              in_tag = true")
+	headers.push("          else")
+	headers.push("              if c == " + char(34) + ">" + char(34) + " then")
+	headers.push("                  in_tag = false")
+	headers.push("              else")
+	headers.push("                  if not in_tag then res = res + c")
+	headers.push("              end if")
+	headers.push("          end if")
+	headers.push("      end for")
+	headers.push("      return res")
+	headers.push("  end function")
 	headers.push("  // Calcular anchos de columna")
 	headers.push("  widths = []")
-	headers.push("  for h in headers")
-	headers.push("      widths.push(str(h).len)")
+	headers.push("  for i in range(0, headers.len - 1)")
+	headers.push("      widths.push(strip(str(headers[i])).len)")
 	headers.push("  end for")
 	headers.push("  for row in rows")
 	headers.push("      for i in range(0, row.len - 1)")
 	headers.push("          if i >= widths.len then continue")
-	headers.push("          v = str(row[i])")
-	headers.push("          if v.len > widths[i] then widths[i] = v.len")
+	headers.push("          w = strip(str(row[i])).len")
+	headers.push("          if w > widths[i] then widths[i] = w")
 	headers.push("      end for")
 	headers.push("  end for")
 	headers.push("  // Funcion de padding")
 	headers.push("  pad = function(s, w)")
 	headers.push("      result = str(s)")
-	headers.push("      while result.len < w")
+	headers.push("      while strip(result).len < w")
 	headers.push("          result = result + " + char(34) + " " + char(34))
 	headers.push("      end while")
 	headers.push("      return result")
 	headers.push("  end function")
-	headers.push("  // Imprimir header")
+	headers.push("  // Imprimir header con color")
 	headers.push("  line = " + char(34) + "<color=#00e5ff>" + char(34))
 	headers.push("  for i in range(0, headers.len - 1)")
 	headers.push("      if i > 0 then line = line + " + char(34) + " | " + char(34))
-	headers.push("      line = line + pad(headers[i], widths[i])")
+	headers.push("      line = line + pad(str(headers[i]), widths[i])")
 	headers.push("  end for")
 	headers.push("  print(line + " + char(34) + "</color>" + char(34) + ")")
-	headers.push("  // Imprimir separador")
+	headers.push("  // Imprimir separador elegante")
 	headers.push("  sep = " + char(34) + char(34))
 	headers.push("  for i in range(0, widths.len - 1)")
 	headers.push("      if i > 0 then sep = sep + " + char(34) + "-+-" + char(34))
@@ -1180,7 +1223,7 @@ if niniState.requiresTable then
 	headers.push("      for i in range(0, widths.len - 1)")
 	headers.push("          if i > 0 then line = line + " + char(34) + " | " + char(34))
 	headers.push("          if i < row.len then")
-	headers.push("              line = line + pad(row[i], widths[i])")
+	headers.push("              line = line + pad(str(row[i]), widths[i])")
 	headers.push("          else")
 	headers.push("              line = line + pad(" + char(34) + char(34) + ", widths[i])")
 	headers.push("          end if")

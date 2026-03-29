@@ -224,39 +224,6 @@ tarea espectro_escaneo_completo(host):
     
     retornar resultados
 
-tarea espectro_mostrar_tabla(resultados):
-    print("")
-    info("RESULTADOS DEL ESCANEO:")
-    print("")
-    
-    // Encabezado
-    print("  ID  Puerto  Estado  Servicio            Version  LAN IP")
-    print("  --- ------  ------  ------------------ -------- ---------------")
-    
-    para r en resultados:
-        id_str = str(r.id)
-        puerto_str = str(r.puerto)
-        estado_str = r.estado
-        servicio_str = r.servicio
-        version_str = r.version
-        lan_str = r.lan_ip
-        
-        // Alinear
-        id_str = id_str + " " * (3 - id_str.len)
-        puerto_str = puerto_str + " " * (6 - puerto_str.len)
-        estado_str = estado_str + " " * (6 - estado_str.len)
-        servicio_str = servicio_str + " " * (18 - servicio_str.len)
-        version_str = version_str + " " * (8 - version_str.len)
-        
-        // Color segun estado
-        color_estado = ""
-        si estado_str == "closed":
-            color_estado = "<color=#ff3131>"
-        
-        print("  " + id_str + "  " + puerto_str + "  " + color_estado + estado_str + "</color>  " + servicio_str + "  " + version_str + "  " + lan_str)
-    
-    print("")
-
 tarea modulo_espectro_recon:
     si globals.objetivo_actual == null:
         error("No hay objetivo. Usa 'objetivo <ip>'")
@@ -270,7 +237,20 @@ tarea modulo_espectro_recon:
     
     si resultados:
         globals.ultimo_scan = resultados
-        espectro_mostrar_tabla(resultados)
+        
+        // Mostrar tabla con construir_tabla
+        print("")
+        info("RESULTADOS DEL ESCANEO:")
+        print("")
+        columnas = ["ID", "Puerto", "Estado", "Servicio", "Version", "LAN IP"]
+        filas = []
+        para r en resultados:
+            estado_col = r.estado
+            si r.estado == "closed": estado_col = "<color=#ff3131>" + r.estado + "</color>"
+            si r.estado == "open": estado_col = "<color=#00ff41>" + r.estado + "</color>"
+            filas.push([r.id, r.puerto, estado_col, r.servicio, r.version, r.lan_ip])
+        print(construir_tabla(columnas, filas))
+        print("")
         
         es_local = es_ip_local(host)
         modo_actual = "REMOTO"
