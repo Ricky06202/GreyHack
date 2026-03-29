@@ -1561,10 +1561,10 @@ if (not globals.objetivo_actual or globals.objetivo_actual == "localhost") then;
 end if
 if (enjambre.hasIndex(globals.objetivo_actual)) then
 sesion = enjambre[globals.objetivo_actual]
-if return (typeof(sesion) == "shell") then
-    sesion
+if (typeof(sesion) == "shell") then
+    return sesion
 else
-    null
+    return null
 end if
 end if
 return null
