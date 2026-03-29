@@ -119,8 +119,18 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	// TEMPORAL: Multilinea DESACTIVADA, usar una sola línea
 	endsWithColon = (trimmed.len > 0 and trimmed[trimmed.len-1] == ":")
 	
-	// 0. PARSER PARA/RECORRER (antes del preprocesamiento)
-	if (trimmed.indexOf("recorrer ") == 0 or trimmed.indexOf("para ") == 0) and (trimmed.indexOf(" como ") != null or trimmed.indexOf(" en ") != null or trimmed.indexOf(" in ") != null) then
+	// 0. PARSER PARA/RECORRER/FOR (handles both start-of-line and after ;)
+	// Check for for/recorrer/para pattern anywhere in the line
+	forStartIdx = 0
+	if trimmed.indexOf("for ") != 0 and trimmed.indexOf("; for ") != null then
+		forStartIdx = trimmed.indexOf("; for ") + 2
+	else if trimmed.indexOf("for ") == 0 or trimmed.indexOf("para ") == 0 or trimmed.indexOf("recorrer ") == 0 then
+		forStartIdx = 0
+	else
+		forStartIdx = null
+	end if
+	
+	if forStartIdx != null and (trimmed.indexOf(" como ") != null or trimmed.indexOf(" en ") != null or trimmed.indexOf(" in ") != null) then
 		middle = trimmed.indexOf(" como ")
 		if middle == null then middle = trimmed.indexOf(" en ")
 		if middle == null then middle = trimmed.indexOf(" in ")
@@ -128,11 +138,17 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		sepLen = 6 // " como " or " en "
 		isRecorrer = (trimmed.indexOf("recorrer ") == 0)
 		if trimmed.indexOf("para ") == 0 then; keywordLen = 5; sepLen = 4; end if
+		if trimmed.indexOf("for ") == 0 then; keywordLen = 4; sepLen = 4; end if
 		if middle != null and trimmed[middle:].indexOf(" in ") == 0 then sepLen = 3 end if
 		
 		// Check if there's action after colon (one-liner)
 		colonIdx = trimmed.indexOf(":")
+		actionAfterColon = ""
 		if colonIdx != null and colonIdx > middle then
+			actionAfterColon = trimmed[colonIdx + 1:].trim
+		end if
+		
+		if colonIdx != null and colonIdx > middle and actionAfterColon.len > 0 then
 			// One-liner: "para item en collection: action"
 			if isRecorrer then
 				collection = trimmed[keywordLen : middle].trim
@@ -141,7 +157,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 				item = trimmed[keywordLen : middle].trim
 				collection = trimmed[middle + sepLen : colonIdx].trim
 			end if
-			action = trimmed[colonIdx + 1:].trim
+			action = actionAfterColon
 			// Process action through parseCommand to handle nested structures
 			processedAction = parseCommand(lineNum, action, currentIndent + 4)
 			// Return complete for block
@@ -165,6 +181,33 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	
 	// PRE-PROCESAMIENTO GLOBAL (Atomic replacements)
 	if (trimmed.indexOf("rango(") != null) then trimmed = trimmed.replace("rango", "range")
+	// Convert "para x en collection" to "for x in collection" (for inline usage)
+	if (trimmed.indexOf("para ") != null) then
+		trimmed = trimmed.replace("para ", "for ")
+	end if
+	if (trimmed.indexOf(" en ") != null) then
+		trimmed = trimmed.replace(" en ", " in ")
+	end if
+	// Handle "something; for x in collection: action" - split into lines
+	// This handles cases like "else; for h in hosts: info(...)"
+	semiIdx = trimmed.indexOf("; ")
+	if semiIdx != null then
+		beforeSemi = trimmed[:semiIdx].trim
+		afterSemi = trimmed[semiIdx + 2:].trim
+		// Check if afterSemi starts with "for ... in ... : action"
+		forIdx = afterSemi.indexOf("for ")
+		inIdx = afterSemi.indexOf(" in ")
+		colonIdx = afterSemi.indexOf(":")
+		if forIdx == 0 and inIdx != null and colonIdx != null and colonIdx > inIdx then
+			varName = afterSemi[4 : inIdx].trim
+			collection = afterSemi[inIdx + 4 : colonIdx].trim
+			action = afterSemi[colonIdx + 1 :].trim
+			if action.len > 0 then
+				// Return multiple statements
+				trimmed = beforeSemi + "; for " + varName + " in " + collection + char(10) + "    " + action + char(10) + "end for"
+			end if
+		end if
+	end if
 	trimmed = trimmed.replace("verdadero", "true")
 	trimmed = trimmed.replace("verdad", "true")
 	trimmed = trimmed.replace("falso", "false")
@@ -264,10 +307,13 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	end if
 
 	// 2. PIPELINES + TERNARIO COMBINADO
-	cleanS = ""; inQ = false; for char_idx in range(0, trimmed.len - 1)
-		c = trimmed[char_idx]; if c == char(34) then inQ = not inQ
-		if inQ then cleanS = cleanS + "_" else cleanS = cleanS + c
-	end for
+	cleanS = ""; inQ = false
+	if trimmed.len > 0 then
+		for char_idx in range(0, trimmed.len - 1)
+			c = trimmed[char_idx]; if c == char(34) then inQ = not inQ
+			if inQ then cleanS = cleanS + "_" else cleanS = cleanS + c
+		end for
+	end if
 	
 	// 2.5. OPERADOR TERNARIO (|:) - Handle simple and cascaded ternaries
 	// Check for any ternary operator (|:) in cleanS (strings masked with underscores)
@@ -331,18 +377,16 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 				end if
 				
 				// Move past this |:
-				// ternaryPos is the position of the space before |: (from " |: ")
-				// or the position of | itself (from "|:")
 				if ternaryPos + 4 <= cleanS.len and cleanS[ternaryPos:ternaryPos+4] == " |: " then
-					lastIdx = ternaryPos + 4  // Skip space + |: + space
+					lastIdx = ternaryPos + 4
 				else if ternaryPos + 3 <= cleanS.len and cleanS[ternaryPos:ternaryPos+3] == "|: " then
-					lastIdx = ternaryPos + 3  // Skip |: + space
+					lastIdx = ternaryPos + 3
 				else if ternaryPos + 3 <= cleanS.len and cleanS[ternaryPos:ternaryPos+3] == " |:" then
-					lastIdx = ternaryPos + 3  // Skip space + |:
+					lastIdx = ternaryPos + 3
 				else if ternaryPos + 2 <= cleanS.len and cleanS[ternaryPos:ternaryPos+2] == "|:" then
-					lastIdx = ternaryPos + 2  // Skip |:
+					lastIdx = ternaryPos + 2
 				else
-					lastIdx = ternaryPos + 3  // Default fallback (space + |:)
+					lastIdx = ternaryPos + 3
 				end if
 			end for
 			
@@ -405,7 +449,15 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 				// No assignment - check for pipeline directly
 				pipeIdx = cleanS.indexOf(" >> ")
 				if pipeIdx != null and pipeIdx < ternaryIdx then
-					condition = trimmed[:pipeIdx].trim
+					// Check if there's a keyword before the condition (like "return", "print", etc.)
+					beforePipe = trimmed[:pipeIdx].trim
+					prefix = ""
+					if beforePipe.indexOf("return ") == 0 then
+						prefix = "return "
+						condition = beforePipe[7:].trim
+					else
+						condition = beforePipe
+					end if
 					trueVal = trimmed[pipeIdx + 4:ternaryIdx].trim
 				end if
 			end if
@@ -413,6 +465,9 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 			// Generate if/then/else/end if block
 			if ternaryVar.len > 0 then
 				return "if " + condition + " then" + char(10) + "    " + ternaryVar + trueVal + char(10) + "else" + char(10) + "    " + ternaryVar + afterTernary + char(10) + "end if"
+			else if prefix.len > 0 then
+				// Has a prefix like "return"
+				return "if " + condition + " then" + char(10) + "    " + prefix + trueVal + char(10) + "else" + char(10) + "    " + prefix + afterTernary + char(10) + "end if"
 			else
 				// No assignment - just conditional execution
 				return "if " + condition + " then" + char(10) + "    " + trueVal + char(10) + "else" + char(10) + "    " + afterTernary + char(10) + "end if"

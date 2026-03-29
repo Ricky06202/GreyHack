@@ -70,7 +70,10 @@ tarea lateral_escanear_desde_pivote:
     
     si dispositivos y dispositivos.len > 0:
         exito("Dispositivos: " + str(dispositivos.len))
-        para ip en dispositivos: info("  - " + ip + ((ip == ip_local) >> " (TU NODO)" |: ""))
+        para ip en dispositivos:
+            nodo_tag = ""
+            si ip == ip_local: nodo_tag = " (TU NODO)"
+            info("  - " + ip + nodo_tag)
     sino:
         // Fallback: escaneo manual
         red = ip_local.split(".")[0:3].join(".") + "."
@@ -80,8 +83,11 @@ tarea lateral_escanear_desde_pivote:
             ip = red + str(i)
             si ip != ip_local y sesion.ping(ip) == 1: hosts.push(ip)
         
-        si hosts.len == 0: info("No se encontraron hosts.")
-        sino: para h en hosts: info("  - " + h)
+        si hosts.len == 0:
+            info("No se encontraron hosts.")
+        sino:
+            para h en hosts:
+                info("  - " + h)
 
 tarea lateral_conectar_servicio:
     tipo = (pedir("Tipo (ssh/ftp): ")).lower()

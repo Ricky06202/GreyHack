@@ -88,8 +88,11 @@ comp_info = (typeof(sesion) == "shell") >> sesion.host_computer.local_ip |: sesi
 
 // Con strings que contienen tags de color
 estado_obj = (not globals.objetivo_actual) >> "<color=#ff3131>NINGUNO</color>" |: "<color=#00ff41>" + globals.objetivo_actual + "</color>"
+
+// Ternarios en cascada
+exts = (modo == "keys") >> [".pem", ".key"] |: (modo == "passwords") >> [".kdb"] |: [".conf"]
 ```
-Se traduce a:
+Se traduce a bloques `if/else` en MiniScript:
 ```miniscript
 if x == 5 then
     resultado = "si"
@@ -97,10 +100,19 @@ else
     resultado = "no"
 end if
 
-if (not globals.objetivo_actual) then
-    estado_obj = "<color=#ff3131>NINGUNO</color>"
+if (typeof(sesion) == "shell") then
+    comp_info = sesion.host_computer.local_ip
 else
-    estado_obj = "<color=#00ff41>" + globals.objetivo_actual + "</color>"
+    comp_info = sesion.local_ip
+end if
+
+// Cascada se convierte en if/else if/else
+if (modo == "keys") then
+    exts = [".pem", ".key"]
+else if (modo == "passwords") then
+    exts = [".kdb"]
+else
+    exts = [".conf"]
 end if
 ```
 
