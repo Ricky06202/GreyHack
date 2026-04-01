@@ -418,7 +418,7 @@ tarea limpiar_logs(ip)
     si ip == "":
         get_shell.host_computer.File("/var/system.log").set_content("")
         info("Logs locales limpiados")
-    sino si enjambre.hasIndex(ip):
+    osi enjambre.hasIndex(ip):
         sesion = enjambre[ip]
         si typeof(sesion) == "shell":
             sesion.launch("/bin/bash", "-c 'echo > /var/system.log'")
@@ -688,7 +688,7 @@ tarea listar_archivos(archivo, indent):
     tipo_arch = ""
     si archivo.is_directory:
         tipo_arch = "<color=#00e5ff>[DIR]</color>"
-    sino si archivo.is_binary:
+    osi archivo.is_binary:
         tipo_arch = "<color=#ffea00>[BIN]</color>"
     sino:
         tipo_arch = "<color=#ffffff>[FILE]</color>"
