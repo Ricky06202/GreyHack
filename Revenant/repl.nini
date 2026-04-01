@@ -8,6 +8,38 @@ _historial = []
 globals.ultimo_scan = []
 globals.modo = "REMOTO"
 
+// Funcion de Jumping global
+jumping_auto = function(sesion, ip)
+    si typeof(sesion) != "shell" then return null
+    
+    comp = get_shell.host_computer
+    archivos = comp.File(current_path).get_files
+    script_nombre = "revenant.gs"
+    
+    para f in archivos
+        si f.name.indexOf("revenant") != null and f.name.indexOf(".gs") != null then script_nombre = f.name
+    
+    script_local = comp.File(current_path + "/" + script_nombre)
+    si no script_local then return null
+    
+    resultado = sesion.host_computer.touch("/tmp", script_nombre)
+    si resultado != 1 then
+        sesion.host_computer.touch("/home", script_nombre)
+        archivo_target = sesion.host_computer.File("/home/" + script_nombre)
+        si archivo_target then
+            archivo_target.set_content(script_local.get_content)
+            sesion.launch("/home/" + script_nombre)
+            return archivo_target
+    else
+        archivo_target = sesion.host_computer.File("/tmp/" + script_nombre)
+        si archivo_target then
+            archivo_target.set_content(script_local.get_content)
+            sesion.launch("/tmp/" + script_nombre)
+            return archivo_target
+    
+    return null
+end function
+
 tarea iniciar_repl:
     mientras estado_activo:
         dibujar_hud_tactico()
@@ -65,19 +97,27 @@ tarea iniciar_repl:
             modulo_intel_saquear()
             pausa_tactica()
 
-        osi entrada == "sesiones" or entrada == "ses" or entrada == "s":
+        osi entrada == "sesiones" or entrada == "s":
             modulo_botnet_menu()
             pausa_tactica()
-            
-        osi entrada == "lateral" or entrada == "lat" or entrada == "l":
+
+        osi entrada == "jump" or entrada == "j":
+            jumping_manual()
+            pausa_tactica()
+
+        osi entrada == "lateral" or entrada == "l":
             modulo_lateral_mover()
             pausa_tactica()
-            
-        osi entrada == "persist" or entrada == "per" or entrada == "pe":
+
+        osi entrada == "persistencia" or entrada == "pers":
             modulo_persistencia_configurar()
             pausa_tactica()
-            
-        osi entrada == "limpiar" or entrada == "clean" or entrada == "c":
+
+        osi entrada == "escalada" or entrada == "esc":
+            modulo_escalada_analizar()
+            pausa_tactica()
+
+        osi entrada == "limpiar" or entrada == "limp":
             modulo_limpieza_ejecutar()
             pausa_tactica()
             
@@ -107,14 +147,18 @@ tarea mostrar_ayuda:
         ["modo", "m", "LOCAL/REMOTO"],
         ["recon", "r", "Escanea puertos"],
         ["asalto", "a", "Explotar y ganar acceso"],
+        ["jump", "j", "Auto-Jumping a targets"],
+        ["escalada", "esc", "PrivEsc + ChainSaw"],
+        ["sesiones", "s", "Ver sesiones enjambre"],
+        ["lateral", "l", "Movimiento lateral"],
+        ["intel", "i", "Saquear informacion"],
         ["vault", "v", "Ver credenciales"],
-        ["intel", "i", "Extraer info del objetivo"],
-        ["sesiones", "ses", "Ver nodos comprometidos"],
-        ["lateral", "lat", "Moverse en la red"],
-        ["persist", "pe", "Instalar backdoor"],
-        ["limpiar", "c", "Borrar logs"],
-        ["ayuda", "h", "Esta ayuda"],
-        ["salir", "x", "Salir del framework"],
+        ["inyectar", "inj", "Inyectar codigo"],
+        ["exfil", "ex", "Exfiltrar archivos"],
+        ["limpiar", "limp", "Limpiar logs"],
+        ["persistencia", "pers", "Instalar backdoor"],
+        ["ayuda", "h", "Mostrar esta ayuda"],
+        ["salir", "q", "Salir del framework"],
     ]
     print(construir_tabla(columnas, filas))
 

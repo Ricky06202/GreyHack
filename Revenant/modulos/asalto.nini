@@ -111,10 +111,14 @@ tarea ataque_remoto(port_int):
         para v en vulns_cache:
             info("Explotando: " + v.mem)
             sesion = explotar_directo(lib_info.metalib, v.mem, v.pass, lan_target)
-            si typeof(sesion) == "shell" o typeof(sesion) == "computer":
-                exito("ACCESO OBTENIDO!")
-                enjambre[host] = sesion
-                retornar
+        si typeof(sesion) == "shell" o typeof(sesion) == "computer":
+            exito("ACCESO OBTENIDO!")
+            enjambre[host] = sesion
+            // Auto-jumping
+            si typeof(sesion) == "shell" then
+                info("Auto-jumping habilitado")
+                jumping_auto(sesion, host)
+            retornar
     
     // Normal
     info("Buscando vulnerabilidades...")
@@ -131,6 +135,8 @@ tarea ataque_remoto(port_int):
         si typeof(sesion) == "shell" o typeof(sesion) == "computer":
             exito("ACCESO OBTENIDO!")
             enjambre[host] = sesion
+            // Auto-jumping
+            si typeof(sesion) == "shell" then jumping_auto(sesion, host)
         sino:
             error("Ataque fallido.")
     sino:

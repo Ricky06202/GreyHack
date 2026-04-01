@@ -1,25 +1,181 @@
-// modulos/escalada.nini - El Camino hacia Root 🔋
+// modulos/escalada.nini - Escalada + ChainSaw
 
-tarea modulo_escalada_analizar:
-    si globals.objetivo_actual == nulo:
-        info("Escaneando sistema local para escalada de privilegios...")
+_chain_samples = [
+    "password", "123456", "qwerty", "admin", "letmein",
+    "welcome", "monkey", "dragon", "master", "login",
+    "shadow", "sunshine", "princess", "football", "baseball",
+    "iloveyou", "trustno1", "superman", "michael", "charlie",
+    "access", "hello", "ranger", "thomas", "hunter",
+    "buster", "soccer", "hockey", "george", "pepper",
+    "killer", "daniel", "andrew", "joshua", "michelle",
+    "starwars", "freedom", "summer", "ashley", "passw0rd",
+    "matrix", "secret", "orange", "computer", "pass123",
+    "password1", "qwerty123", "abc123", "password123", "admin123"
+]
+
+_chain_pregens = [
+    "root", "pass", "123", "abc", "qwerty", "admin", "letmein",
+    "abc123", "password1", "123456", "qwerty123", "admin123",
+    "root123", "toor", "changeme", "default"
+]
+
+_chain_build = function(samples, order)
+    chains = {}
+    para sample en samples
+        mayus = sample.upper
+        si mayus.len <= order then continue
+        para i en rango(0, mayus.len - order - 1)
+            token = mayus[i : i + order]
+            next_char = mayus[i + order]
+            si no chains.hasIndex(token) then chains[token] = []
+            si chains[token].indexOf(next_char) == null then chains[token].push(next_char)
+
+_chain_next = function(chains, token)
+    si no chains.hasIndex(token) then return null
+    return chains[token][floor(rnd * chains[token].len)]
+
+_chain_generate = function(chains, token, max_len, order)
+    password = token.lower
+    mientras password.len < max_len
+        sub = password[password.len - order :].upper
+        next_c = _chain_next(chains, sub)
+        si next_c == null then break
+        password = password + next_c.lower
+    return password
+
+_chain_try = function(sesion, user, password, ip, port)
+    si ip == "" or ip == null then
+        return get_shell(user, password)
+    return get_shell.connect_service(ip, port, user, password)
+
+tarea chainsaw_crack(sesion, user, ip, port)
+    info("CHAINSAW - Markov Chain Cracker")
+    order = 3
+    max_len = 12
+    intentos = 0
+    chains = _chain_build(_chain_samples, order)
+
+    // Fase 1
+    para pwd en _chain_pregens
+        intentos = intentos + 1
+        resultado = _chain_try(sesion, user, pwd, ip, port)
+        si resultado != null then
+            exito("PASSWORD: " + pwd)
+            return resultado
+
+    // Fase 2
+    para token en chains.indexes
+        pwd = _chain_generate(chains, token, max_len, order)
+        si pwd.len < 3 then continue
+        intentos = intentos + 1
+        resultado = _chain_try(sesion, user, pwd, ip, port)
+        si resultado != null then
+            exito("PASSWORD: " + pwd)
+            return resultado
+
+    info("ChainSaw: " + str(intentos) + " intentos")
+    return null
+
+tarea modulo_escalada_analizar
+    si globals.objetivo_actual == null then
+        info("Escaneando sistema local...")
         sesion = get_shell
-    sino:
-        info("Buscando vectores de PrivEsc en " + globals.objetivo_actual)
+        ip = ""
+        port = 0
+    else
+        si no enjambre.hasIndex(globals.objetivo_actual) then
+            error("No hay sesion")
+            return
         sesion = enjambre[globals.objetivo_actual]
-    
-    si no sesion:
-        error("No hay sesion activa para el análisis.")
-        retornar
-        
-    resultado = buscar_vectores_escalada(sesion)
-    
-    si resultado.len == 0:
-        alerta("No se detectaron vectores de escalada automáticos.")
-    sino:
-        exito("Vectores detectados: " + resultado.len)
+        ip = globals.objetivo_actual
+        port = 22
+
+    si no sesion then
+        error("No hay sesion activa")
+        return
+
+    usuario = "root"
+    si typeof(sesion) == "shell" then usuario = sesion.user
+    info("Usuario: " + usuario)
+
+    si usuario == "root" then
+        alerta("Ya eres root!")
+        return
+
+    opciones = [
+        {"label": "Analizar PrivEsc", "cmd": "analizar"},
+        {"label": "ChainSaw crack root", "cmd": "chainsaw"},
+        {"label": "Fuerza bruta SSH", "cmd": "brute"},
+    ]
+
+    accion = menu_interactivo("ESCALADA", opciones)
+    si no accion then return
+
+    si accion == "analizar" then modulo_escalada_vector(sesion)
+    else if accion == "chainsaw" then
+        resultado = chainsaw_crack(sesion, "root", ip, port)
+        si resultado != null then
+            exito("Ahora eres root!")
+            si ip != "" then enjambre[ip] = resultado
+        else alerta("No se encontro password")
+    else if accion == "brute" then modulo_escalada_brute(sesion, "root", ip, port)
+
+tarea modulo_escalada_vector(sesion)
+    info("ANALIZANDO VECTORES...")
+    vectores = []
+    comp = null
+
+    si typeof(sesion) == "shell" then comp = sesion.host_computer
+    else if typeof(sesion) == "computer" then comp = sesion
+
+    si no comp then
+        error("Sin acceso a computadora")
+        return
+
+    root = comp.File("/")
+    si no root then
+        error("Sin acceso a filesystem")
+        return
+
+    suids = root.find_permissive("s", true)
+    si suids then para f en suids
+        si f.is_binary then vectores.push({"path": f.path, "type": "SUID", "severity": "MEDIA"})
+
+    etc = comp.File("/etc")
+    si etc and etc.get_files then para f en etc.get_files
+        si f.has_permission("w") then vectores.push({"path": f.path, "type": "WRITEABLE_ETC", "severity": "ALTA"})
+
+    si vectores.len == 0 then
+        alerta("No hay vectores detectados")
+        info("Tip: Usa ChainSaw")
+    else
+        exito("Vectores: " + str(vectores.len))
         columnas = ["Ruta", "Tipo", "Severidad"]
         filas = []
-        recorrer resultado como v:
-            filas.push([v.path, v.type, v.severity])
+        para v en vectores
+            color = "<color=#00ff41>"
+            si v.severity == "ALTA" then color = "<color=#ff3131>"
+            else if v.severity == "MEDIA" then color = "<color=#ffea00>"
+            filas.push([v.path, v.type, color + v.severity + "</color>"])
         print(construir_tabla(columnas, filas))
+
+tarea modulo_escalada_brute(sesion, user, ip, port)
+    info("FUERZA BRUTA - " + user)
+
+    passwords = [
+        "123456", "password", "qwerty", "abc123", "monkey", "letmein", "dragon",
+        "iloveyou", "sunshine", "princess", "football", "shadow", "michael",
+        "admin", "root", "toor", "pass", "changeme", "test", "guest",
+        "password1", "password123", "admin123", "root123", "qwerty123",
+        "ranger", "thomas", "hunter", "buster", "soccer", "daniel"
+    ]
+
+    para pwd en passwords
+        resultado = _chain_try(sesion, user, pwd, ip, port)
+        si resultado != null then
+            exito("PASSWORD: " + pwd)
+            si ip != "" then enjambre[ip] = pwd
+            return resultado
+
+    alerta("No se encontro password")
+    return null
