@@ -10,43 +10,43 @@ _chain_samples = [
     "killer", "daniel", "andrew", "joshua", "michelle",
     "starwars", "freedom", "summer", "ashley", "passw0rd",
     "matrix", "secret", "orange", "computer", "pass123",
-    "password1", "qwerty123", "abc123", "password123", "admin123"
+    "password1", "qwerty123", "abc123", "password123", "admin123",
 ]
 
 _chain_pregens = [
     "root", "pass", "123", "abc", "qwerty", "admin", "letmein",
     "abc123", "password1", "123456", "qwerty123", "admin123",
-    "root123", "toor", "changeme", "default"
+    "root123", "toor", "changeme", "default",
 ]
 
 _chain_build = function(samples, order)
     chains = {}
-    para sample en samples
+    para sample en samples:
         mayus = sample.upper
-        si mayus.len <= order then continue
-        para i en rango(0, mayus.len - order - 1)
+        si mayus.len <= order: siguiente
+        para i en rango(0, mayus.len - order - 1):
             token = mayus[i : i + order]
             next_char = mayus[i + order]
-            si no chains.hasIndex(token) then chains[token] = []
-            si chains[token].indexOf(next_char) == null then chains[token].push(next_char)
+            si no chains.hasIndex(token): chains[token] = []
+            si chains[token].indexOf(next_char) == null: chains[token].push(next_char)
 
 _chain_next = function(chains, token)
-    si no chains.hasIndex(token) then return null
-    return chains[token][floor(rnd * chains[token].len)]
+    si no chains.hasIndex(token): retornar null
+    retornar chains[token][floor(rnd * chains[token].len)]
 
 _chain_generate = function(chains, token, max_len, order)
     password = token.lower
-    mientras password.len < max_len
+    mientras password.len < max_len:
         sub = password[password.len - order :].upper
         next_c = _chain_next(chains, sub)
-        si next_c == null then break
+        si next_c == null: salir
         password = password + next_c.lower
-    return password
+    retornar password
 
 _chain_try = function(sesion, user, password, ip, port)
-    si ip == "" or ip == null then
-        return get_shell(user, password)
-    return get_shell.connect_service(ip, port, user, password)
+    si ip == "" or ip == null:
+        retornar get_shell(user, password)
+    retornar get_shell.connect_service(ip, port, user, password)
 
 tarea chainsaw_crack(sesion, user, ip, port)
     info("CHAINSAW - Markov Chain Cracker")
@@ -56,51 +56,51 @@ tarea chainsaw_crack(sesion, user, ip, port)
     chains = _chain_build(_chain_samples, order)
 
     // Fase 1
-    para pwd en _chain_pregens
+    para pwd en _chain_pregens:
         intentos = intentos + 1
         resultado = _chain_try(sesion, user, pwd, ip, port)
-        si resultado != null then
+        si resultado != null:
             exito("PASSWORD: " + pwd)
-            return resultado
+            retornar resultado
 
     // Fase 2
-    para token en chains.indexes
+    para token en chains.indexes:
         pwd = _chain_generate(chains, token, max_len, order)
-        si pwd.len < 3 then continue
+        si pwd.len < 3: siguiente
         intentos = intentos + 1
         resultado = _chain_try(sesion, user, pwd, ip, port)
-        si resultado != null then
+        si resultado != null:
             exito("PASSWORD: " + pwd)
-            return resultado
+            retornar resultado
 
     info("ChainSaw: " + str(intentos) + " intentos")
-    return null
+    retornar null
 
 tarea modulo_escalada_analizar
-    si globals.objetivo_actual == null then
+    si globals.objetivo_actual == null:
         info("Escaneando sistema local...")
         sesion = get_shell
         ip = ""
         port = 0
-    else
-        si no enjambre.hasIndex(globals.objetivo_actual) then
+    sino:
+        si no enjambre.hasIndex(globals.objetivo_actual):
             error("No hay sesion")
-            return
+            retornar
         sesion = enjambre[globals.objetivo_actual]
         ip = globals.objetivo_actual
         port = 22
 
-    si no sesion then
+    si no sesion:
         error("No hay sesion activa")
-        return
+        retornar
 
     usuario = "root"
-    si typeof(sesion) == "shell" then usuario = sesion.user
+    si typeof(sesion) == "shell": usuario = sesion.user
     info("Usuario: " + usuario)
 
-    si usuario == "root" then
+    si usuario == "root":
         alerta("Ya eres root!")
-        return
+        retornar
 
     opciones = [
         {"label": "Analizar PrivEsc", "cmd": "analizar"},
@@ -109,53 +109,56 @@ tarea modulo_escalada_analizar
     ]
 
     accion = menu_interactivo("ESCALADA", opciones)
-    si no accion then return
+    si no accion: retornar
 
-    si accion == "analizar" then modulo_escalada_vector(sesion)
-    else if accion == "chainsaw" then
+    si accion == "analizar": modulo_escalada_vector(sesion)
+    osi accion == "chainsaw":
         resultado = chainsaw_crack(sesion, "root", ip, port)
-        si resultado != null then
+        si resultado != null:
             exito("Ahora eres root!")
-            si ip != "" then enjambre[ip] = resultado
-        else alerta("No se encontro password")
-    else if accion == "brute" then modulo_escalada_brute(sesion, "root", ip, port)
+            si ip != "": enjambre[ip] = resultado
+        sino:
+            alerta("No se encontro password")
+    osi accion == "brute": modulo_escalada_brute(sesion, "root", ip, port)
 
 tarea modulo_escalada_vector(sesion)
     info("ANALIZANDO VECTORES...")
     vectores = []
     comp = null
 
-    si typeof(sesion) == "shell" then comp = sesion.host_computer
-    else if typeof(sesion) == "computer" then comp = sesion
+    si typeof(sesion) == "shell": comp = sesion.host_computer
+    osi typeof(sesion) == "computer": comp = sesion
 
-    si no comp then
+    si no comp:
         error("Sin acceso a computadora")
-        return
+        retornar
 
     root = comp.File("/")
-    si no root then
+    si no root:
         error("Sin acceso a filesystem")
-        return
+        retornar
 
     suids = root.find_permissive("s", true)
-    si suids then para f en suids
-        si f.is_binary then vectores.push({"path": f.path, "type": "SUID", "severity": "MEDIA"})
+    si suids:
+        para f en suids:
+            si f.is_binary: vectores.push({"path": f.path, "type": "SUID", "severity": "MEDIA"})
 
     etc = comp.File("/etc")
-    si etc and etc.get_files then para f en etc.get_files
-        si f.has_permission("w") then vectores.push({"path": f.path, "type": "WRITEABLE_ETC", "severity": "ALTA"})
+    si etc and etc.get_files:
+        para f en etc.get_files:
+            si f.has_permission("w"): vectores.push({"path": f.path, "type": "WRITEABLE_ETC", "severity": "ALTA"})
 
-    si vectores.len == 0 then
+    si vectores.len == 0:
         alerta("No hay vectores detectados")
         info("Tip: Usa ChainSaw")
-    else
+    sino:
         exito("Vectores: " + str(vectores.len))
         columnas = ["Ruta", "Tipo", "Severidad"]
         filas = []
-        para v en vectores
+        para v en vectores:
             color = "<color=#00ff41>"
-            si v.severity == "ALTA" then color = "<color=#ff3131>"
-            else if v.severity == "MEDIA" then color = "<color=#ffea00>"
+            si v.severity == "ALTA": color = "<color=#ff3131>"
+            osi v.severity == "MEDIA": color = "<color=#ffea00>"
             filas.push([v.path, v.type, color + v.severity + "</color>"])
         print(construir_tabla(columnas, filas))
 
@@ -167,15 +170,15 @@ tarea modulo_escalada_brute(sesion, user, ip, port)
         "iloveyou", "sunshine", "princess", "football", "shadow", "michael",
         "admin", "root", "toor", "pass", "changeme", "test", "guest",
         "password1", "password123", "admin123", "root123", "qwerty123",
-        "ranger", "thomas", "hunter", "buster", "soccer", "daniel"
+        "ranger", "thomas", "hunter", "buster", "soccer", "daniel",
     ]
 
-    para pwd en passwords
+    para pwd en passwords:
         resultado = _chain_try(sesion, user, pwd, ip, port)
-        si resultado != null then
+        si resultado != null:
             exito("PASSWORD: " + pwd)
-            si ip != "" then enjambre[ip] = pwd
-            return resultado
+            si ip != "": enjambre[ip] = pwd
+            retornar resultado
 
     alerta("No se encontro password")
-    return null
+    retornar null
