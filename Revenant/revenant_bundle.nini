@@ -1,574 +1,524 @@
-// --- INICIO SUB-MODULO: repl.nini ---
-// repl.nini - Bucle Principal Interactivo Revenant v2.0
+// main.nini - Revenant OS v3.0
 
-// Estado Global
-enjambre = {}
-globals.objetivo_actual = null
-estado_activo = verdadero
-_historial = []
-globals.ultimo_scan = []
-globals.modo = "REMOTO"
+// Core
+// --- INICIO SUB-MODULO: core/kernel.nini ---
+// core/kernel.nini - Corazon de Revenant
 
-// Funcion de Jumping global
-jumping_auto = function(sesion, ip)
-    si typeof(sesion) != "shell" then return null
-    
-    comp = get_shell.host_computer
-    archivos = comp.File(current_path).get_files
-    script_nombre = "revenant.gs"
-    
-    para f in archivos
-        si f.name.indexOf("revenant") != null and f.name.indexOf(".gs") != null then script_nombre = f.name
-    
-    script_local = comp.File(current_path + "/" + script_nombre)
-    si no script_local then return null
-    
-    resultado = sesion.host_computer.touch("/tmp", script_nombre)
-    si resultado != 1 then
-        sesion.host_computer.touch("/home", script_nombre)
-        archivo_target = sesion.host_computer.File("/home/" + script_nombre)
-        si archivo_target then
-            archivo_target.set_content(script_local.get_content)
-            sesion.launch("/home/" + script_nombre)
-            return archivo_target
-    else
-        archivo_target = sesion.host_computer.File("/tmp/" + script_nombre)
-        si archivo_target then
-            archivo_target.set_content(script_local.get_content)
-            sesion.launch("/tmp/" + script_nombre)
-            return archivo_target
-    
-    return null
+Buffer = {}
+Buffer.items = []
+Buffer.max_size = 50
+
+Buffer.push = function(objeto, descripcion)
+    si Buffer.items.len >= Buffer.max_size: Buffer.items.remove(0)
+    item = {"objeto": objeto, "tipo": typeof(objeto), "descripcion": descripcion or "Sin desc", "timestamp": time, "id": Buffer.items.len}
+    Buffer.items.push(item)
+    retornar item.id
 end function
 
-tarea iniciar_repl:
-    mientras estado_activo:
-        dibujar_hud_tactico()
-        
-        p = "<color=#00e5ff>revenant"
-        si globals.objetivo_actual:
-            p = p + ":" + globals.objetivo_actual
-        p = p + ":" + globals.modo + "> "
-        
-        entrada = pedir(p)
-        
-        si entrada.trim.len > 0:
-            _historial.push(entrada.trim)
-        
-        entrada = entrada.trim.lower()
-        
-        // Comandos esenciales
-        si entrada == "salir" o entrada == "x" o entrada == "q":
-            info("Saliendo...")
-            globals.estado_activo = falso
-            
-        osi entrada == "ayuda" o entrada == "h" o entrada == "?":
-            mostrar_ayuda()
-            pausa_tactica()
-            
-        osi entrada == "objetivo" or entrada == "o":
-            prompt_objetivo()
-            si globals.objetivo_actual:
-                modulo_espectro_recon()
-            
-        osi entrada.indexOf("objetivo ") == 0 or entrada.indexOf("o ") == 0:
-            partes = entrada.split(" ")
-            si partes.len >= 2:
-                ip = resolver_objetivo(partes[1])
-                si ip:
-                    globals.objetivo_actual = ip
-                    exito("Objetivo: " + globals.objetivo_actual)
-                    modulo_espectro_recon()
+Buffer.get = function(index)
+    si index < 0 or index >= Buffer.items.len: retornar null
+    retornar Buffer.items[index].objeto
+end function
 
-        osi entrada == "modo" or entrada == "m":
-            cambiar_modo()
-
-        osi entrada == "recon" or entrada == "r":
-            modulo_espectro_recon()
-            
-        osi entrada == "asalto" or entrada == "a":
-            modulo_asalto_root()
-            pausa_tactica()
-            
-        osi entrada == "vault" or entrada == "v":
-            listar_credenciales()
-            pausa_tactica()
-            
-        osi entrada == "intel" or entrada == "i":
-            modulo_intel_saquear()
-            pausa_tactica()
-
-        osi entrada == "sesiones" or entrada == "s":
-            modulo_botnet_menu()
-            pausa_tactica()
-
-        osi entrada == "jump" or entrada == "j":
-            jumping_manual()
-            pausa_tactica()
-
-        osi entrada == "lateral" or entrada == "l":
-            modulo_lateral_mover()
-            pausa_tactica()
-
-        osi entrada == "persistencia" or entrada == "pers":
-            modulo_persistencia_configurar()
-            pausa_tactica()
-
-        osi entrada == "escalada" or entrada == "esc":
-            modulo_escalada_analizar()
-            pausa_tactica()
-
-        osi entrada == "limpiar" or entrada == "limp":
-            modulo_limpieza_ejecutar()
-            pausa_tactica()
-            
-        osi entrada == "historial" or entrada == "history":
-            si _historial.len == 0:
-                info("Sin comandos.")
-            sino:
-                i = _historial.len - 1
-                cont = 0
-                mientras i >= 0 y cont < 10:
-                    info("  " + _historial[i])
-                    i = i - 1
-                    cont = cont + 1
-            pausa_tactica()
-            
-        osi entrada == "":
-            // Saltar
-            
-        sino:
-            error("Comando: " + entrada)
-            pausa_tactica()
-
-tarea mostrar_ayuda:
-    columnas = ["Comando", "Alias", "Que hace"]
-    filas = [
-        ["objetivo", "o", "Fija un objetivo"],
-        ["modo", "m", "LOCAL/REMOTO"],
-        ["recon", "r", "Escanea puertos"],
-        ["asalto", "a", "Explotar y ganar acceso"],
-        ["jump", "j", "Auto-Jumping a targets"],
-        ["escalada", "esc", "PrivEsc + ChainSaw"],
-        ["sesiones", "s", "Ver sesiones enjambre"],
-        ["lateral", "l", "Movimiento lateral"],
-        ["intel", "i", "Saquear informacion"],
-        ["vault", "v", "Ver credenciales"],
-        ["inyectar", "inj", "Inyectar codigo"],
-        ["exfil", "ex", "Exfiltrar archivos"],
-        ["limpiar", "limp", "Limpiar logs"],
-        ["persistencia", "pers", "Instalar backdoor"],
-        ["ayuda", "h", "Mostrar esta ayuda"],
-        ["salir", "q", "Salir del framework"],
-    ]
-    print(construir_tabla(columnas, filas))
-
-tarea cambiar_modo:
-    si globals.modo == "REMOTO":
-        globals.modo = "LOCAL"
-        info("Modo cambiado a: LOCAL")
-    sino:
-        globals.modo = "REMOTO"
-        info("Modo cambiado a: REMOTO")
-
-tarea mostrar_menu_principal:
-    opciones = [
-        {"label": "Fijar Objetivo", "cmd": "o"},
-        {"label": "Cambiar Modo (LOCAL/REMOTO)", "cmd": "modo"},
-        {"label": "Escanear", "cmd": "r"},
-        {"label": "Asaltar", "cmd": "a"},
-        {"label": "Inteligencia (saquear)", "cmd": "i"},
-        {"label": "Ver Vault (credenciales)", "cmd": "v"},
-        {"label": "Sesiones (enjambre)", "cmd": "ses"},
-        {"label": "Movimiento Lateral", "cmd": "lat"},
-        {"label": "Persistencia (backdoor)", "cmd": "pe"},
-        {"label": "Limpiar huellas", "cmd": "c"},
-    ]
-    
-    comando = menu_interactivo("MENU", opciones)
-    si comando:
-        entrada = comando
-
-// --- FIN SUB-MODULO: repl.nini ---
-// --- INICIO SUB-MODULO: modulos/espectro.nini ---
-// modulo espectro.nini - RECONOCIMIENTO AVANZADO
-// Automatico con la mejor info
-
-tarea espectro_escaneo_completo(host):
-    si not host o host == "":
-        error("No hay host definido.")
-        retornar null
-    
-    sh = get_shell
-    si sh.ping(host) != 1:
-        error("Host inalcanzable: " + host)
-        retornar null
-    
-    router = get_router(host)
-    si not router:
-        error("No se pudo obtener router.")
-        retornar null
-    
-    es_local = es_ip_local(host)
-    
-    ports = []
-    si es_local:
-        ports = router.device_ports(host)
-    sino:
-        ports = router.used_ports
-    
-    si not ports o ports.len == 0:
-        info("No hay puertos abiertos.")
-        retornar null
-    
-    resultados = []
-    i = 1
-    
-    para port en ports:
-        port_num = port.port_number
-        servicio_completo = router.port_info(port)
-        
-        // Separar servicio y version
-        servicio = servicio_completo
-        version = "N/A"
-        
-        partes_svc = servicio_completo.split(" ")
-        si partes_svc.len > 1:
-            servicio = partes_svc[0]
-            version = partes_svc[1]
-        
-        estado = "open"
-        si port.is_closed y not es_local:
-            estado = "closed"
-        
-        // Obtener IP LAN
-        lan_ip = "N/A"
-        si es_local:
-            lan_ip = host
-        sino:
-            lan_ip = port.get_lan_ip
-        
-        resultados.push({
-            "id": i,
-            "puerto": port_num,
-            "servicio": servicio,
-            "version": version,
-            "estado": estado,
-            "lan_ip": lan_ip,
-        })
-        
-        i = i + 1
-    
-    retornar resultados
-
-tarea modulo_espectro_recon:
-    si globals.objetivo_actual == null:
-        error("No hay objetivo. Usa 'objetivo <ip>'")
-        retornar
-    
-    host = globals.objetivo_actual
-    
-    info("Escaneando " + host + "...")
-    
-    resultados = espectro_escaneo_completo(host)
-    
-    si resultados:
-        globals.ultimo_scan = resultados
-        
-        // Mostrar tabla con construir_tabla
-        print("")
-        info("RESULTADOS DEL ESCANEO:")
-        print("")
-        columnas = ["ID", "Puerto", "Estado", "Servicio", "Version", "LAN IP"]
-        filas = []
-        para r en resultados:
-            estado_col = r.estado
-            si r.estado == "closed": estado_col = "<color=#ff3131>" + r.estado + "</color>"
-            si r.estado == "open": estado_col = "<color=#00ff41>" + r.estado + "</color>"
-            filas.push([r.id, r.puerto, estado_col, r.servicio, r.version, r.lan_ip])
-        print(construir_tabla(columnas, filas))
-        print("")
-        
-        es_local = es_ip_local(host)
-        modo_actual = "REMOTO"
-        si es_local:
-            modo_actual = "LOCAL"
-        
-        info("Modo: " + modo_actual + " | Puertos: " + str(resultados.len))
-    sino:
-        error("Sin resultados.")
-
-tarea es_ip_local(ip):
-    si not ip: retornar falso
-    si ip == "127.0.0.1": retornar verdadero
-    
-    comp = get_shell.host_computer
-    local_ip = comp.local_ip
-    
-    partes_local = local_ip.split("\.")
-    partes_ip = ip.split("\.")
-    
-    si partes_local.len < 3 o partes_ip.len < 3: retornar falso
-    
-    red_local = partes_local[0] + "." + partes_local[1] + "." + partes_local[2]
-    red_ip = partes_ip[0] + "." + partes_ip[1] + "." + partes_ip[2]
-    
-    retornar red_local == red_ip
-
-// --- FIN SUB-MODULO: modulos/espectro.nini ---
-// --- INICIO SUB-MODULO: modulos/asalto.nini ---
-// modulo asalto.nini - Explotacion con seleccion de puerto
-
-tarea modulo_asalto_root:
-    si globals.objetivo_actual == null:
-        error("No hay objetivo. Usa 'objetivo <ip>'")
-        retornar
-    
-    // Ver si hay scan previo
-    si globals.ultimo_scan.len == 0:
-        info("Escaneando objetivo...")
-        modulo_espectro_recon()
-    
-    // Pedir seleccion directamente
-    sel = pedir("Puerto (ID, 0=router, Enter=todos): ")
-    
-    port_int = 0
-    puerto_seleccionado = null
-    
-    si sel.len > 0:
-        si sel == "0":
-            port_int = 0
-            info("Atacando router (puerto 0)...")
-        sino:
-            sel_int = val(sel)
-            si sel_int > 0 y sel_int <= globals.ultimo_scan.len:
-                puerto_seleccionado = globals.ultimo_scan[sel_int - 1]
-                port_int = puerto_seleccionado.puerto
-                info("Atacando puerto " + str(port_int) + "...")
-            sino:
-                port_int = val(sel)
-                info("Atacando puerto " + str(port_int) + "...")
-    sino:
-        info("Atacando todos los puertos...")
-        port_int = null
-    
-    // Verificar modo
-    si globals.modo == "LOCAL":
-        info("Modo LOCAL - escaneando librerias...")
-        ataque_local()
-    sino:
-        ataque_remoto(port_int)
-
-tarea ataque_local:
-    comp = get_shell.host_computer
-    
-    info("Escaneando librerias en /lib...")
-    
-    lib_folder = comp.File("/lib")
-    si not lib_folder:
-        error("No se pudo acceder a /lib")
-        retornar
-    
-    libs = []
-    para f en lib_folder.get_files:
-        si f.name.indexOf(".so") != null:
-            libs.push(f)
-    
-    si libs.len == 0:
-        error("No hay librerias.")
-        retornar
-    
-    info("Librerias: " + str(libs.len))
-    
-    metax = include_lib("/lib/metaxploit.so")
-    si not metax:
-        error("Metaxploit no disponible")
-        retornar
-    
-    para lib_file en libs:
-        info("Probando: " + lib_file.name)
-        
-        lib = metax.load(lib_file.path)
-        si lib:
-            vulns = metax.scan(lib)
-            si vulns.len > 0:
-                info("  Vulns: " + str(vulns.len))
-                para v en vulns:
-                    res = lib.overflow(vulns[0], "")
-                    si res:
-                        exito("ACCESO OBTENIDO!")
-                        enjambre[globals.objetivo_actual] = res
-                        retornar
-    
-    error("Sin vulnerabilidades.")
-
-tarea ataque_remoto(port_int):
-    host = globals.objetivo_actual
-    
-    es_router = falso
-    r = obtener_router_objetivo(host)
-    si r y port_int == 0:
-        es_router = verdadero
-    
-    lan_target = null
-    si es_router:
-        alerta("ROUTER DETECTADO!")
-        opcion = pedir("Saltar a IP interna? [s/n]: ")
-        si opcion.lower() == "s":
-            lan_target = pedir("IP interna: ")
-            info("Saltando a: " + lan_target)
-    
-    // Cache
-    lib_info = obtener_info_libreria(host, port_int)
-    
-    vulns_cache = []
-    si lib_info:
-        vulns_cache = obtener_vulnerabilidades(lib_info.lib_name, lib_info.version)
-    
-    si vulns_cache.len > 0:
-        exito("Cache hit: " + lib_info.lib_name)
-        para v en vulns_cache:
-            info("Explotando: " + v.mem)
-            sesion = explotar_directo(lib_info.metalib, v.mem, v.pass, lan_target)
-        si typeof(sesion) == "shell" o typeof(sesion) == "computer":
-            exito("ACCESO OBTENIDO!")
-            enjambre[host] = sesion
-            // Auto-jumping
-            si typeof(sesion) == "shell" then
-                info("Auto-jumping habilitado")
-                jumping_auto(sesion, host)
-            retornar
-    
-    // Normal
-    info("Buscando vulnerabilidades...")
-    vuln = buscar_vulnerabilidad(host, port_int)
-    
-    si vuln:
-        info("Vulnerabilidades: " + str(vuln.v_list.len))
-        
-        para v en vuln.v_list:
-            cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, v.mem, v.pass)
-        
-        sesion = explotar(vuln, null, lan_target)
-        
-        si typeof(sesion) == "shell" o typeof(sesion) == "computer":
-            exito("ACCESO OBTENIDO!")
-            enjambre[host] = sesion
-            // Auto-jumping
-            si typeof(sesion) == "shell" then jumping_auto(sesion, host)
-        sino:
-            error("Ataque fallido.")
-    sino:
-        error("Sin vulnerabilidades.")
-
-tarea obtener_router_objetivo(ip):
-    r = get_router(ip)
-    si r y r.public_ip == ip:
-        retornar r
-    retornar null
-
-// --- FIN SUB-MODULO: modulos/asalto.nini ---
-// --- INICIO SUB-MODULO: modulos/ui.nini ---
-// modulo ui.nini - INTERFAZ
-
-tarea mostrar_banner_revenant:
-    print("<color=#00e5ff> [ ###################################################### ] </color>")
-    print("<color=#00e5ff> [ # ]                                              [ # ] </color>")
-    print("<color=#ffffff> [ # ]          R  E  V  E  N  A  N  T              [ # ] </color>")
-    print("<color=#ffffff> [ # ]   P O S T - E X P L O I T A T I O N          [ # ] </color>")
-    print("<color=#424242> [ # ]             F R A M E W O R K                [ # ] </color>")
-    print("<color=#424242> [ # ]                                              [ # ] </color>")
-    print("<color=#00e5ff> [ ###################################################### ] </color>")
-    print("")
-
-tarea dibujar_separador: print("<color=#424242>======================================================</color>")
-tarea dibujar_separador_doble: print("<color=#b537f2>======================================================</color>")
-tarea limpiar_pantalla: clear_screen
-
-tarea dibujar_hud_tactico:
-    limpiar_pantalla()
-    mostrar_banner_revenant()
-    dibujar_separador()
-    
-    estado_obj = (not globals.objetivo_actual) >> "<color=#ff3131>NINGUNO</color>" |: "<color=#00ff41>" + globals.objetivo_actual + "</color>"
-    estado_enjambre = (enjambre.len == 0) >> "<color=#424242>" + str(enjambre.len) + "</color>" |: "<color=#00ff41>" + str(enjambre.len) + "</color>"
-    modo_color = (globals.modo == "LOCAL") >> "<color=#00ff41>LOCAL</color>" |: "<color=#ff3131>REMOTO</color>"
-    
-    print("OBJ: " + estado_obj + " | MODO: " + modo_color + " | SES: " + estado_enjambre)
-    dibujar_separador()
-    
-    // Mostrar tabla de puertos si hay scan reciente
-    si globals.ultimo_scan.len > 0:
-        print("<color=#00e5ff>[#] PUERTOS ESCANEADOS:</color>")
-        columnas = ["ID", "Puerto", "Estado", "Servicio", "Version"]
-        filas = []
-        para r in globals.ultimo_scan:
-            estado_col = r.estado
-            si r.estado == "closed": estado_col = "<color=#ff3131>" + r.estado + "</color>"
-            si r.estado == "open": estado_col = "<color=#00ff41>" + r.estado + "</color>"
-            filas.push([r.id, r.puerto, estado_col, r.servicio, r.version])
-        print(construir_tabla(columnas, filas))
-        dibujar_separador()
-
-tarea dibujar_ventana(titulo, contenido):
-    dibujar_separador()
-    print("[#] " + titulo.upper())
-    dibujar_separador()
-    print(contenido)
-    dibujar_separador()
-
-tarea dibujar_ventana_centrada(titulo, contenido):
-    dibujar_separador_doble()
-    print("[ " + titulo.upper() + " ]")
-    dibujar_separador_doble()
-    print(contenido)
-    dibujar_separador_doble()
-
-tarea pausa_tactica: pedir("<color=#424242>[ Enter ]</color>")
-
-tarea menu_interactivo(titulo, opciones):
-    dibujar_separador_doble()
-    print("[ " + titulo.upper() + " ]")
-    dibujar_separador()
-    
+Buffer.list = function()
+    si Buffer.items.len == 0:
+        info("BUFFER vacio")
+        retornar ""
+    columnas = ["#", "Tipo", "Descripcion"]
     filas = []
-    i = 1
-    para opt en opciones:
-        filas.push([i, opt.label])
-        i = i + 1
-    
-    print(construir_tabla(["#", "Accion"], filas))
-    dibujar_separador()
-    
-    sel = val(pedir("<color=#ffea00>Selecciona > </color>"))
-    si sel > 0 y sel <= opciones.len: return opciones[sel - 1].cmd
-    error("Selección inválida.")
-    return null
+    para i en rango(0, Buffer.items.len):
+        item = Buffer.items[i]
+        filas.push([i + 1, item.tipo, item.descripcion])
+    retornar construir_tabla(columnas, filas)
+end function
 
-tarea prompt_objetivo:
-    si globals.objetivo_actual:
-        confirm = pedir("Cambiar (" + globals.objetivo_actual + ")? [s/n]: ")
-        si confirm.lower() != "s": return globals.objetivo_actual
-    
-    t_obj = pedir("<color=#ffea00>IP o Dominio > </color>")
-    si t_obj == "": return globals.objetivo_actual
-    
-    res = resolver_objetivo(t_obj)
-    si res:
-        globals.objetivo_actual = res
-        globals.ultimo_scan = []
-        exito("Objetivo: " + res)
-        return res
-    error("No se pudo resolver: " + t_obj)
-    return null
+Buffer.clear = function()
+    Buffer.items = []
+    info("BUFFER limpiado")
+end function
 
-tarea mostrar_cargando(texto): print("<color=#00e5ff>Cargando " + texto + "...</color>")
+Cob = {}
+Cob.set = function(clave, valor)
+    globals.custom_object[clave] = valor
+    retornar verdadero
+end function
+Cob.get = function(clave)
+    si globals.custom_object.hasIndex(clave): retornar globals.custom_object[clave]
+    retornar null
+end function
+Cob.del = function(clave)
+    si globals.custom_object.hasIndex(clave): globals.custom_object.remove(clave)
+end function
 
-tarea confirmar_accion(pregunta):
-    resp = pedir("<color=#ffea00>" + pregunta + " [s/n]: </color>")
-    return (resp.lower() == "s" o resp.lower() == "si" o resp.lower() == "y")
+Clipboard = {}
+Clipboard.alpha = null
+Clipboard.beta = null
+Clipboard.gamma = null
+Clipboard.set = function(espacio, valor)
+    si espacio == "a": Clipboard.alpha = valor
+    si espacio == "b": Clipboard.beta = valor
+    si espacio == "c": Clipboard.gamma = valor
+end function
+Clipboard.get = function(espacio)
+    si espacio == "a": retornar Clipboard.alpha
+    si espacio == "b": retornar Clipboard.beta
+    si espacio == "c": retornar Clipboard.gamma
+    retornar null
+end function
 
-// --- FIN SUB-MODULO: modulos/ui.nini ---
+Aliases = {}
+Aliases.lista = {"h": "ayuda", "?": "ayuda", "ll": "lateral", "ss": "sesiones", "sc": "silentclean", "rc": "rclean", "ex": "exfil", "pe": "persistencia"}
+Aliases.custom = {}
+Aliases.agregar = function(alias, comando)
+    Aliases.custom[alias] = comando
+    info("Alias: " + alias + " -> " + comando)
+end function
+Aliases.resolver = function(entrada)
+    si Aliases.custom.hasIndex(entrada): retornar Aliases.custom[entrada]
+    si Aliases.lista.hasIndex(entrada): retornar Aliases.lista[entrada]
+    retornar entrada
+end function
+Aliases.listar = function()
+    columnas = ["Alias", "Comando", "Tipo"]
+    filas = []
+    para alias in Aliases.lista.indexes: filas.push([alias, Aliases.lista[alias], "Sistema"])
+    para alias in Aliases.custom.indexes: filas.push([alias, Aliases.custom[alias], "Custom"])
+    retornar construir_tabla(columnas, filas)
+end function
+
+Kernel = {}
+Kernel.sesion_activa = null
+Kernel.ip_activa = ""
+Kernel.usuario = "guest"
+Kernel.home_path = "/home"
+Kernel.current_path = "/home"
+Kernel.modo = "REMOTO"
+Kernel.prompt_completo = verdadero
+
+Kernel.actualizar_info = function(sesion)
+    si sesion == null: retornar
+    Kernel.sesion_activa = sesion
+    Kernel.ip_activa = globals.objetivo_actual or ""
+    si typeof(sesion) == "shell":
+        Kernel.usuario = sesion.user
+        Kernel.home_path = sesion.home_dir
+        Kernel.current_path = sesion.current_dir
+end function
+
+Kernel.info = function()
+    columnas = ["Propiedad", "Valor"]
+    filas = [
+        ["Sesion", Kernel.ip_activa or "Ninguna"],
+        ["Usuario", Kernel.usuario],
+        ["Path", Kernel.current_path],
+        ["Modo", Kernel.modo],
+        ["Sesiones", str(enjambre.len)],
+        ["Buffer", str(Buffer.items.len)]
+    ]
+    retornar construir_tabla(columnas, filas)
+end function
+
+Config = {}
+Config.archivo = "/root/.revenantrc"
+Config.datos = {"color_primario": "#00e5ff", "auto_jump": verdadero, "max_buffer": 50}
+Config.guardar = function()
+    contenido = ""
+    para clave in Config.datos.indexes: contenido = contenido + clave + "=" + str(Config.datos[clave]) + char(10)
+    archivo = get_shell.host_computer.File(Config.archivo)
+    si archivo: archivo.set_content(contenido)
+end function
+Config.cargar = function()
+    archivo = get_shell.host_computer.File(Config.archivo)
+    si no archivo: retornar
+    contenido = archivo.get_content
+    si contenido == null or contenido == "": retornar
+    lineas = contenido.split(char(10))
+    para linea in lineas:
+        si linea == "": continue
+        partes = linea.split("=")
+        si partes.len >= 2: Config.datos[partes[0].trim] = partes[1:].join("=").trim
+end function
+Config.obtener = function(clave, default)
+    si Config.datos.hasIndex(clave): retornar Config.datos[clave]
+    retornar default
+end function
+Config.establecer = function(clave, valor)
+    Config.datos[clave] = valor
+    Config.guardar()
+end function
+
+Log = {}
+Log.historial = []
+Log.maximo = 100
+Log.agregar = function(tipo, mensaje)
+    Log.historial.push({"tipo": tipo, "mensaje": mensaje, "tiempo": time})
+    si Log.historial.len > Log.maximo: Log.historial.remove(0)
+end function
+Log.ver = function(cantidad)
+    cantidad = cantidad or 20
+    inicio = si Log.historial.len > cantidad: Log.historial.len - cantidad |: 0
+    para i en rango(inicio, Log.historial.len):
+        entrada = Log.historial[i]
+        print(entrada.tipo + ": " + entrada.mensaje)
+end function
+
+Kernel.inicializar = function()
+    Config.cargar()
+    si no globals.hasIndex("custom_object"): globals.custom_object = {}
+    info("Kernel inicializado")
+end function
+
+Kernel.inicializar()
+
+// --- FIN SUB-MODULO: core/kernel.nini ---
+// --- INICIO SUB-MODULO: core/shell.nini ---
+// core/shell.nini - Shell con Glasspool y Piping
+
+Glasspool = {}
+Glasspool.sesion = null
+Glasspool.activo = falso
+Glasspool.configurar = function(sesion)
+    Glasspool.sesion = sesion
+    Glasspool.activo = verdadero
+    info("Glasspool activo")
+end function
+Glasspool.ejecutar = function(comando)
+    si no Glasspool.activo or Glasspool.sesion == null: retornar null
+    si typeof(Glasspool.sesion) == "shell": retornar Glasspool.sesion.launch("/bin/bash", "-c '" + comando + "'")
+    retornar null
+end function
+Glasspool.desactivar = function()
+    Glasspool.sesion = null
+    Glasspool.activo = falso
+    info("Glasspool desactivado")
+end function
+
+Shell = {}
+Shell.comandos = {}
+Shell.registrar = function(nombre, funcion, help_text)
+    Shell.comandos[nombre] = {"funcion": funcion, "help": help_text or "Sin descripcion"}
+end function
+Shell.ejecutar = function(nombre, args)
+    nombre = Aliases.resolver(nombre)
+    si Shell.comandos.hasIndex(nombre):
+        funcion = Shell.comandos[nombre].funcion
+        si args.len == 0: retornar funcion()
+        si args.len == 1: retornar funcion(args[0])
+        si args.len == 2: retornar funcion(args[0], args[1])
+        si args.len == 3: retornar funcion(args[0], args[1], args[2])
+        si args.len == 4: retornar funcion(args[0], args[1], args[2], args[3])
+        retornar funcion(args.join(" "))
+    si nombre == "ls" or nombre == "dir": retornar Shell.cmd_ls(args)
+    si nombre == "cd": retornar Shell.cmd_cd(args)
+    si nombre == "cat": retornar Shell.cmd_cat(args)
+    si nombre == "pwd": retornar Shell.cmd_pwd()
+    si nombre == "whoami": retornar Shell.cmd_whoami()
+    si nombre == "clear" or nombre == "limpiar": retornar Shell.cmd_clear()
+    si nombre == "exit" or nombre == "salir": retornar "EXIT"
+    error("Comando no encontrado: " + nombre)
+    retornar null
+end function
+
+Shell.cmd_ls = function(args)
+    ruta = si args.len > 0: args[0] |: "."
+    comp = get_shell.host_computer
+    archivo = comp.File(ruta)
+    si no archivo: retornar null
+    si archivo.is_directory:
+        archivos = archivo.get_files
+        carpetas = archivo.get_folders
+        resultado = ""
+        para f in carpetas: resultado = resultado + "<color=#00e5ff>" + f.name + "/</color>  "
+        para f in archivos: resultado = resultado + f.name + "  "
+        retornar resultado
+    retornar archivo.name
+end function
+
+Shell.cmd_cd = function(args)
+    si args.len == 0 or args[0] == "":
+        Kernel.current_path = Kernel.home_path
+        retornar Kernel.current_path
+    nueva_ruta = args[0]
+    si nueva_ruta == "..":
+        partes = Kernel.current_path.split("/")
+        partes.pop()
+        Kernel.current_path = partes.join("/")
+        si Kernel.current_path == "": Kernel.current_path = "/"
+        retornar Kernel.current_path
+    si nueva_ruta[0] != "/": nueva_ruta = Kernel.current_path + "/" + nueva_ruta
+    partes = nueva_ruta.split("/")
+    limpio = []
+    para p in partes: si p != "" and p != ".": limpio.push(p)
+    Kernel.current_path = "/" + limpio.join("/")
+    retornar Kernel.current_path
+end function
+
+Shell.cmd_cat = function(args)
+    si args.len == 0: retornar null
+    ruta = args[0]
+    comp = get_shell.host_computer
+    archivo = comp.File(ruta)
+    si no archivo: retornar null
+    si archivo.is_binary: retornar "Archivo binario"
+    retornar archivo.get_content
+end function
+
+Shell.cmd_pwd = function(): retornar Kernel.current_path
+Shell.cmd_whoami = function(): retornar Kernel.usuario
+Shell.cmd_clear = function(): clear_screen()
+end function
+
+Shell.registrar("ls", Shell.cmd_ls, "Listar archivos")
+Shell.registrar("cd", Shell.cmd_cd, "Cambiar directorio")
+Shell.registrar("cat", Shell.cmd_cat, "Ver archivo")
+Shell.registrar("pwd", Shell.cmd_pwd, "Directorio actual")
+Shell.registrar("whoami", Shell.cmd_whoami, "Usuario actual")
+Shell.registrar("clear", Shell.cmd_clear, "Limpiar pantalla")
+
+// --- FIN SUB-MODULO: core/shell.nini ---
+// --- INICIO SUB-MODULO: lib/ui.nini ---
+// lib/ui.nini - Componentes UI
+
+Colores = {"rojo": "<color=#FF0000FF><b>", "cian": "<color=#00FFFFFF><b>", "verde": "<color=#00FF00FF><b>", "gris": "<color=#71858DFF><b>", "naranja": "<color=#FF8400FF><b>", "reset": "</color></b>"}
+
+Prompt = {}
+Prompt.generar = function()
+    ip_pub = get_shell.host_computer.public_ip
+    ip_local = get_shell.host_computer.local_ip
+    user_color = si Kernel.usuario == "root": Colores.rojo |: Colores.verde
+    glass = si Glasspool.activo: Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
+    retornar user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
+end function
+Prompt.simple = function()
+    si Kernel.usuario == "root": retornar Colores.rojo + "root$ " + Colores.reset
+    retornar Colores.gris + "user$ " + Colores.reset
+end function
+
+Banner = {}
+Banner.mostrar = function()
+    clear_screen()
+    print(Colores.cian + "  REVENANT OS v3.0" + Colores.reset)
+    print(Colores.gris + "  Modular | Buffer | Glasspool" + Colores.reset)
+    print("")
+end function
+
+Separador = {}
+Separador.simple = function(): print(Colores.gris + "---" + Colores.reset)
+Separador.doble = function(): print(Colores.cian + "===" + Colores.reset)
+Separador.titulo = function(titulo): print(Colores.cian + "---[ " + titulo + " ]---" + Colores.reset)
+
+Menu = {}
+Menu.opciones = function(titulo, opciones)
+    Separador.titulo(titulo)
+    para i en rango(0, opciones.len):
+        print("  " + Colores.cian + "[" + str(i + 1) + "]" + Colores.reset + " " + opciones[i].label)
+    separador.simple()
+    sel = user_input(Colores.cian + "Seleccion: " + Colores.reset)
+    si sel == "": retornar null
+    idx = val(sel) - 1
+    si idx < 0 or idx >= opciones.len: retornar null
+    si opciones[idx].hasIndex("cmd"): retornar opciones[idx].cmd
+    retornar idx
+end function
+
+Progress = {}
+Progress.mostrar = function(actual, total, ancho)
+    ancho = ancho or 30
+    porcentaje = floor((actual / total) * 100)
+    llenado = floor((actual / total) * ancho)
+    barra = Colores.verde + "#" * llenado + Colores.gris + "-" * (ancho - llenado) + Colores.reset
+    retornar "[" + barra + "] " + str(porcentaje) + "%"
+end function
+
+Status = {}
+Status.activo = function(t): retornar Colores.verde + "+ " + Colores.reset + t
+Status.inactivo = function(t): retornar Colores.rojo + "- " + Colores.reset + t
+Status.info = function(t): retornar Colores.cian + "* " + Colores.reset + t
+
+// --- FIN SUB-MODULO: lib/ui.nini ---
+
+// Commands
+// --- INICIO SUB-MODULO: commands/recon.nini ---
+// commands/recon.nini - Escaneo y recon
+
+tarea escanear_puertos(ip)
+    info("Escaneando " + ip + "...")
+    router = get_router(ip)
+    si no router: retornar null
+    puertos = router.used_ports
+    si puertos.len == 0: retornar []
+    resultados = []
+    para port in puertos:
+        resultados.push({"puerto": port.port_number, "estado": port.is_closed, "servicio": router.port_info(port), "lan_ip": port.get_lan_ip})
+    columnas = ["Puerto", "Estado", "Servicio", "LAN IP"]
+    filas = []
+    para r in resultados:
+        estado = si r.estado: "<color=#ff3131>closed</color>" |: "<color=#00ff41>open</color>"
+        filas.push([r.puerto, estado, r.servicio, r.lan_ip])
+    print(construir_tabla(columnas, filas))
+    Buffer.push(resultados, "Scan " + ip)
+    retornar resultados
+end function
+
+tarea escanear_red(ip_base)
+    info("Escaneando red " + ip_base + "...")
+    si ip_base.indexOf(".") == null:
+        mi_ip = get_shell.host_computer.local_ip
+        partes = mi_ip.split(".")
+        ip_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
+    encontrados = []
+    para i en rango(1, 255):
+        ip = ip_base + str(i)
+        resultado = get_shell.connect_service(ip, 22, "root", "")
+        si resultado != null:
+            exito("Encontrado: " + ip)
+            encontrados.push(ip)
+            enjambre[ip] = resultado
+    info("Encontrados: " + str(encontrados.len))
+    si encontrados.len > 0: Buffer.push(encontrados, "Red " + ip_base)
+    retornar encontrados
+end function
+
+tarea whois_objetivo(ip)
+    router = get_router(ip)
+    si no router: retornar null
+    columnas = ["Propiedad", "Valor"]
+    puertos_abiertos = []
+    para port in router.used_ports:
+        si not port.is_closed: puertos_abiertos.push(str(port.port_number))
+    filas = [["IP Publica", router.public_ip], ["IP Local", router.local_ip], ["Puertos", puertos_abiertos.join(", ")]]
+    print(construir_tabla(columnas, filas))
+    retornar router
+end function
+
+// --- FIN SUB-MODULO: commands/recon.nini ---
+// --- INICIO SUB-MODULO: commands/exploit.nini ---
+// commands/exploit.nini - Explotacion
+
+tarea explotar_objetivo(ip, puerto)
+    info("Explotando " + ip + ":" + str(puerto))
+    si puerto == 0: retornar explotar_router(ip)
+    vuln = buscar_vulnerabilidad(ip, puerto)
+    si no vuln: retornar null
+    info("Vuln: " + vuln.lib_name + " v" + vuln.version)
+    para v in vuln.v_list:
+        info("Probando: " + v.mem)
+        sesion = explotar_directo(vuln.metalib, v.mem, v.pass, "")
+        si sesion != null:
+            tipo = typeof(sesion)
+            si tipo == "shell" or tipo == "computer":
+                exito("ACCESO OBTENIDO!")
+                enjambre[ip] = sesion
+                Buffer.push(sesion, "Shell " + ip)
+                si Config.obtener("auto_jump", verdadero): jumping_auto(sesion, ip)
+                retornar sesion
+    alerta("Explotacion fallida")
+    retornar null
+end function
+
+tarea explotar_router(ip)
+    router = get_router(ip)
+    si no router: retornar null
+    para port in router.used_ports:
+        si port.is_closed: continue
+        vuln = buscar_vulnerabilidad(ip, port.port_number)
+        si vuln:
+            para v in vuln.v_list:
+                sesion = explotar_directo(vuln.metalib, v.mem, v.pass, "")
+                si sesion != null:
+                    exito("Router comprometido!")
+                    enjambre[ip] = sesion
+                    Buffer.push(sesion, "Router " + ip)
+                    retornar sesion
+    retornar null
+end function
+
+tarea limpiar_logs(ip)
+    si ip == "":
+        get_shell.host_computer.File("/var/system.log").set_content("")
+        info("Logs locales limpiados")
+    sino si enjambre.hasIndex(ip):
+        sesion = enjambre[ip]
+        si typeof(sesion) == "shell":
+            sesion.launch("/bin/bash", "-c 'echo > /var/system.log'")
+            info("Logs remotos limpiados")
+end function
+
+// --- FIN SUB-MODULO: commands/exploit.nini ---
+// --- INICIO SUB-MODULO: commands/jump.nini ---
+// commands/jump.nini - Jumping
+
+jumping_auto = function(sesion, ip)
+    si typeof(sesion) != "shell": retornar null
+    comp = get_shell.host_computer
+    script_nombre = "revenant.gs"
+    para f in comp.File(current_path).get_files:
+        si f.name.indexOf("revenant") != null and f.name.indexOf(".gs") != null: script_nombre = f.name
+    script_local = comp.File(current_path + "/" + script_nombre)
+    si no script_local: script_local = comp.File(program_path)
+    si no script_local: retornar null
+    info("Copiando a " + ip + "...")
+    para dest in ["/tmp", "/home"]:
+        resultado = sesion.host_computer.touch(dest, script_nombre)
+        archivo = sesion.host_computer.File(dest + "/" + script_nombre)
+        si archivo:
+            archivo.set_content(script_local.get_content)
+            exito("Copiado a: " + dest + "/" + script_nombre)
+            sesion.launch(dest + "/" + script_nombre)
+            Buffer.push(sesion, "Jump " + ip)
+            retornar archivo
+    retornar null
+end function
+
+tarea jump_manual
+    si enjambre.len == 0: retornar
+    nodos = enjambre.indexes
+    columnas = ["#", "IP", "Tipo"]
+    filas = []
+    para i en rango(0, nodos.len):
+        filas.push([i + 1, nodos[i], typeof(enjambre[nodos[i]])])
+    print(construir_tabla(columnas, filas))
+    sel = pedir("Selecciona (#): ")
+    si sel == "": retornar
+    idx = val(sel) - 1
+    si idx < 0 or idx >= nodos.len: retornar
+    jumping_auto(enjambre[nodos[idx]], nodos[idx])
+end function
+
+tarea scan_and_jump
+    mi_ip = get_shell.host_computer.local_ip
+    partes = mi_ip.split(".")
+    red_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
+    info("Escaneando " + red_base + "0/24...")
+    encontrados = 0
+    para i en rango(1, 255):
+        ip = red_base + str(i)
+        si enjambre.hasIndex(ip): continue
+        para pwd in ["root", "toor", "admin", "password", "123456", ""]:
+            resultado = get_shell.connect_service(ip, 22, "root", pwd)
+            si resultado != null:
+                exito(ip)
+                enjambre[ip] = resultado
+                Buffer.push(resultado, "SSH " + ip)
+                encontrados = encontrados + 1
+    info("ScanJump: " + str(encontrados) + " targets")
+end function
+
+tarea jump_listar
+    si enjambre.len == 0: retornar
+    columnas = ["IP", "Tipo", "Usuario"]
+    filas = []
+    para ip in enjambre.indexes:
+        sesion = enjambre[ip]
+        tipo = typeof(sesion)
+        usuario = si tipo == "shell": sesion.user |: "-"
+        filas.push([ip, tipo, usuario])
+    print(construir_tabla(columnas, filas))
+end function
+
+// --- FIN SUB-MODULO: commands/jump.nini ---
+
+// Legacy
 // --- INICIO SUB-MODULO: modulos/botnet.nini ---
 // modulo botnet.nini - El Alma de Revenant
 
@@ -980,6 +930,190 @@ tarea sesion_action_devices(ip, sesion):
     fin
 
 // --- FIN SUB-MODULO: modulos/botnet.nini ---
+// --- INICIO SUB-MODULO: modulos/escalada.nini ---
+// modulos/escalada.nini - Escalada + ChainSaw
+
+_chain_samples = [
+    "password", "123456", "qwerty", "admin", "letmein",
+    "welcome", "monkey", "dragon", "master", "login",
+    "shadow", "sunshine", "princess", "football", "baseball",
+    "iloveyou", "trustno1", "superman", "michael", "charlie",
+    "access", "hello", "ranger", "thomas", "hunter",
+    "buster", "soccer", "hockey", "george", "pepper",
+    "killer", "daniel", "andrew", "joshua", "michelle",
+    "starwars", "freedom", "summer", "ashley", "passw0rd",
+    "matrix", "secret", "orange", "computer", "pass123",
+    "password1", "qwerty123", "abc123", "password123", "admin123"
+]
+
+_chain_pregens = [
+    "root", "pass", "123", "abc", "qwerty", "admin", "letmein",
+    "abc123", "password1", "123456", "qwerty123", "admin123",
+    "root123", "toor", "changeme", "default"
+]
+
+_chain_build = function(samples, order)
+    chains = {}
+    para sample en samples
+        mayus = sample.upper
+        si mayus.len <= order then continue
+        para i en rango(0, mayus.len - order - 1)
+            token = mayus[i : i + order]
+            next_char = mayus[i + order]
+            si no chains.hasIndex(token) then chains[token] = []
+            si chains[token].indexOf(next_char) == null then chains[token].push(next_char)
+
+_chain_next = function(chains, token)
+    si no chains.hasIndex(token) then return null
+    return chains[token][floor(rnd * chains[token].len)]
+
+_chain_generate = function(chains, token, max_len, order)
+    password = token.lower
+    mientras password.len < max_len
+        sub = password[password.len - order :].upper
+        next_c = _chain_next(chains, sub)
+        si next_c == null then break
+        password = password + next_c.lower
+    return password
+
+_chain_try = function(sesion, user, password, ip, port)
+    si ip == "" or ip == null then
+        return get_shell(user, password)
+    return get_shell.connect_service(ip, port, user, password)
+
+tarea chainsaw_crack(sesion, user, ip, port)
+    info("CHAINSAW - Markov Chain Cracker")
+    order = 3
+    max_len = 12
+    intentos = 0
+    chains = _chain_build(_chain_samples, order)
+
+    // Fase 1
+    para pwd en _chain_pregens
+        intentos = intentos + 1
+        resultado = _chain_try(sesion, user, pwd, ip, port)
+        si resultado != null then
+            exito("PASSWORD: " + pwd)
+            return resultado
+
+    // Fase 2
+    para token en chains.indexes
+        pwd = _chain_generate(chains, token, max_len, order)
+        si pwd.len < 3 then continue
+        intentos = intentos + 1
+        resultado = _chain_try(sesion, user, pwd, ip, port)
+        si resultado != null then
+            exito("PASSWORD: " + pwd)
+            return resultado
+
+    info("ChainSaw: " + str(intentos) + " intentos")
+    return null
+
+tarea modulo_escalada_analizar
+    si globals.objetivo_actual == null then
+        info("Escaneando sistema local...")
+        sesion = get_shell
+        ip = ""
+        port = 0
+    else
+        si no enjambre.hasIndex(globals.objetivo_actual) then
+            error("No hay sesion")
+            return
+        sesion = enjambre[globals.objetivo_actual]
+        ip = globals.objetivo_actual
+        port = 22
+
+    si no sesion then
+        error("No hay sesion activa")
+        return
+
+    usuario = "root"
+    si typeof(sesion) == "shell" then usuario = sesion.user
+    info("Usuario: " + usuario)
+
+    si usuario == "root" then
+        alerta("Ya eres root!")
+        return
+
+    opciones = [
+        {"label": "Analizar PrivEsc", "cmd": "analizar"},
+        {"label": "ChainSaw crack root", "cmd": "chainsaw"},
+        {"label": "Fuerza bruta SSH", "cmd": "brute"},
+    ]
+
+    accion = menu_interactivo("ESCALADA", opciones)
+    si no accion then return
+
+    si accion == "analizar" then modulo_escalada_vector(sesion)
+    else if accion == "chainsaw" then
+        resultado = chainsaw_crack(sesion, "root", ip, port)
+        si resultado != null then
+            exito("Ahora eres root!")
+            si ip != "" then enjambre[ip] = resultado
+        else alerta("No se encontro password")
+    else if accion == "brute" then modulo_escalada_brute(sesion, "root", ip, port)
+
+tarea modulo_escalada_vector(sesion)
+    info("ANALIZANDO VECTORES...")
+    vectores = []
+    comp = null
+
+    si typeof(sesion) == "shell" then comp = sesion.host_computer
+    else if typeof(sesion) == "computer" then comp = sesion
+
+    si no comp then
+        error("Sin acceso a computadora")
+        return
+
+    root = comp.File("/")
+    si no root then
+        error("Sin acceso a filesystem")
+        return
+
+    suids = root.find_permissive("s", true)
+    si suids then para f en suids
+        si f.is_binary then vectores.push({"path": f.path, "type": "SUID", "severity": "MEDIA"})
+
+    etc = comp.File("/etc")
+    si etc and etc.get_files then para f en etc.get_files
+        si f.has_permission("w") then vectores.push({"path": f.path, "type": "WRITEABLE_ETC", "severity": "ALTA"})
+
+    si vectores.len == 0 then
+        alerta("No hay vectores detectados")
+        info("Tip: Usa ChainSaw")
+    else
+        exito("Vectores: " + str(vectores.len))
+        columnas = ["Ruta", "Tipo", "Severidad"]
+        filas = []
+        para v en vectores
+            color = "<color=#00ff41>"
+            si v.severity == "ALTA" then color = "<color=#ff3131>"
+            else if v.severity == "MEDIA" then color = "<color=#ffea00>"
+            filas.push([v.path, v.type, color + v.severity + "</color>"])
+        print(construir_tabla(columnas, filas))
+
+tarea modulo_escalada_brute(sesion, user, ip, port)
+    info("FUERZA BRUTA - " + user)
+
+    passwords = [
+        "123456", "password", "qwerty", "abc123", "monkey", "letmein", "dragon",
+        "iloveyou", "sunshine", "princess", "football", "shadow", "michael",
+        "admin", "root", "toor", "pass", "changeme", "test", "guest",
+        "password1", "password123", "admin123", "root123", "qwerty123",
+        "ranger", "thomas", "hunter", "buster", "soccer", "daniel"
+    ]
+
+    para pwd en passwords
+        resultado = _chain_try(sesion, user, pwd, ip, port)
+        si resultado != null then
+            exito("PASSWORD: " + pwd)
+            si ip != "" then enjambre[ip] = pwd
+            return resultado
+
+    alerta("No se encontro password")
+    return null
+
+// --- FIN SUB-MODULO: modulos/escalada.nini ---
 // --- INICIO SUB-MODULO: modulos/persistencia.nini ---
 // modulo persistencia.nini - PERSISTENCIA
 
@@ -1294,402 +1428,6 @@ tarea intel_crack_passwd:
     exito("Crackeadas: " + str(cont))
 
 // --- FIN SUB-MODULO: modulos/intel.nini ---
-// --- INICIO SUB-MODULO: modulos/red.nini ---
-// modulos/red.nini - El Mapa de la Redes Invisibles 🌐
-
-tarea modulo_red_escanear:
-    si globals.objetivo_actual == null:
-        info("Escaneando red local desde el host actual...")
-        // Usar IP local como base
-        // TODO: Implementar macro 'escanear_lan' en nini.src
-    sino:
-        info("Escaneando subred desde " + globals.objetivo_actual)
-    
-    hosts = descubrir_red_local()
-    
-    si hosts.len == 0:
-        alerta("No se detectaron otros hosts activos en la subred.")
-    sino:
-        exito("Hosts detectados: " + hosts.len)
-        columnas = ["IP", "Estado"]
-        filas = []
-        recorrer hosts como h:
-            filas.push([h, "ACTIVO"])
-        print(construir_tabla(columnas, filas))
-
-tarea modulo_red_info:
-    info("Topología de red detectada:")
-    // Mostrar saltos y pivotes activos
-    recorrer enjambre como nodo:
-        info("Nodo vivo: " + nodo.key + " [" + typeof(nodo.value) + "]")
-
-// --- FIN SUB-MODULO: modulos/red.nini ---
-// --- INICIO SUB-MODULO: modulos/inyeccion.nini ---
-// modulos/inyeccion.nini - Propagación del Enjambre 💉
-
-tarea modulo_inyeccion_replicar:
-    si globals.objetivo_actual == null:
-        error("Fije un objetivo primero.")
-        retornar
-        
-    si globals.objetivo_actual == nulo:
-        sesion = get_shell
-    sino:
-        sesion = enjambre[globals.objetivo_actual]
-    
-    si no sesion o typeof(sesion) != "shell":
-        error("Se requiere una shell activa para inyectar.")
-        retornar
-        
-    info("Inyectando Revenant en " + globals.objetivo_actual + "...")
-    
-    // Rutas de destino comunes
-    rutas = ["/bin", "/usr/bin", "/tmp", "/var", "/home/guest"]
-    
-    // Nini provee 'replicar_binario' que abstrae scp
-    recorrer rutas como r:
-        exito_inj = replicar_binario(sesion, r)
-        si exito_inj:
-            exito("Revenant inyectado y oculto en " + r)
-            retornar
-            
-    error("No se pudo inyectar el binario en ninguna ruta conocida.")
-
-// --- FIN SUB-MODULO: modulos/inyeccion.nini ---
-// --- INICIO SUB-MODULO: modulos/escalada.nini ---
-// modulos/escalada.nini - Escalada + ChainSaw
-
-_chain_samples = [
-    "password", "123456", "qwerty", "admin", "letmein",
-    "welcome", "monkey", "dragon", "master", "login",
-    "shadow", "sunshine", "princess", "football", "baseball",
-    "iloveyou", "trustno1", "superman", "michael", "charlie",
-    "access", "hello", "ranger", "thomas", "hunter",
-    "buster", "soccer", "hockey", "george", "pepper",
-    "killer", "daniel", "andrew", "joshua", "michelle",
-    "starwars", "freedom", "summer", "ashley", "passw0rd",
-    "matrix", "secret", "orange", "computer", "pass123",
-    "password1", "qwerty123", "abc123", "password123", "admin123"
-]
-
-_chain_pregens = [
-    "root", "pass", "123", "abc", "qwerty", "admin", "letmein",
-    "abc123", "password1", "123456", "qwerty123", "admin123",
-    "root123", "toor", "changeme", "default"
-]
-
-_chain_build = function(samples, order)
-    chains = {}
-    para sample en samples
-        mayus = sample.upper
-        si mayus.len <= order then continue
-        para i en rango(0, mayus.len - order - 1)
-            token = mayus[i : i + order]
-            next_char = mayus[i + order]
-            si no chains.hasIndex(token) then chains[token] = []
-            si chains[token].indexOf(next_char) == null then chains[token].push(next_char)
-
-_chain_next = function(chains, token)
-    si no chains.hasIndex(token) then return null
-    return chains[token][floor(rnd * chains[token].len)]
-
-_chain_generate = function(chains, token, max_len, order)
-    password = token.lower
-    mientras password.len < max_len
-        sub = password[password.len - order :].upper
-        next_c = _chain_next(chains, sub)
-        si next_c == null then break
-        password = password + next_c.lower
-    return password
-
-_chain_try = function(sesion, user, password, ip, port)
-    si ip == "" or ip == null then
-        return get_shell(user, password)
-    return get_shell.connect_service(ip, port, user, password)
-
-tarea chainsaw_crack(sesion, user, ip, port)
-    info("CHAINSAW - Markov Chain Cracker")
-    order = 3
-    max_len = 12
-    intentos = 0
-    chains = _chain_build(_chain_samples, order)
-
-    // Fase 1
-    para pwd en _chain_pregens
-        intentos = intentos + 1
-        resultado = _chain_try(sesion, user, pwd, ip, port)
-        si resultado != null then
-            exito("PASSWORD: " + pwd)
-            return resultado
-
-    // Fase 2
-    para token en chains.indexes
-        pwd = _chain_generate(chains, token, max_len, order)
-        si pwd.len < 3 then continue
-        intentos = intentos + 1
-        resultado = _chain_try(sesion, user, pwd, ip, port)
-        si resultado != null then
-            exito("PASSWORD: " + pwd)
-            return resultado
-
-    info("ChainSaw: " + str(intentos) + " intentos")
-    return null
-
-tarea modulo_escalada_analizar
-    si globals.objetivo_actual == null then
-        info("Escaneando sistema local...")
-        sesion = get_shell
-        ip = ""
-        port = 0
-    else
-        si no enjambre.hasIndex(globals.objetivo_actual) then
-            error("No hay sesion")
-            return
-        sesion = enjambre[globals.objetivo_actual]
-        ip = globals.objetivo_actual
-        port = 22
-
-    si no sesion then
-        error("No hay sesion activa")
-        return
-
-    usuario = "root"
-    si typeof(sesion) == "shell" then usuario = sesion.user
-    info("Usuario: " + usuario)
-
-    si usuario == "root" then
-        alerta("Ya eres root!")
-        return
-
-    opciones = [
-        {"label": "Analizar PrivEsc", "cmd": "analizar"},
-        {"label": "ChainSaw crack root", "cmd": "chainsaw"},
-        {"label": "Fuerza bruta SSH", "cmd": "brute"},
-    ]
-
-    accion = menu_interactivo("ESCALADA", opciones)
-    si no accion then return
-
-    si accion == "analizar" then modulo_escalada_vector(sesion)
-    else if accion == "chainsaw" then
-        resultado = chainsaw_crack(sesion, "root", ip, port)
-        si resultado != null then
-            exito("Ahora eres root!")
-            si ip != "" then enjambre[ip] = resultado
-        else alerta("No se encontro password")
-    else if accion == "brute" then modulo_escalada_brute(sesion, "root", ip, port)
-
-tarea modulo_escalada_vector(sesion)
-    info("ANALIZANDO VECTORES...")
-    vectores = []
-    comp = null
-
-    si typeof(sesion) == "shell" then comp = sesion.host_computer
-    else if typeof(sesion) == "computer" then comp = sesion
-
-    si no comp then
-        error("Sin acceso a computadora")
-        return
-
-    root = comp.File("/")
-    si no root then
-        error("Sin acceso a filesystem")
-        return
-
-    suids = root.find_permissive("s", true)
-    si suids then para f en suids
-        si f.is_binary then vectores.push({"path": f.path, "type": "SUID", "severity": "MEDIA"})
-
-    etc = comp.File("/etc")
-    si etc and etc.get_files then para f en etc.get_files
-        si f.has_permission("w") then vectores.push({"path": f.path, "type": "WRITEABLE_ETC", "severity": "ALTA"})
-
-    si vectores.len == 0 then
-        alerta("No hay vectores detectados")
-        info("Tip: Usa ChainSaw")
-    else
-        exito("Vectores: " + str(vectores.len))
-        columnas = ["Ruta", "Tipo", "Severidad"]
-        filas = []
-        para v en vectores
-            color = "<color=#00ff41>"
-            si v.severity == "ALTA" then color = "<color=#ff3131>"
-            else if v.severity == "MEDIA" then color = "<color=#ffea00>"
-            filas.push([v.path, v.type, color + v.severity + "</color>"])
-        print(construir_tabla(columnas, filas))
-
-tarea modulo_escalada_brute(sesion, user, ip, port)
-    info("FUERZA BRUTA - " + user)
-
-    passwords = [
-        "123456", "password", "qwerty", "abc123", "monkey", "letmein", "dragon",
-        "iloveyou", "sunshine", "princess", "football", "shadow", "michael",
-        "admin", "root", "toor", "pass", "changeme", "test", "guest",
-        "password1", "password123", "admin123", "root123", "qwerty123",
-        "ranger", "thomas", "hunter", "buster", "soccer", "daniel"
-    ]
-
-    para pwd en passwords
-        resultado = _chain_try(sesion, user, pwd, ip, port)
-        si resultado != null then
-            exito("PASSWORD: " + pwd)
-            si ip != "" then enjambre[ip] = pwd
-            return resultado
-
-    alerta("No se encontro password")
-    return null
-
-// --- FIN SUB-MODULO: modulos/escalada.nini ---
-// --- INICIO SUB-MODULO: modulos/lateral.nini ---
-// modulo lateral.nini - MOVIMIENTO LATERAL
-
-tarea modulo_lateral_mover:
-    opciones = [
-        {"label": "Listar nodos del enjambre", "cmd": "list"},
-        {"label": "Cambiar a otro nodo", "cmd": "switch"},
-        {"label": "Escanear red DESDE pivote", "cmd": "scan"},
-        {"label": "Conectar via SSH/FTP", "cmd": "connect"},
-        {"label": "Conectar via Metaxploit", "cmd": "net"},
-    ]
-    
-    modo = menu_interactivo("MOVIMIENTO LATERAL", opciones)
-    si not modo: return
-    
-    si modo == "list": lateral_listar_nodos()
-    osi modo == "switch": lateral_cambiar_nodo()
-    osi modo == "scan": lateral_escanear_desde_pivote()
-    osi modo == "connect": lateral_conectar_servicio()
-    osi modo == "net": lateral_conectar_metaxploit()
-
-tarea lateral_listar_nodos:
-    info("NODOS EN EL ENJAMBRE:")
-    i = 1
-    para nodo en enjambre:
-        ip = nodo.key
-        sesion = nodo.value
-        tipo = typeof(sesion)
-        comp_info = (typeof(sesion) == "shell") >> sesion.host_computer.local_ip |: sesion.local_ip
-        estado = (globals.objetivo_actual == ip) >> "<color=#ffea00>ACTUAL</color>" |: "<color=#00ff41>ACTIVO</color>"
-        info(str(i) + ". " + ip + " (" + tipo + ") " + estado + " | " + comp_info)
-        i = i + 1
-    pausa_tactica()
-
-tarea lateral_cambiar_nodo:
-    si enjambre.len <= 1: info("Solo hay un nodo."); return
-    
-    // Mostrar nodos disponibles
-    para nodo en enjambre:
-        ip = nodo.key
-        si ip != globals.objetivo_actual: info(str(i) + ". " + ip); i = i + 1
-    
-    sel = val(pedir("Nodo > "))
-    si sel <= 0: return
-    
-    // Encontrar nodo seleccionado
-    cont = 0
-    para k en enjambre.keys:
-        si k != globals.objetivo_actual:
-            cont = cont + 1
-            si cont == sel:
-                globals.objetivo_actual = k
-                exito("Cambiado a: " + k)
-                return
-    error("Selección inválida.")
-
-tarea lateral_escanear_desde_pivote:
-    info("ESCANEANDO RED DESDE EL NODO...")
-    
-    sesion = obtener_shell_nodo()
-    si not sesion: error("No hay shell activa."); return
-    
-    ip_local = obtener_ip_local_nodo(sesion)
-    si not ip_local: error("No se pudo obtener IP local."); return
-    
-    info("IP local: " + ip_local)
-    
-    // Obtener router y dispositivos
-    router_nodo = obtener_router_nodo(sesion)
-    dispositivos = (router_nodo) >> dispositivos_red_nodo(sesion)
-    
-    si dispositivos y dispositivos.len > 0:
-        exito("Dispositivos: " + str(dispositivos.len))
-        para ip en dispositivos:
-            nodo_tag = ""
-            si ip == ip_local: nodo_tag = " (TU NODO)"
-            info("  - " + ip + nodo_tag)
-    sino:
-        // Fallback: escaneo manual
-        red = ip_local.split("\.")[0:3].join("\.") + "."
-        info("Escaneando: " + red + "0/24...")
-        hosts = []
-        para i en rango(1, 255):
-            ip = red + str(i)
-            si ip != ip_local y sesion.ping(ip) == 1: hosts.push(ip)
-        
-        si hosts.len == 0:
-            info("No se encontraron hosts.")
-        sino:
-            para h en hosts:
-                info("  - " + h)
-
-tarea lateral_conectar_servicio:
-    tipo = (pedir("Tipo (ssh/ftp): ")).lower()
-    si tipo != "ssh" y tipo != "ftp": error("Usa 'ssh' o 'ftp'"); return
-    
-    ip = pedir("IP: "); usuario = pedir("Usuario: "); pass = pedir("Pass: ")
-    si ip == "" o usuario == "": return
-    
-    info("Conectando a " + ip + "...")
-    sesion = (tipo == "ssh") >> conectar_ssh(ip, usuario, pass) |: conectar_ftp(ip, usuario, pass)
-    
-    si sesion:
-        enjambre[ip] = sesion
-        globals.objetivo_actual = ip
-        exito("Conectado: " + usuario + "@" + ip)
-        modulo_espectro_recon()
-    sino: error("No se pudo conectar.")
-
-tarea lateral_conectar_metaxploit:
-    ip = pedir("IP objetivo: ")
-    si ip == "": return
-    
-    puertos = puertos_dispositivo(ip)
-    
-    si not puertos o puertos.len == 0:
-        info("Sin forwarding. Intentando directo...")
-        sesion = conectar_net(ip, 22)
-        si sesion: enjambre[ip] = sesion; globals.objetivo_actual = ip; exito("Conexión directa!"); modulo_espectro_recon()
-        sino: error("No se pudo.")
-        return
-    
-    // Mostrar puertos
-    info("Puertos: " + str(puertos.len))
-    para p en puertos: info("  [" + str(p.port_number) + "] " + info_puerto(p))
-    
-    sel = val(pedir("Puerto a explotar: "))
-    si sel <= 0: return
-    
-    sesion = conectar_net(ip, sel)
-    si sesion:
-        enjambre[ip] = sesion
-        globals.objetivo_actual = ip
-        exito("ACCESO OBTENIDO!")
-        modulo_espectro_recon()
-    sino: error("Explotación fallida.")
-
-tarea obtener_shell_nodo:
-    si not globals.objetivo_actual o globals.objetivo_actual == "localhost": return get_shell
-    si enjambre.tiene(globals.objetivo_actual):
-        sesion = enjambre[globals.objetivo_actual]
-        return (typeof(sesion) == "shell") >> sesion |: null
-    return null
-
-tarea obtener_computadora_objetivo:
-    sesion = obtener_shell_nodo()
-    si sesion: return sesion.host_computer
-    return get_shell.host_computer
-
-// --- FIN SUB-MODULO: modulos/lateral.nini ---
 // --- INICIO SUB-MODULO: modulos/exfil.nini ---
 // modulo exfil.nini - EXFILTRACION v2.0
 
@@ -1824,95 +1562,36 @@ tarea modulo_payloads_generar:
     exito("Payload configurado para " + ip_atacante + ":" + puerto)
 
 // --- FIN SUB-MODULO: modulos/exfil.nini ---
-// --- INICIO SUB-MODULO: modulos/limpieza.nini ---
-// modulo limpieza.nini - LIMPIEZA DE HUELLAS v2.0
-
-tarea modulo_limpieza_ejecutar:
-    opciones_clean = [
-        {"label": "Limpiar logs del sistema", "cmd": "logs"},
-        {"label": "Limpiar historial de comandos", "cmd": "history"},
-        {"label": "Limpieza completa (todo)", "cmd": "full"},
-    ]
-    
-    modo = menu_interactivo("LIMPIEZA DE HUELLAS", opciones_clean)
-    si not modo: return
-    
-    si modo == "logs":
-        limpieza_logs()
-    osi modo == "history":
-        limpieza_historial()
-    osi modo == "full":
-        limpieza_completa()
-
-tarea limpieza_logs:
-    info("LIMPIANDO LOGS (metodo touch)...")
-    
-    comp = obtener_computadora_objetivo()
-    si not comp:
-        info("Usando equipo local...")
-        comp = get_shell.host_computer
-    
-    // Logs a limpiar
-    logs = [
-        "/var/system.log",
-        "/var/log/syslog",
-        "/var/log/auth.log",
-    ]
-    
-    cont = 0
-    para ruta en logs:
-        // Obtener la carpeta padre y el nombre del archivo
-        partes = ruta.split("/")
-        nombre = partes[-1]
-        carpeta = "/"
-        si partes.len > 2:
-            carpeta = partes[0:partes.len-1].join("/")
-        
-        archivo = comp.File(ruta)
-        si archivo:
-            // Eliminar y recrear con touch
-            archivo.delete
-            comp.touch(carpeta, nombre)
-            info("  [BLANCO] " + ruta)
-            cont = cont + 1
-        sino:
-            // Si no existe, crear vacio
-            comp.touch(carpeta, nombre)
-            info("  [CREADO] " + ruta)
-            cont = cont + 1
-    
-    exito("Logs limpiados: " + str(cont))
-    info("Archivos en blanco - sin rastros de conexión/desconexión.")
-
-tarea limpieza_historial:
-    info("Limpiando historial de comandos...")
-    
-    comp = obtener_computadora_objetivo()
-    si not comp:
-        comp = get_shell.host_computer
-    
-    // Limpiar system.log desde el objetivo
-    archivo = comp.File("/var/system.log")
-    si archivo:
-        archivo.delete
-        comp.touch("/var", "system.log")
-        info("  Historial limpiado: /var/system.log")
-    
-    exito("Historial limpiado.")
-
-tarea limpieza_completa:
-    info("=== LIMPIEZA COMPLETA ===")
-    
-    limpieza_logs()
-    limpieza_historial()
-    
-    exito("=== LIMPIEZA COMPLETA ===")
-    info("Sistema limpio. Sin rastros.")
-
-// --- FIN SUB-MODULO: modulos/limpieza.nini ---
 
 modo ninja:
 inicializar_vault()
-info("Cargando REVENANT OS...")
+
+// Registrar comandos
+Shell.registrar("scan", escanear_puertos, "Escanear puertos")
+Shell.registrar("scanred", escanear_red, "Escanear red")
+Shell.registrar("whois", whois_objetivo, "WHOIS")
+Shell.registrar("hack", explotar_objetivo, "Explotar")
+Shell.registrar("router", explotar_router, "Explotar router")
+Shell.registrar("limpiarlogs", limpiar_logs, "Limpiar logs")
+Shell.registrar("jump", jump_manual, "Jump")
+Shell.registrar("scanjump", scan_and_jump, "Scan y Jump")
+Shell.registrar("sesiones", jump_listar, "Listar sesiones")
+Shell.registrar("buffer", Buffer.list, "Ver BUFFER")
+Shell.registrar("clearbuffer", Buffer.clear, "Limpiar BUFFER")
+Shell.registrar("aliases", Aliases.listar, "Ver aliases")
+Shell.registrar("alias", Aliases.agregar, "Crear alias")
+Shell.registrar("kernel", Kernel.info, "Info kernel")
+Shell.registrar("escanear", escanear_puertos, "Escanear")
+Shell.registrar("espectro", modulo_espectro_recon, "Recon")
+Shell.registrar("asalto", modulo_asalto_root, "Asalto")
+Shell.registrar("escalada", modulo_escalada_analizar, "Escalada")
+Shell.registrar("vault", listar_credenciales, "Vault")
+Shell.registrar("intel", modulo_intel_saquear, "Intel")
+Shell.registrar("exfil", modulo_exfil_menu, "Exfil")
+Shell.registrar("persistencia", modulo_persistencia_configurar, "Persistencia")
+Shell.registrar("ses", modulo_botnet_menu, "Sesiones")
+
+Banner.mostrar()
+info("Revenant v3.0 - 'ayuda' para comandos")
 
 iniciar_repl()

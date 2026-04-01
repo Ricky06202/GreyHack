@@ -1,189 +1,90 @@
-// repl.nini - Bucle Principal Interactivo Revenant v2.0
+// repl.nini - REPL Revenant v3.0
 
-// Estado Global
 enjambre = {}
 globals.objetivo_actual = null
+globals.custom_object = {}
 estado_activo = verdadero
 _historial = []
 globals.ultimo_scan = []
 globals.modo = "REMOTO"
 
-// Funcion de Jumping global
-jumping_auto = function(sesion, ip)
-    si typeof(sesion) != "shell" then return null
-    
-    comp = get_shell.host_computer
-    archivos = comp.File(current_path).get_files
-    script_nombre = "revenant.gs"
-    
-    para f in archivos
-        si f.name.indexOf("revenant") != null and f.name.indexOf(".gs") != null then script_nombre = f.name
-    
-    script_local = comp.File(current_path + "/" + script_nombre)
-    si no script_local then return null
-    
-    resultado = sesion.host_computer.touch("/tmp", script_nombre)
-    si resultado != 1 then
-        sesion.host_computer.touch("/home", script_nombre)
-        archivo_target = sesion.host_computer.File("/home/" + script_nombre)
-        si archivo_target then
-            archivo_target.set_content(script_local.get_content)
-            sesion.launch("/home/" + script_nombre)
-            return archivo_target
-    else
-        archivo_target = sesion.host_computer.File("/tmp/" + script_nombre)
-        si archivo_target then
-            archivo_target.set_content(script_local.get_content)
-            sesion.launch("/tmp/" + script_nombre)
-            return archivo_target
-    
-    return null
+inicializar_vault = function()
+    si no globals.hasIndex("vault_data"): globals.vault_data = []
 end function
 
-tarea iniciar_repl:
-    mientras estado_activo:
-        dibujar_hud_tactico()
-        
-        p = "<color=#00e5ff>revenant"
-        si globals.objetivo_actual:
-            p = p + ":" + globals.objetivo_actual
-        p = p + ":" + globals.modo + "> "
-        
-        entrada = pedir(p)
-        
-        si entrada.trim.len > 0:
-            _historial.push(entrada.trim)
-        
-        entrada = entrada.trim.lower()
-        
-        // Comandos esenciales
-        si entrada == "salir" o entrada == "x" o entrada == "q":
-            info("Saliendo...")
-            globals.estado_activo = falso
-            
-        osi entrada == "ayuda" o entrada == "h" o entrada == "?":
-            mostrar_ayuda()
-            pausa_tactica()
-            
-        osi entrada == "objetivo" or entrada == "o":
-            prompt_objetivo()
-            si globals.objetivo_actual:
-                modulo_espectro_recon()
-            
-        osi entrada.indexOf("objetivo ") == 0 or entrada.indexOf("o ") == 0:
-            partes = entrada.split(" ")
-            si partes.len >= 2:
-                ip = resolver_objetivo(partes[1])
-                si ip:
-                    globals.objetivo_actual = ip
-                    exito("Objetivo: " + globals.objetivo_actual)
-                    modulo_espectro_recon()
-
-        osi entrada == "modo" or entrada == "m":
-            cambiar_modo()
-
-        osi entrada == "recon" or entrada == "r":
-            modulo_espectro_recon()
-            
-        osi entrada == "asalto" or entrada == "a":
-            modulo_asalto_root()
-            pausa_tactica()
-            
-        osi entrada == "vault" or entrada == "v":
-            listar_credenciales()
-            pausa_tactica()
-            
-        osi entrada == "intel" or entrada == "i":
-            modulo_intel_saquear()
-            pausa_tactica()
-
-        osi entrada == "sesiones" or entrada == "s":
-            modulo_botnet_menu()
-            pausa_tactica()
-
-        osi entrada == "jump" or entrada == "j":
-            jumping_manual()
-            pausa_tactica()
-
-        osi entrada == "lateral" or entrada == "l":
-            modulo_lateral_mover()
-            pausa_tactica()
-
-        osi entrada == "persistencia" or entrada == "pers":
-            modulo_persistencia_configurar()
-            pausa_tactica()
-
-        osi entrada == "escalada" or entrada == "esc":
-            modulo_escalada_analizar()
-            pausa_tactica()
-
-        osi entrada == "limpiar" or entrada == "limp":
-            modulo_limpieza_ejecutar()
-            pausa_tactica()
-            
-        osi entrada == "historial" or entrada == "history":
-            si _historial.len == 0:
-                info("Sin comandos.")
-            sino:
-                i = _historial.len - 1
-                cont = 0
-                mientras i >= 0 y cont < 10:
-                    info("  " + _historial[i])
-                    i = i - 1
-                    cont = cont + 1
-            pausa_tactica()
-            
-        osi entrada == "":
-            // Saltar
-            
-        sino:
-            error("Comando: " + entrada)
-            pausa_tactica()
-
-tarea mostrar_ayuda:
-    columnas = ["Comando", "Alias", "Que hace"]
+mostrar_ayuda = function()
+    Separador.titulo("AYUDA")
+    columnas = ["Comando", "Alias", "Descripcion"]
     filas = [
-        ["objetivo", "o", "Fija un objetivo"],
-        ["modo", "m", "LOCAL/REMOTO"],
-        ["recon", "r", "Escanea puertos"],
-        ["asalto", "a", "Explotar y ganar acceso"],
-        ["jump", "j", "Auto-Jumping a targets"],
-        ["escalada", "esc", "PrivEsc + ChainSaw"],
-        ["sesiones", "s", "Ver sesiones enjambre"],
-        ["lateral", "l", "Movimiento lateral"],
-        ["intel", "i", "Saquear informacion"],
-        ["vault", "v", "Ver credenciales"],
-        ["inyectar", "inj", "Inyectar codigo"],
-        ["exfil", "ex", "Exfiltrar archivos"],
-        ["limpiar", "limp", "Limpiar logs"],
-        ["persistencia", "pers", "Instalar backdoor"],
-        ["ayuda", "h", "Mostrar esta ayuda"],
-        ["salir", "q", "Salir del framework"],
+        ["scan <ip>", "sc", "Escanear puertos"],
+        ["scanred <ip>", "sr", "Escanear red"],
+        ["whois <ip>", "w", "Info objetivo"],
+        ["hack <ip> <port>", "h", "Explotar"],
+        ["jump", "j", "Jump sesion"],
+        ["scanjump", "sj", "Scan Jump auto"],
+        ["sesiones", "ss", "Ver sesiones"],
+        ["buffer", "buf", "Ver BUFFER"],
+        ["kernel", "k", "Info kernel"],
+        ["esc", "", "Escalada + ChainSaw"],
+        ["vault", "v", "Credenciales"],
+        ["intel", "i", "Saquear"],
+        ["exfil", "ex", "Exfiltrar"],
+        ["persistencia", "pe", "Backdoor"],
+        ["alias <a> <cmd>", "", "Crear alias"],
+        ["aliases", "", "Ver aliases"],
+        ["ayuda", "h", "Ayuda"],
+        ["salir", "q", "Salir"]
     ]
     print(construir_tabla(columnas, filas))
+end function
 
-tarea cambiar_modo:
-    si globals.modo == "REMOTO":
-        globals.modo = "LOCAL"
-        info("Modo cambiado a: LOCAL")
-    sino:
-        globals.modo = "REMOTO"
-        info("Modo cambiado a: REMOTO")
-
-tarea mostrar_menu_principal:
-    opciones = [
-        {"label": "Fijar Objetivo", "cmd": "o"},
-        {"label": "Cambiar Modo (LOCAL/REMOTO)", "cmd": "modo"},
-        {"label": "Escanear", "cmd": "r"},
-        {"label": "Asaltar", "cmd": "a"},
-        {"label": "Inteligencia (saquear)", "cmd": "i"},
-        {"label": "Ver Vault (credenciales)", "cmd": "v"},
-        {"label": "Sesiones (enjambre)", "cmd": "ses"},
-        {"label": "Movimiento Lateral", "cmd": "lat"},
-        {"label": "Persistencia (backdoor)", "cmd": "pe"},
-        {"label": "Limpiar huellas", "cmd": "c"},
-    ]
+procesar_comando = function(entrada)
+    si entrada == "": retornar
+    _historial.push(entrada)
+    si _historial.len > 50: _historial.remove(0)
+    partes = entrada.split(" ")
+    comando = Aliases.resolver(partes[0].lower)
+    args = partes[1:]
     
-    comando = menu_interactivo("MENU", opciones)
-    si comando:
-        entrada = comando
+    si comando == "ayuda" or comando == "h" or comando == "?": mostrar_ayuda(); retornar
+    si comando == "salir" or comando == "q": estado_activo = falso; retornar
+    si comando == "objetivo" or comando == "o":
+        si args.len == 0: info("Objetivo: " + (globals.objetivo_actual or "Ninguno"))
+        sino: globals.objetivo_actual = args[0]; exito("Objetivo: " + args[0])
+        retornar
+    end if
+    si comando == "modo" or comando == "m":
+        si globals.modo == "REMOTO": globals.modo = "LOCAL"
+        sino: globals.modo = "REMOTO"
+        info("Modo: " + globals.modo)
+        retornar
+    end if
+    si comando == "historial":
+        para i en rango(_historial.len - 1, max(0, _historial.len - 11), -1):
+            print("  " + str(i + 1) + ": " + _historial[i])
+        retornar
+    end if
+    si comando == "clear" or comando == "limpiar": clear_screen(); retornar
+    si comando == "buffer" or comando == "buf":
+        si args.len == 0: print(Buffer.list())
+        si args[0] == "clear": Buffer.clear()
+        retornar
+    end if
+    si comando == "alias" and args.len >= 2: Aliases.agregar(args[0], args[1:]); retornar
+    si comando == "aliases": print(Aliases.listar()); retornar
+    si comando == "kernel" or comando == "status": print(Kernel.info()); retornar
+    
+    resultado = Shell.ejecutar(comando, args)
+    si resultado == "EXIT": estado_activo = falso
+end function
+
+tarea iniciar_repl
+    mientras estado_activo:
+        dibujar_hud_tactico()
+        prompt = si Kernel.prompt_completo: Prompt.generar() |: Prompt.simple()
+        entrada = user_input(prompt)
+        si entrada == "": continue
+        procesar_comando(entrada)
+        si estado_activo: esperar(0.1)
+    print("Hasta luego, hacker.")
+end function

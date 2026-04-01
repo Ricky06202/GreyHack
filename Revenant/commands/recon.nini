@@ -1,0 +1,51 @@
+// commands/recon.nini - Escaneo y recon
+
+tarea escanear_puertos(ip)
+    info("Escaneando " + ip + "...")
+    router = get_router(ip)
+    si no router: retornar null
+    puertos = router.used_ports
+    si puertos.len == 0: retornar []
+    resultados = []
+    para port in puertos:
+        resultados.push({"puerto": port.port_number, "estado": port.is_closed, "servicio": router.port_info(port), "lan_ip": port.get_lan_ip})
+    columnas = ["Puerto", "Estado", "Servicio", "LAN IP"]
+    filas = []
+    para r in resultados:
+        estado = si r.estado: "<color=#ff3131>closed</color>" |: "<color=#00ff41>open</color>"
+        filas.push([r.puerto, estado, r.servicio, r.lan_ip])
+    print(construir_tabla(columnas, filas))
+    Buffer.push(resultados, "Scan " + ip)
+    retornar resultados
+end function
+
+tarea escanear_red(ip_base)
+    info("Escaneando red " + ip_base + "...")
+    si ip_base.indexOf(".") == null:
+        mi_ip = get_shell.host_computer.local_ip
+        partes = mi_ip.split(".")
+        ip_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
+    encontrados = []
+    para i en rango(1, 255):
+        ip = ip_base + str(i)
+        resultado = get_shell.connect_service(ip, 22, "root", "")
+        si resultado != null:
+            exito("Encontrado: " + ip)
+            encontrados.push(ip)
+            enjambre[ip] = resultado
+    info("Encontrados: " + str(encontrados.len))
+    si encontrados.len > 0: Buffer.push(encontrados, "Red " + ip_base)
+    retornar encontrados
+end function
+
+tarea whois_objetivo(ip)
+    router = get_router(ip)
+    si no router: retornar null
+    columnas = ["Propiedad", "Valor"]
+    puertos_abiertos = []
+    para port in router.used_ports:
+        si not port.is_closed: puertos_abiertos.push(str(port.port_number))
+    filas = [["IP Publica", router.public_ip], ["IP Local", router.local_ip], ["Puertos", puertos_abiertos.join(", ")]]
+    print(construir_tabla(columnas, filas))
+    retornar router
+end function

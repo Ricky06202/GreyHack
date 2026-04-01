@@ -1,0 +1,167 @@
+// core/kernel.nini - Corazon de Revenant
+
+Buffer = {}
+Buffer.items = []
+Buffer.max_size = 50
+
+Buffer.push = function(objeto, descripcion)
+    si Buffer.items.len >= Buffer.max_size: Buffer.items.remove(0)
+    item = {"objeto": objeto, "tipo": typeof(objeto), "descripcion": descripcion or "Sin desc", "timestamp": time, "id": Buffer.items.len}
+    Buffer.items.push(item)
+    retornar item.id
+end function
+
+Buffer.get = function(index)
+    si index < 0 or index >= Buffer.items.len: retornar null
+    retornar Buffer.items[index].objeto
+end function
+
+Buffer.list = function()
+    si Buffer.items.len == 0:
+        info("BUFFER vacio")
+        retornar ""
+    columnas = ["#", "Tipo", "Descripcion"]
+    filas = []
+    para i en rango(0, Buffer.items.len):
+        item = Buffer.items[i]
+        filas.push([i + 1, item.tipo, item.descripcion])
+    retornar construir_tabla(columnas, filas)
+end function
+
+Buffer.clear = function()
+    Buffer.items = []
+    info("BUFFER limpiado")
+end function
+
+Cob = {}
+Cob.set = function(clave, valor)
+    globals.custom_object[clave] = valor
+    retornar verdadero
+end function
+Cob.get = function(clave)
+    si globals.custom_object.hasIndex(clave): retornar globals.custom_object[clave]
+    retornar null
+end function
+Cob.del = function(clave)
+    si globals.custom_object.hasIndex(clave): globals.custom_object.remove(clave)
+end function
+
+Clipboard = {}
+Clipboard.alpha = null
+Clipboard.beta = null
+Clipboard.gamma = null
+Clipboard.set = function(espacio, valor)
+    si espacio == "a": Clipboard.alpha = valor
+    si espacio == "b": Clipboard.beta = valor
+    si espacio == "c": Clipboard.gamma = valor
+end function
+Clipboard.get = function(espacio)
+    si espacio == "a": retornar Clipboard.alpha
+    si espacio == "b": retornar Clipboard.beta
+    si espacio == "c": retornar Clipboard.gamma
+    retornar null
+end function
+
+Aliases = {}
+Aliases.lista = {"h": "ayuda", "?": "ayuda", "ll": "lateral", "ss": "sesiones", "sc": "silentclean", "rc": "rclean", "ex": "exfil", "pe": "persistencia"}
+Aliases.custom = {}
+Aliases.agregar = function(alias, comando)
+    Aliases.custom[alias] = comando
+    info("Alias: " + alias + " -> " + comando)
+end function
+Aliases.resolver = function(entrada)
+    si Aliases.custom.hasIndex(entrada): retornar Aliases.custom[entrada]
+    si Aliases.lista.hasIndex(entrada): retornar Aliases.lista[entrada]
+    retornar entrada
+end function
+Aliases.listar = function()
+    columnas = ["Alias", "Comando", "Tipo"]
+    filas = []
+    para alias in Aliases.lista.indexes: filas.push([alias, Aliases.lista[alias], "Sistema"])
+    para alias in Aliases.custom.indexes: filas.push([alias, Aliases.custom[alias], "Custom"])
+    retornar construir_tabla(columnas, filas)
+end function
+
+Kernel = {}
+Kernel.sesion_activa = null
+Kernel.ip_activa = ""
+Kernel.usuario = "guest"
+Kernel.home_path = "/home"
+Kernel.current_path = "/home"
+Kernel.modo = "REMOTO"
+Kernel.prompt_completo = verdadero
+
+Kernel.actualizar_info = function(sesion)
+    si sesion == null: retornar
+    Kernel.sesion_activa = sesion
+    Kernel.ip_activa = globals.objetivo_actual or ""
+    si typeof(sesion) == "shell":
+        Kernel.usuario = sesion.user
+        Kernel.home_path = sesion.home_dir
+        Kernel.current_path = sesion.current_dir
+end function
+
+Kernel.info = function()
+    columnas = ["Propiedad", "Valor"]
+    filas = [
+        ["Sesion", Kernel.ip_activa or "Ninguna"],
+        ["Usuario", Kernel.usuario],
+        ["Path", Kernel.current_path],
+        ["Modo", Kernel.modo],
+        ["Sesiones", str(enjambre.len)],
+        ["Buffer", str(Buffer.items.len)]
+    ]
+    retornar construir_tabla(columnas, filas)
+end function
+
+Config = {}
+Config.archivo = "/root/.revenantrc"
+Config.datos = {"color_primario": "#00e5ff", "auto_jump": verdadero, "max_buffer": 50}
+Config.guardar = function()
+    contenido = ""
+    para clave in Config.datos.indexes: contenido = contenido + clave + "=" + str(Config.datos[clave]) + char(10)
+    archivo = get_shell.host_computer.File(Config.archivo)
+    si archivo: archivo.set_content(contenido)
+end function
+Config.cargar = function()
+    archivo = get_shell.host_computer.File(Config.archivo)
+    si no archivo: retornar
+    contenido = archivo.get_content
+    si contenido == null or contenido == "": retornar
+    lineas = contenido.split(char(10))
+    para linea in lineas:
+        si linea == "": continue
+        partes = linea.split("=")
+        si partes.len >= 2: Config.datos[partes[0].trim] = partes[1:].join("=").trim
+end function
+Config.obtener = function(clave, default)
+    si Config.datos.hasIndex(clave): retornar Config.datos[clave]
+    retornar default
+end function
+Config.establecer = function(clave, valor)
+    Config.datos[clave] = valor
+    Config.guardar()
+end function
+
+Log = {}
+Log.historial = []
+Log.maximo = 100
+Log.agregar = function(tipo, mensaje)
+    Log.historial.push({"tipo": tipo, "mensaje": mensaje, "tiempo": time})
+    si Log.historial.len > Log.maximo: Log.historial.remove(0)
+end function
+Log.ver = function(cantidad)
+    cantidad = cantidad or 20
+    inicio = si Log.historial.len > cantidad: Log.historial.len - cantidad |: 0
+    para i en rango(inicio, Log.historial.len):
+        entrada = Log.historial[i]
+        print(entrada.tipo + ": " + entrada.mensaje)
+end function
+
+Kernel.inicializar = function()
+    Config.cargar()
+    si no globals.hasIndex("custom_object"): globals.custom_object = {}
+    info("Kernel inicializado")
+end function
+
+Kernel.inicializar()

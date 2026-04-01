@@ -1,20 +1,52 @@
-importar "repl.nini"
-importar "modulos/espectro.nini"
-importar "modulos/asalto.nini"
-importar "modulos/ui.nini"
+// main.nini - Revenant OS v3.0
+
+// Core
+importar "core/kernel.nini"
+importar "core/shell.nini"
+importar "lib/ui.nini"
+
+// Commands
+importar "commands/recon.nini"
+importar "commands/exploit.nini"
+importar "commands/jump.nini"
+
+// Legacy
 importar "modulos/botnet.nini"
+importar "modulos/escalada.nini"
 importar "modulos/persistencia.nini"
 importar "modulos/vault.nini"
 importar "modulos/intel.nini"
-importar "modulos/red.nini"
-importar "modulos/inyeccion.nini"
-importar "modulos/escalada.nini"
-importar "modulos/lateral.nini"
 importar "modulos/exfil.nini"
-importar "modulos/limpieza.nini"
 
 modo ninja:
 inicializar_vault()
-info("Cargando REVENANT OS...")
+
+// Registrar comandos
+Shell.registrar("scan", escanear_puertos, "Escanear puertos")
+Shell.registrar("scanred", escanear_red, "Escanear red")
+Shell.registrar("whois", whois_objetivo, "WHOIS")
+Shell.registrar("hack", explotar_objetivo, "Explotar")
+Shell.registrar("router", explotar_router, "Explotar router")
+Shell.registrar("limpiarlogs", limpiar_logs, "Limpiar logs")
+Shell.registrar("jump", jump_manual, "Jump")
+Shell.registrar("scanjump", scan_and_jump, "Scan y Jump")
+Shell.registrar("sesiones", jump_listar, "Listar sesiones")
+Shell.registrar("buffer", Buffer.list, "Ver BUFFER")
+Shell.registrar("clearbuffer", Buffer.clear, "Limpiar BUFFER")
+Shell.registrar("aliases", Aliases.listar, "Ver aliases")
+Shell.registrar("alias", Aliases.agregar, "Crear alias")
+Shell.registrar("kernel", Kernel.info, "Info kernel")
+Shell.registrar("escanear", escanear_puertos, "Escanear")
+Shell.registrar("espectro", modulo_espectro_recon, "Recon")
+Shell.registrar("asalto", modulo_asalto_root, "Asalto")
+Shell.registrar("escalada", modulo_escalada_analizar, "Escalada")
+Shell.registrar("vault", listar_credenciales, "Vault")
+Shell.registrar("intel", modulo_intel_saquear, "Intel")
+Shell.registrar("exfil", modulo_exfil_menu, "Exfil")
+Shell.registrar("persistencia", modulo_persistencia_configurar, "Persistencia")
+Shell.registrar("ses", modulo_botnet_menu, "Sesiones")
+
+Banner.mostrar()
+info("Revenant v3.0 - 'ayuda' para comandos")
 
 iniciar_repl()

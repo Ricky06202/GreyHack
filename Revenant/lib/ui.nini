@@ -1,0 +1,57 @@
+// lib/ui.nini - Componentes UI
+
+Colores = {"rojo": "<color=#FF0000FF><b>", "cian": "<color=#00FFFFFF><b>", "verde": "<color=#00FF00FF><b>", "gris": "<color=#71858DFF><b>", "naranja": "<color=#FF8400FF><b>", "reset": "</color></b>"}
+
+Prompt = {}
+Prompt.generar = function()
+    ip_pub = get_shell.host_computer.public_ip
+    ip_local = get_shell.host_computer.local_ip
+    user_color = si Kernel.usuario == "root": Colores.rojo |: Colores.verde
+    glass = si Glasspool.activo: Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
+    retornar user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
+end function
+Prompt.simple = function()
+    si Kernel.usuario == "root": retornar Colores.rojo + "root$ " + Colores.reset
+    retornar Colores.gris + "user$ " + Colores.reset
+end function
+
+Banner = {}
+Banner.mostrar = function()
+    clear_screen()
+    print(Colores.cian + "  REVENANT OS v3.0" + Colores.reset)
+    print(Colores.gris + "  Modular | Buffer | Glasspool" + Colores.reset)
+    print("")
+end function
+
+Separador = {}
+Separador.simple = function(): print(Colores.gris + "---" + Colores.reset)
+Separador.doble = function(): print(Colores.cian + "===" + Colores.reset)
+Separador.titulo = function(titulo): print(Colores.cian + "---[ " + titulo + " ]---" + Colores.reset)
+
+Menu = {}
+Menu.opciones = function(titulo, opciones)
+    Separador.titulo(titulo)
+    para i en rango(0, opciones.len):
+        print("  " + Colores.cian + "[" + str(i + 1) + "]" + Colores.reset + " " + opciones[i].label)
+    separador.simple()
+    sel = user_input(Colores.cian + "Seleccion: " + Colores.reset)
+    si sel == "": retornar null
+    idx = val(sel) - 1
+    si idx < 0 or idx >= opciones.len: retornar null
+    si opciones[idx].hasIndex("cmd"): retornar opciones[idx].cmd
+    retornar idx
+end function
+
+Progress = {}
+Progress.mostrar = function(actual, total, ancho)
+    ancho = ancho or 30
+    porcentaje = floor((actual / total) * 100)
+    llenado = floor((actual / total) * ancho)
+    barra = Colores.verde + "#" * llenado + Colores.gris + "-" * (ancho - llenado) + Colores.reset
+    retornar "[" + barra + "] " + str(porcentaje) + "%"
+end function
+
+Status = {}
+Status.activo = function(t): retornar Colores.verde + "+ " + Colores.reset + t
+Status.inactivo = function(t): retornar Colores.rojo + "- " + Colores.reset + t
+Status.info = function(t): retornar Colores.cian + "* " + Colores.reset + t

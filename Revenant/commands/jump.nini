@@ -1,0 +1,69 @@
+// commands/jump.nini - Jumping
+
+jumping_auto = function(sesion, ip)
+    si typeof(sesion) != "shell": retornar null
+    comp = get_shell.host_computer
+    script_nombre = "revenant.gs"
+    para f in comp.File(current_path).get_files:
+        si f.name.indexOf("revenant") != null and f.name.indexOf(".gs") != null: script_nombre = f.name
+    script_local = comp.File(current_path + "/" + script_nombre)
+    si no script_local: script_local = comp.File(program_path)
+    si no script_local: retornar null
+    info("Copiando a " + ip + "...")
+    para dest in ["/tmp", "/home"]:
+        resultado = sesion.host_computer.touch(dest, script_nombre)
+        archivo = sesion.host_computer.File(dest + "/" + script_nombre)
+        si archivo:
+            archivo.set_content(script_local.get_content)
+            exito("Copiado a: " + dest + "/" + script_nombre)
+            sesion.launch(dest + "/" + script_nombre)
+            Buffer.push(sesion, "Jump " + ip)
+            retornar archivo
+    retornar null
+end function
+
+tarea jump_manual
+    si enjambre.len == 0: retornar
+    nodos = enjambre.indexes
+    columnas = ["#", "IP", "Tipo"]
+    filas = []
+    para i en rango(0, nodos.len):
+        filas.push([i + 1, nodos[i], typeof(enjambre[nodos[i]])])
+    print(construir_tabla(columnas, filas))
+    sel = pedir("Selecciona (#): ")
+    si sel == "": retornar
+    idx = val(sel) - 1
+    si idx < 0 or idx >= nodos.len: retornar
+    jumping_auto(enjambre[nodos[idx]], nodos[idx])
+end function
+
+tarea scan_and_jump
+    mi_ip = get_shell.host_computer.local_ip
+    partes = mi_ip.split(".")
+    red_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
+    info("Escaneando " + red_base + "0/24...")
+    encontrados = 0
+    para i en rango(1, 255):
+        ip = red_base + str(i)
+        si enjambre.hasIndex(ip): continue
+        para pwd in ["root", "toor", "admin", "password", "123456", ""]:
+            resultado = get_shell.connect_service(ip, 22, "root", pwd)
+            si resultado != null:
+                exito(ip)
+                enjambre[ip] = resultado
+                Buffer.push(resultado, "SSH " + ip)
+                encontrados = encontrados + 1
+    info("ScanJump: " + str(encontrados) + " targets")
+end function
+
+tarea jump_listar
+    si enjambre.len == 0: retornar
+    columnas = ["IP", "Tipo", "Usuario"]
+    filas = []
+    para ip in enjambre.indexes:
+        sesion = enjambre[ip]
+        tipo = typeof(sesion)
+        usuario = si tipo == "shell": sesion.user |: "-"
+        filas.push([ip, tipo, usuario])
+    print(construir_tabla(columnas, filas))
+end function
