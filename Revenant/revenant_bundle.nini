@@ -156,14 +156,17 @@ Kernel.inicializar()
 Glasspool = {}
 Glasspool.sesion = null
 Glasspool.activo = falso
+
 Glasspool.configurar = function(sesion)
     Glasspool.sesion = sesion
     Glasspool.activo = verdadero
     info("Glasspool activo")
+
 Glasspool.ejecutar = function(comando)
     si no Glasspool.activo or Glasspool.sesion == null: retornar null
     si typeof(Glasspool.sesion) == "shell": retornar Glasspool.sesion.launch("/bin/bash", "-c '" + comando + "'")
     retornar null
+
 Glasspool.desactivar = function()
     Glasspool.sesion = null
     Glasspool.activo = falso
@@ -171,8 +174,10 @@ Glasspool.desactivar = function()
 
 Shell = {}
 Shell.comandos = {}
+
 Shell.registrar = function(nombre, funcion, help_text)
     Shell.comandos[nombre] = {"funcion": funcion, "help": help_text or "Sin descripcion"}
+
 Shell.ejecutar = function(nombre, args)
     nombre = Aliases.resolver(nombre)
     si Shell.comandos.hasIndex(nombre):
@@ -237,13 +242,12 @@ Shell.cmd_cat = function(args)
 
 Shell.cmd_pwd = function()
     retornar Kernel.current_path
-fin
+
 Shell.cmd_whoami = function()
     retornar Kernel.usuario
-fin
+
 Shell.cmd_clear = function()
     clear_screen()
-fin
 
 Shell.registrar("ls", Shell.cmd_ls, "Listar archivos")
 Shell.registrar("cd", Shell.cmd_cd, "Cambiar directorio")
@@ -256,7 +260,7 @@ Shell.registrar("clear", Shell.cmd_clear, "Limpiar pantalla")
 // --- INICIO SUB-MODULO: lib/ui.nini ---
 // lib/ui.nini - Componentes UI
 
-Colores = {"rojo": "<color=#FF0000FF><b>", "cian": "<color=#00FFFFFF><b>", "verde": "<color=#00FF00FF><b>", "gris": "<color=#71858DFF><b>", "naranja": "<color=#FF8400FF><b>", "reset": "</color></b>"}
+Colores = {"rojo": "<color=#FF0000FF><b>", "cian": "<color=#00FFFFFF><b>", "verde": "<color=#00FF00FF><b>", "gris": "<color=#71858DFF><b>", "naranja": "<color=#FF8400FF><b>", "reset": "</color></b>",}
 
 Prompt = {}
 Prompt.generar = function()
@@ -265,6 +269,7 @@ Prompt.generar = function()
     user_color = Kernel.usuario == "root" >> Colores.rojo |: Colores.verde
     glass = Glasspool.activo >> Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
     retornar user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
+
 Prompt.simple = function()
     si Kernel.usuario == "root": retornar Colores.rojo + "root$ " + Colores.reset
     retornar Colores.gris + "user$ " + Colores.reset
@@ -279,20 +284,19 @@ Banner.mostrar = function()
 Separador = {}
 Separador.simple = function()
     print(Colores.gris + "---" + Colores.reset)
-fin
+
 Separador.doble = function()
     print(Colores.cian + "===" + Colores.reset)
-fin
+
 Separador.titulo = function(titulo)
     print(Colores.cian + "---[ " + titulo + " ]---" + Colores.reset)
-fin
 
 Menu = {}
 Menu.opciones = function(titulo, opciones)
     Separador.titulo(titulo)
     para i en rango(0, opciones.len):
         print("  " + Colores.cian + "[" + str(i + 1) + "]" + Colores.reset + " " + opciones[i].label)
-    separador.simple()
+    Separador.simple()
     sel = user_input(Colores.cian + "Seleccion: " + Colores.reset)
     si sel == "": retornar null
     idx = val(sel) - 1

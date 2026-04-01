@@ -702,6 +702,27 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		end if
 	end if
 	
+	// VARIABLE = FUNCTION ONE-LINER: var = function(args): codigo
+	if trimmed.indexOf("= function") >= 0 and trimmed.indexOf(":") != null then
+		colonIdx = trimmed.indexOf(":")
+		afterColon = trimmed[colonIdx + 1:].trim
+		// Si hay código después del colon, es one-liner
+		if afterColon.len > 0 then
+			// Buscar el nombre de la variable antes de =
+			eqIdx = trimmed.indexOf("=")
+			varName = trimmed[:eqIdx].trim
+			// Buscar los args de la función
+			funcIdx = trimmed.indexOf("function")
+			funcPart = trimmed[funcIdx + 8:].trim
+			if funcPart.indexOf("(") != null then
+				args = funcPart[:funcPart.indexOf(")") + 1]
+			else
+				args = "()"
+			end if
+			return varName + " = function" + args + "; " + afterColon + "; end function"
+		end if
+	end if
+	
 	// END FOR / END IF / END WHILE - pasar sin generar output (blockStack lo maneja)
 	if trimmed == "end for" or trimmed == "end if" or trimmed == "end while" then
 		// Sacar el bloque correspondiente del blockStack

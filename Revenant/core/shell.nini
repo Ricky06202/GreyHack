@@ -3,14 +3,17 @@
 Glasspool = {}
 Glasspool.sesion = null
 Glasspool.activo = falso
+
 Glasspool.configurar = function(sesion)
     Glasspool.sesion = sesion
     Glasspool.activo = verdadero
     info("Glasspool activo")
+
 Glasspool.ejecutar = function(comando)
     si no Glasspool.activo or Glasspool.sesion == null: retornar null
     si typeof(Glasspool.sesion) == "shell": retornar Glasspool.sesion.launch("/bin/bash", "-c '" + comando + "'")
     retornar null
+
 Glasspool.desactivar = function()
     Glasspool.sesion = null
     Glasspool.activo = falso
@@ -18,8 +21,10 @@ Glasspool.desactivar = function()
 
 Shell = {}
 Shell.comandos = {}
+
 Shell.registrar = function(nombre, funcion, help_text)
     Shell.comandos[nombre] = {"funcion": funcion, "help": help_text or "Sin descripcion"}
+
 Shell.ejecutar = function(nombre, args)
     nombre = Aliases.resolver(nombre)
     si Shell.comandos.hasIndex(nombre):
@@ -84,13 +89,12 @@ Shell.cmd_cat = function(args)
 
 Shell.cmd_pwd = function()
     retornar Kernel.current_path
-fin
+
 Shell.cmd_whoami = function()
     retornar Kernel.usuario
-fin
+
 Shell.cmd_clear = function()
     clear_screen()
-fin
 
 Shell.registrar("ls", Shell.cmd_ls, "Listar archivos")
 Shell.registrar("cd", Shell.cmd_cd, "Cambiar directorio")
