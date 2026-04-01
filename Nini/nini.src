@@ -874,7 +874,7 @@ for i in range(0, lines.len)
 		topBlock = blockStack[-1]
 		if currentIndent < topBlock.indent or (currentIndent == topBlock.indent and not isContinuation) then
 			b = blockStack.pop
-			if b.bType == "if" or b.bType == "if_oneline" then 
+			if b.bType == "if" then 
 				outputLines.push("end if")
 			else if b.bType == "while" then 
 				outputLines.push("en" + "d while")
