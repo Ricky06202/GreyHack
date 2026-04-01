@@ -91,12 +91,12 @@ Kernel.actualizar_info = function(sesion)
 Kernel.info = function()
     columnas = ["Propiedad", "Valor"]
     filas = [
-        ["Sesion", Kernel.ip_activa or "Ninguna"],
-        ["Usuario", Kernel.usuario],
-        ["Path", Kernel.current_path],
-        ["Modo", Kernel.modo],
-        ["Sesiones", str(enjambre.len)],
-        ["Buffer", str(Buffer.items.len)]
+        ["Sesion", Kernel.ip_activa or "Ninguna",],
+        ["Usuario", Kernel.usuario,],
+        ["Path", Kernel.current_path,],
+        ["Modo", Kernel.modo,],
+        ["Sesiones", str(enjambre.len),],
+        ["Buffer", str(Buffer.items.len),],
     ]
     retornar construir_tabla(columnas, filas)
 
