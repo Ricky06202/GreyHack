@@ -41,7 +41,7 @@ Shell.ejecutar = function(nombre, args)
     retornar null
 
 Shell.cmd_ls = function(args)
-    ruta = si args.len > 0: args[0] |: "."
+    ruta = args.len > 0 >> args[0] |: "."
     comp = get_shell.host_computer
     archivo = comp.File(ruta)
     si no archivo: retornar null

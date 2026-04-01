@@ -6,8 +6,8 @@ Prompt = {}
 Prompt.generar = function()
     ip_pub = get_shell.host_computer.public_ip
     ip_local = get_shell.host_computer.local_ip
-    user_color = si Kernel.usuario == "root": Colores.rojo |: Colores.verde
-    glass = si Glasspool.activo: Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
+    user_color = Kernel.usuario == "root" >> Colores.rojo |: Colores.verde
+    glass = Glasspool.activo >> Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
     retornar user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
 Prompt.simple = function()
     si Kernel.usuario == "root": retornar Colores.rojo + "root$ " + Colores.reset

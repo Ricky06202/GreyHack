@@ -12,7 +12,7 @@ tarea escanear_puertos(ip)
     columnas = ["Puerto", "Estado", "Servicio", "LAN IP"]
     filas = []
     para r in resultados:
-        estado = si r.estado: "<color=#ff3131>closed</color>" |: "<color=#00ff41>open</color>"
+        estado = r.estado >> "<color=#ff3131>closed</color>" |: "<color=#00ff41>open</color>"
         filas.push([r.puerto, estado, r.servicio, r.lan_ip])
     print(construir_tabla(columnas, filas))
     Buffer.push(resultados, "Scan " + ip)

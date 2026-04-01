@@ -133,7 +133,7 @@ Log.agregar = function(tipo, mensaje)
     si Log.historial.len > Log.maximo: Log.historial.remove(0)
 Log.ver = function(cantidad)
     cantidad = cantidad or 20
-    inicio = si Log.historial.len > cantidad: Log.historial.len - cantidad |: 0
+    inicio = Log.historial.len > cantidad >> Log.historial.len - cantidad |: 0
     para i en rango(inicio, Log.historial.len):
         entrada = Log.historial[i]
         print(entrada.tipo + ": " + entrada.mensaje)

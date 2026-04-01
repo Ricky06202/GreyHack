@@ -137,7 +137,7 @@ Log.agregar = function(tipo, mensaje)
     si Log.historial.len > Log.maximo: Log.historial.remove(0)
 Log.ver = function(cantidad)
     cantidad = cantidad or 20
-    inicio = si Log.historial.len > cantidad: Log.historial.len - cantidad |: 0
+    inicio = Log.historial.len > cantidad >> Log.historial.len - cantidad |: 0
     para i en rango(inicio, Log.historial.len):
         entrada = Log.historial[i]
         print(entrada.tipo + ": " + entrada.mensaje)
@@ -194,7 +194,7 @@ Shell.ejecutar = function(nombre, args)
     retornar null
 
 Shell.cmd_ls = function(args)
-    ruta = si args.len > 0: args[0] |: "."
+    ruta = args.len > 0 >> args[0] |: "."
     comp = get_shell.host_computer
     archivo = comp.File(ruta)
     si no archivo: retornar null
@@ -255,8 +255,8 @@ Prompt = {}
 Prompt.generar = function()
     ip_pub = get_shell.host_computer.public_ip
     ip_local = get_shell.host_computer.local_ip
-    user_color = si Kernel.usuario == "root": Colores.rojo |: Colores.verde
-    glass = si Glasspool.activo: Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
+    user_color = Kernel.usuario == "root" >> Colores.rojo |: Colores.verde
+    glass = Glasspool.activo >> Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
     retornar user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
 Prompt.simple = function()
     si Kernel.usuario == "root": retornar Colores.rojo + "root$ " + Colores.reset
@@ -318,7 +318,7 @@ tarea escanear_puertos(ip)
     columnas = ["Puerto", "Estado", "Servicio", "LAN IP"]
     filas = []
     para r in resultados:
-        estado = si r.estado: "<color=#ff3131>closed</color>" |: "<color=#00ff41>open</color>"
+        estado = r.estado >> "<color=#ff3131>closed</color>" |: "<color=#00ff41>open</color>"
         filas.push([r.puerto, estado, r.servicio, r.lan_ip])
     print(construir_tabla(columnas, filas))
     Buffer.push(resultados, "Scan " + ip)
@@ -471,7 +471,7 @@ tarea jump_listar
     para ip in enjambre.indexes:
         sesion = enjambre[ip]
         tipo = typeof(sesion)
-        usuario = si tipo == "shell": sesion.user |: "-"
+        usuario = tipo == "shell" >> sesion.user |: "-"
         filas.push([ip, tipo, usuario])
     print(construir_tabla(columnas, filas))
 

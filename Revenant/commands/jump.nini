@@ -60,6 +60,6 @@ tarea jump_listar
     para ip in enjambre.indexes:
         sesion = enjambre[ip]
         tipo = typeof(sesion)
-        usuario = si tipo == "shell": sesion.user |: "-"
+        usuario = tipo == "shell" >> sesion.user |: "-"
         filas.push([ip, tipo, usuario])
     print(construir_tabla(columnas, filas))
