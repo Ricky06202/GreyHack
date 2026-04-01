@@ -13,12 +13,10 @@ Buffer.push = function(objeto, descripcion)
     item = {"objeto": objeto, "tipo": typeof(objeto), "descripcion": descripcion or "Sin desc", "timestamp": time, "id": Buffer.items.len}
     Buffer.items.push(item)
     retornar item.id
-end function
 
 Buffer.get = function(index)
     si index < 0 or index >= Buffer.items.len: retornar null
     retornar Buffer.items[index].objeto
-end function
 
 Buffer.list = function()
     si Buffer.items.len == 0:
@@ -30,25 +28,20 @@ Buffer.list = function()
         item = Buffer.items[i]
         filas.push([i + 1, item.tipo, item.descripcion])
     retornar construir_tabla(columnas, filas)
-end function
 
 Buffer.clear = function()
     Buffer.items = []
     info("BUFFER limpiado")
-end function
 
 Cob = {}
 Cob.set = function(clave, valor)
     globals.custom_object[clave] = valor
     retornar verdadero
-end function
 Cob.get = function(clave)
     si globals.custom_object.hasIndex(clave): retornar globals.custom_object[clave]
     retornar null
-end function
 Cob.del = function(clave)
     si globals.custom_object.hasIndex(clave): globals.custom_object.remove(clave)
-end function
 
 Clipboard = {}
 Clipboard.alpha = null
@@ -58,13 +51,11 @@ Clipboard.set = function(espacio, valor)
     si espacio == "a": Clipboard.alpha = valor
     si espacio == "b": Clipboard.beta = valor
     si espacio == "c": Clipboard.gamma = valor
-end function
 Clipboard.get = function(espacio)
     si espacio == "a": retornar Clipboard.alpha
     si espacio == "b": retornar Clipboard.beta
     si espacio == "c": retornar Clipboard.gamma
     retornar null
-end function
 
 Aliases = {}
 Aliases.lista = {"h": "ayuda", "?": "ayuda", "ll": "lateral", "ss": "sesiones", "sc": "silentclean", "rc": "rclean", "ex": "exfil", "pe": "persistencia"}
@@ -72,19 +63,16 @@ Aliases.custom = {}
 Aliases.agregar = function(alias, comando)
     Aliases.custom[alias] = comando
     info("Alias: " + alias + " -> " + comando)
-end function
 Aliases.resolver = function(entrada)
     si Aliases.custom.hasIndex(entrada): retornar Aliases.custom[entrada]
     si Aliases.lista.hasIndex(entrada): retornar Aliases.lista[entrada]
     retornar entrada
-end function
 Aliases.listar = function()
     columnas = ["Alias", "Comando", "Tipo"]
     filas = []
     para alias in Aliases.lista.indexes: filas.push([alias, Aliases.lista[alias], "Sistema"])
     para alias in Aliases.custom.indexes: filas.push([alias, Aliases.custom[alias], "Custom"])
     retornar construir_tabla(columnas, filas)
-end function
 
 Kernel = {}
 Kernel.sesion_activa = null
@@ -103,7 +91,6 @@ Kernel.actualizar_info = function(sesion)
         Kernel.usuario = sesion.user
         Kernel.home_path = sesion.home_dir
         Kernel.current_path = sesion.current_dir
-end function
 
 Kernel.info = function()
     columnas = ["Propiedad", "Valor"]
@@ -116,7 +103,6 @@ Kernel.info = function()
         ["Buffer", str(Buffer.items.len)]
     ]
     retornar construir_tabla(columnas, filas)
-end function
 
 Config = {}
 Config.archivo = "/root/.revenantrc"
@@ -126,7 +112,6 @@ Config.guardar = function()
     para clave in Config.datos.indexes: contenido = contenido + clave + "=" + str(Config.datos[clave]) + char(10)
     archivo = get_shell.host_computer.File(Config.archivo)
     si archivo: archivo.set_content(contenido)
-end function
 Config.cargar = function()
     archivo = get_shell.host_computer.File(Config.archivo)
     si no archivo: retornar
@@ -137,15 +122,12 @@ Config.cargar = function()
         si linea == "": continue
         partes = linea.split("=")
         si partes.len >= 2: Config.datos[partes[0].trim] = partes[1:].join("=").trim
-end function
 Config.obtener = function(clave, default)
     si Config.datos.hasIndex(clave): retornar Config.datos[clave]
     retornar default
-end function
 Config.establecer = function(clave, valor)
     Config.datos[clave] = valor
     Config.guardar()
-end function
 
 Log = {}
 Log.historial = []
@@ -153,20 +135,17 @@ Log.maximo = 100
 Log.agregar = function(tipo, mensaje)
     Log.historial.push({"tipo": tipo, "mensaje": mensaje, "tiempo": time})
     si Log.historial.len > Log.maximo: Log.historial.remove(0)
-end function
 Log.ver = function(cantidad)
     cantidad = cantidad or 20
     inicio = si Log.historial.len > cantidad: Log.historial.len - cantidad |: 0
     para i en rango(inicio, Log.historial.len):
         entrada = Log.historial[i]
         print(entrada.tipo + ": " + entrada.mensaje)
-end function
 
 Kernel.inicializar = function()
     Config.cargar()
     si no globals.hasIndex("custom_object"): globals.custom_object = {}
     info("Kernel inicializado")
-end function
 
 Kernel.inicializar()
 
@@ -181,23 +160,19 @@ Glasspool.configurar = function(sesion)
     Glasspool.sesion = sesion
     Glasspool.activo = verdadero
     info("Glasspool activo")
-end function
 Glasspool.ejecutar = function(comando)
     si no Glasspool.activo or Glasspool.sesion == null: retornar null
     si typeof(Glasspool.sesion) == "shell": retornar Glasspool.sesion.launch("/bin/bash", "-c '" + comando + "'")
     retornar null
-end function
 Glasspool.desactivar = function()
     Glasspool.sesion = null
     Glasspool.activo = falso
     info("Glasspool desactivado")
-end function
 
 Shell = {}
 Shell.comandos = {}
 Shell.registrar = function(nombre, funcion, help_text)
     Shell.comandos[nombre] = {"funcion": funcion, "help": help_text or "Sin descripcion"}
-end function
 Shell.ejecutar = function(nombre, args)
     nombre = Aliases.resolver(nombre)
     si Shell.comandos.hasIndex(nombre):
@@ -217,7 +192,6 @@ Shell.ejecutar = function(nombre, args)
     si nombre == "exit" or nombre == "salir": retornar "EXIT"
     error("Comando no encontrado: " + nombre)
     retornar null
-end function
 
 Shell.cmd_ls = function(args)
     ruta = si args.len > 0: args[0] |: "."
@@ -232,7 +206,6 @@ Shell.cmd_ls = function(args)
         para f in archivos: resultado = resultado + f.name + "  "
         retornar resultado
     retornar archivo.name
-end function
 
 Shell.cmd_cd = function(args)
     si args.len == 0 or args[0] == "":
@@ -251,7 +224,6 @@ Shell.cmd_cd = function(args)
     para p in partes: si p != "" and p != ".": limpio.push(p)
     Kernel.current_path = "/" + limpio.join("/")
     retornar Kernel.current_path
-end function
 
 Shell.cmd_cat = function(args)
     si args.len == 0: retornar null
@@ -261,12 +233,10 @@ Shell.cmd_cat = function(args)
     si no archivo: retornar null
     si archivo.is_binary: retornar "Archivo binario"
     retornar archivo.get_content
-end function
 
 Shell.cmd_pwd = function(): retornar Kernel.current_path
 Shell.cmd_whoami = function(): retornar Kernel.usuario
 Shell.cmd_clear = function(): clear_screen()
-end function
 
 Shell.registrar("ls", Shell.cmd_ls, "Listar archivos")
 Shell.registrar("cd", Shell.cmd_cd, "Cambiar directorio")
@@ -288,11 +258,9 @@ Prompt.generar = function()
     user_color = si Kernel.usuario == "root": Colores.rojo |: Colores.verde
     glass = si Glasspool.activo: Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
     retornar user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
-end function
 Prompt.simple = function()
     si Kernel.usuario == "root": retornar Colores.rojo + "root$ " + Colores.reset
     retornar Colores.gris + "user$ " + Colores.reset
-end function
 
 Banner = {}
 Banner.mostrar = function()
@@ -300,7 +268,6 @@ Banner.mostrar = function()
     print(Colores.cian + "  REVENANT OS v3.0" + Colores.reset)
     print(Colores.gris + "  Modular | Buffer | Glasspool" + Colores.reset)
     print("")
-end function
 
 Separador = {}
 Separador.simple = function(): print(Colores.gris + "---" + Colores.reset)
@@ -319,7 +286,6 @@ Menu.opciones = function(titulo, opciones)
     si idx < 0 or idx >= opciones.len: retornar null
     si opciones[idx].hasIndex("cmd"): retornar opciones[idx].cmd
     retornar idx
-end function
 
 Progress = {}
 Progress.mostrar = function(actual, total, ancho)
@@ -328,7 +294,6 @@ Progress.mostrar = function(actual, total, ancho)
     llenado = floor((actual / total) * ancho)
     barra = Colores.verde + "#" * llenado + Colores.gris + "-" * (ancho - llenado) + Colores.reset
     retornar "[" + barra + "] " + str(porcentaje) + "%"
-end function
 
 Status = {}
 Status.activo = function(t): retornar Colores.verde + "+ " + Colores.reset + t
@@ -358,7 +323,6 @@ tarea escanear_puertos(ip)
     print(construir_tabla(columnas, filas))
     Buffer.push(resultados, "Scan " + ip)
     retornar resultados
-end function
 
 tarea escanear_red(ip_base)
     info("Escaneando red " + ip_base + "...")
@@ -377,7 +341,6 @@ tarea escanear_red(ip_base)
     info("Encontrados: " + str(encontrados.len))
     si encontrados.len > 0: Buffer.push(encontrados, "Red " + ip_base)
     retornar encontrados
-end function
 
 tarea whois_objetivo(ip)
     router = get_router(ip)
@@ -389,7 +352,6 @@ tarea whois_objetivo(ip)
     filas = [["IP Publica", router.public_ip], ["IP Local", router.local_ip], ["Puertos", puertos_abiertos.join(", ")]]
     print(construir_tabla(columnas, filas))
     retornar router
-end function
 
 // --- FIN SUB-MODULO: commands/recon.nini ---
 // --- INICIO SUB-MODULO: commands/exploit.nini ---
@@ -414,7 +376,6 @@ tarea explotar_objetivo(ip, puerto)
                 retornar sesion
     alerta("Explotacion fallida")
     retornar null
-end function
 
 tarea explotar_router(ip)
     router = get_router(ip)
@@ -431,7 +392,6 @@ tarea explotar_router(ip)
                     Buffer.push(sesion, "Router " + ip)
                     retornar sesion
     retornar null
-end function
 
 tarea limpiar_logs(ip)
     si ip == "":
@@ -442,7 +402,6 @@ tarea limpiar_logs(ip)
         si typeof(sesion) == "shell":
             sesion.launch("/bin/bash", "-c 'echo > /var/system.log'")
             info("Logs remotos limpiados")
-end function
 
 // --- FIN SUB-MODULO: commands/exploit.nini ---
 // --- INICIO SUB-MODULO: commands/jump.nini ---
@@ -468,7 +427,6 @@ jumping_auto = function(sesion, ip)
             Buffer.push(sesion, "Jump " + ip)
             retornar archivo
     retornar null
-end function
 
 tarea jump_manual
     si enjambre.len == 0: retornar
@@ -483,7 +441,6 @@ tarea jump_manual
     idx = val(sel) - 1
     si idx < 0 or idx >= nodos.len: retornar
     jumping_auto(enjambre[nodos[idx]], nodos[idx])
-end function
 
 tarea scan_and_jump
     mi_ip = get_shell.host_computer.local_ip
@@ -502,7 +459,6 @@ tarea scan_and_jump
                 Buffer.push(resultado, "SSH " + ip)
                 encontrados = encontrados + 1
     info("ScanJump: " + str(encontrados) + " targets")
-end function
 
 tarea jump_listar
     si enjambre.len == 0: retornar
@@ -514,7 +470,6 @@ tarea jump_listar
         usuario = si tipo == "shell": sesion.user |: "-"
         filas.push([ip, tipo, usuario])
     print(construir_tabla(columnas, filas))
-end function
 
 // --- FIN SUB-MODULO: commands/jump.nini ---
 

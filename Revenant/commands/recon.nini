@@ -17,7 +17,6 @@ tarea escanear_puertos(ip)
     print(construir_tabla(columnas, filas))
     Buffer.push(resultados, "Scan " + ip)
     retornar resultados
-end function
 
 tarea escanear_red(ip_base)
     info("Escaneando red " + ip_base + "...")
@@ -36,7 +35,6 @@ tarea escanear_red(ip_base)
     info("Encontrados: " + str(encontrados.len))
     si encontrados.len > 0: Buffer.push(encontrados, "Red " + ip_base)
     retornar encontrados
-end function
 
 tarea whois_objetivo(ip)
     router = get_router(ip)
@@ -48,4 +46,3 @@ tarea whois_objetivo(ip)
     filas = [["IP Publica", router.public_ip], ["IP Local", router.local_ip], ["Puertos", puertos_abiertos.join(", ")]]
     print(construir_tabla(columnas, filas))
     retornar router
-end function

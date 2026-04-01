@@ -9,11 +9,9 @@ Prompt.generar = function()
     user_color = si Kernel.usuario == "root": Colores.rojo |: Colores.verde
     glass = si Glasspool.activo: Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
     retornar user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
-end function
 Prompt.simple = function()
     si Kernel.usuario == "root": retornar Colores.rojo + "root$ " + Colores.reset
     retornar Colores.gris + "user$ " + Colores.reset
-end function
 
 Banner = {}
 Banner.mostrar = function()
@@ -21,7 +19,6 @@ Banner.mostrar = function()
     print(Colores.cian + "  REVENANT OS v3.0" + Colores.reset)
     print(Colores.gris + "  Modular | Buffer | Glasspool" + Colores.reset)
     print("")
-end function
 
 Separador = {}
 Separador.simple = function(): print(Colores.gris + "---" + Colores.reset)
@@ -40,7 +37,6 @@ Menu.opciones = function(titulo, opciones)
     si idx < 0 or idx >= opciones.len: retornar null
     si opciones[idx].hasIndex("cmd"): retornar opciones[idx].cmd
     retornar idx
-end function
 
 Progress = {}
 Progress.mostrar = function(actual, total, ancho)
@@ -49,7 +45,6 @@ Progress.mostrar = function(actual, total, ancho)
     llenado = floor((actual / total) * ancho)
     barra = Colores.verde + "#" * llenado + Colores.gris + "-" * (ancho - llenado) + Colores.reset
     retornar "[" + barra + "] " + str(porcentaje) + "%"
-end function
 
 Status = {}
 Status.activo = function(t): retornar Colores.verde + "+ " + Colores.reset + t

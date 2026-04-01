@@ -10,81 +10,67 @@ globals.modo = "REMOTO"
 
 inicializar_vault = function()
     si no globals.hasIndex("vault_data"): globals.vault_data = []
-end function
 
 mostrar_ayuda = function()
     Separador.titulo("AYUDA")
     columnas = ["Comando", "Alias", "Descripcion"]
     filas = [
         ["scan <ip>", "sc", "Escanear puertos"],
-        ["scanred <ip>", "sr", "Escanear red"],
-        ["whois <ip>", "w", "Info objetivo"],
-        ["hack <ip> <port>", "h", "Explotar"],
+        ["hack <ip>", "h", "Explotar"],
         ["jump", "j", "Jump sesion"],
-        ["scanjump", "sj", "Scan Jump auto"],
         ["sesiones", "ss", "Ver sesiones"],
         ["buffer", "buf", "Ver BUFFER"],
-        ["kernel", "k", "Info kernel"],
         ["esc", "", "Escalada + ChainSaw"],
         ["vault", "v", "Credenciales"],
-        ["intel", "i", "Saquear"],
-        ["exfil", "ex", "Exfiltrar"],
-        ["persistencia", "pe", "Backdoor"],
         ["alias <a> <cmd>", "", "Crear alias"],
-        ["aliases", "", "Ver aliases"],
         ["ayuda", "h", "Ayuda"],
         ["salir", "q", "Salir"]
     ]
     print(construir_tabla(columnas, filas))
-end function
 
 procesar_comando = function(entrada)
-    si entrada == "": retornar
+    si entrada == "": return
     _historial.push(entrada)
     si _historial.len > 50: _historial.remove(0)
     partes = entrada.split(" ")
     comando = Aliases.resolver(partes[0].lower)
     args = partes[1:]
     
-    si comando == "ayuda" or comando == "h" or comando == "?": mostrar_ayuda(); retornar
-    si comando == "salir" or comando == "q": estado_activo = falso; retornar
+    si comando == "ayuda" or comando == "h" or comando == "?": mostrar_ayuda(); return
+    si comando == "salir" or comando == "q": estado_activo = falso; return
     si comando == "objetivo" or comando == "o":
         si args.len == 0: info("Objetivo: " + (globals.objetivo_actual or "Ninguno"))
-        sino: globals.objetivo_actual = args[0]; exito("Objetivo: " + args[0])
-        retornar
-    end if
+        else: globals.objetivo_actual = args[0]; exito("Objetivo: " + args[0])
+        return
     si comando == "modo" or comando == "m":
         si globals.modo == "REMOTO": globals.modo = "LOCAL"
-        sino: globals.modo = "REMOTO"
+        else: globals.modo = "REMOTO"
         info("Modo: " + globals.modo)
-        retornar
-    end if
+        return
     si comando == "historial":
         para i en rango(_historial.len - 1, max(0, _historial.len - 11), -1):
             print("  " + str(i + 1) + ": " + _historial[i])
-        retornar
-    end if
-    si comando == "clear" or comando == "limpiar": clear_screen(); retornar
+        return
+    si comando == "clear" or comando == "limpiar": clear_screen(); return
     si comando == "buffer" or comando == "buf":
         si args.len == 0: print(Buffer.list())
         si args[0] == "clear": Buffer.clear()
-        retornar
-    end if
-    si comando == "alias" and args.len >= 2: Aliases.agregar(args[0], args[1:]); retornar
-    si comando == "aliases": print(Aliases.listar()); retornar
-    si comando == "kernel" or comando == "status": print(Kernel.info()); retornar
+        return
+    si comando == "alias" and args.len >= 2: Aliases.agregar(args[0], args[1:]); return
+    si comando == "aliases": print(Aliases.listar()); return
+    si comando == "kernel" or comando == "status": print(Kernel.info()); return
     
     resultado = Shell.ejecutar(comando, args)
     si resultado == "EXIT": estado_activo = falso
-end function
 
-tarea iniciar_repl
+iniciar_repl = function()
     mientras estado_activo:
         dibujar_hud_tactico()
-        prompt = si Kernel.prompt_completo: Prompt.generar() |: Prompt.simple()
+        prompt = si Kernel.prompt_completo: Prompt.generar() else: Prompt.simple()
         entrada = user_input(prompt)
         si entrada == "": continue
         procesar_comando(entrada)
         si estado_activo: esperar(0.1)
     print("Hasta luego, hacker.")
-end function
+
+iniciar_repl()

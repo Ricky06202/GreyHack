@@ -20,7 +20,6 @@ jumping_auto = function(sesion, ip)
             Buffer.push(sesion, "Jump " + ip)
             retornar archivo
     retornar null
-end function
 
 tarea jump_manual
     si enjambre.len == 0: retornar
@@ -35,7 +34,6 @@ tarea jump_manual
     idx = val(sel) - 1
     si idx < 0 or idx >= nodos.len: retornar
     jumping_auto(enjambre[nodos[idx]], nodos[idx])
-end function
 
 tarea scan_and_jump
     mi_ip = get_shell.host_computer.local_ip
@@ -54,7 +52,6 @@ tarea scan_and_jump
                 Buffer.push(resultado, "SSH " + ip)
                 encontrados = encontrados + 1
     info("ScanJump: " + str(encontrados) + " targets")
-end function
 
 tarea jump_listar
     si enjambre.len == 0: retornar
@@ -66,4 +63,3 @@ tarea jump_listar
         usuario = si tipo == "shell": sesion.user |: "-"
         filas.push([ip, tipo, usuario])
     print(construir_tabla(columnas, filas))
-end function
