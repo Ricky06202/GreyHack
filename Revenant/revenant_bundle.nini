@@ -221,7 +221,8 @@ Shell.cmd_cd = function(args)
     si nueva_ruta[0] != "/": nueva_ruta = Kernel.current_path + "/" + nueva_ruta
     partes = nueva_ruta.split("/")
     limpio = []
-    para p in partes: si p != "" and p != ".": limpio.push(p)
+    para p in partes:
+        si p != "" and p != ".": limpio.push(p)
     Kernel.current_path = "/" + limpio.join("/")
     retornar Kernel.current_path
 
