@@ -21,9 +21,15 @@ Banner.mostrar = function()
     print("")
 
 Separador = {}
-Separador.simple = function(): print(Colores.gris + "---" + Colores.reset)
-Separador.doble = function(): print(Colores.cian + "===" + Colores.reset)
-Separador.titulo = function(titulo): print(Colores.cian + "---[ " + titulo + " ]---" + Colores.reset)
+Separador.simple = function()
+    print(Colores.gris + "---" + Colores.reset)
+fin
+Separador.doble = function()
+    print(Colores.cian + "===" + Colores.reset)
+fin
+Separador.titulo = function(titulo)
+    print(Colores.cian + "---[ " + titulo + " ]---" + Colores.reset)
+fin
 
 Menu = {}
 Menu.opciones = function(titulo, opciones)

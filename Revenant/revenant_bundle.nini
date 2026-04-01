@@ -235,9 +235,15 @@ Shell.cmd_cat = function(args)
     si archivo.is_binary: retornar "Archivo binario"
     retornar archivo.get_content
 
-Shell.cmd_pwd = function(): retornar Kernel.current_path
-Shell.cmd_whoami = function(): retornar Kernel.usuario
-Shell.cmd_clear = function(): clear_screen()
+Shell.cmd_pwd = function()
+    retornar Kernel.current_path
+fin
+Shell.cmd_whoami = function()
+    retornar Kernel.usuario
+fin
+Shell.cmd_clear = function()
+    clear_screen()
+fin
 
 Shell.registrar("ls", Shell.cmd_ls, "Listar archivos")
 Shell.registrar("cd", Shell.cmd_cd, "Cambiar directorio")
@@ -271,9 +277,15 @@ Banner.mostrar = function()
     print("")
 
 Separador = {}
-Separador.simple = function(): print(Colores.gris + "---" + Colores.reset)
-Separador.doble = function(): print(Colores.cian + "===" + Colores.reset)
-Separador.titulo = function(titulo): print(Colores.cian + "---[ " + titulo + " ]---" + Colores.reset)
+Separador.simple = function()
+    print(Colores.gris + "---" + Colores.reset)
+fin
+Separador.doble = function()
+    print(Colores.cian + "===" + Colores.reset)
+fin
+Separador.titulo = function(titulo)
+    print(Colores.cian + "---[ " + titulo + " ]---" + Colores.reset)
+fin
 
 Menu = {}
 Menu.opciones = function(titulo, opciones)
