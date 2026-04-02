@@ -1,5 +1,13 @@
 // main.nini - Revenant OS v3.0
 
+// Declarar variables globales PRIMERO (antes de importar)
+global enjambre = {}
+global objetivo_actual = null
+global custom_object = {}
+global ultimo_scan = []
+global modo = "REMOTO"
+global vault_data = []
+
 // Core
 // --- INICIO SUB-MODULO: core/kernel.nini ---
 // core/kernel.nini - Corazon de Revenant
@@ -173,6 +181,7 @@ Kernel.obtener_archivo = function(comp, ruta)
 Kernel.inicializar = function()
     Config.cargar()
     si no globals.hasIndex("custom_object"): globals.custom_object = {}
+    si no globals.hasIndex("enjambre"): globals.enjambre = {}
     info("Kernel inicializado")
 
 Kernel.inicializar()
@@ -370,10 +379,11 @@ tarea escanear_puertos(ip)
     retornar resultados
 
 tarea escanear_red(ip_base)
+    si no ip_base: ip_base = ""
     info("Escaneando red " + ip_base + "...")
     si ip_base.indexOf(".") == null:
         mi_ip = get_shell().host_computer.local_ip
-        partes = mi_ip.split(".")
+        partes = mi_ip.split("\.")
         ip_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
     encontrados = []
     para i en rango(1, 255):

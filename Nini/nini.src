@@ -3,6 +3,13 @@ _nini_sh = @get_shell
 _nini_rt = @get_router
 _nini_lb = @include_lib
 
+// Helper function to replace all occurrences in a string
+replaceAll = function(s, old, new)
+	if old == "" then return s
+	parts = s.split(old)
+	return parts.join(new)
+end function
+
 if params.len != 1 or params[0] == "-h" or params[0] == "--help" then
 	print("Uso: nini [archivo.nini]")
 	exit
@@ -47,6 +54,7 @@ niniState.requiresWifi = false
 niniState.requiresCracker = false
 niniState.requiresResolver = false
 niniState.pendingTernaryLine = ""
+niniState.globales = {}
 
 // Motor de Expansión de Macros Nini
 preprocessNiniMacros = function(s)
@@ -231,9 +239,24 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	
 	// --- Blindaje Global Inteligente (Evita corromper metodos .objeto) ---
 	// Solo blindamos si NO es un metodo (no precedido por '.') y NO es una referencia de funcion (@)
-	if (trimmed.indexOf("get_shell") != null and trimmed.indexOf(".get_shell") == null and trimmed.indexOf("@get_shell") == null) then trimmed = trimmed.replace("get_shell", "globals.__n_sh")
-	if (trimmed.indexOf("get_router") != null and trimmed.indexOf(".get_router") == null and trimmed.indexOf("@get_router") == null) then trimmed = trimmed.replace("get_router", "globals.__n_rt")
-	if (trimmed.indexOf("include_lib") != null and trimmed.indexOf(".include_lib") == null and trimmed.indexOf("@include_lib") == null) then trimmed = trimmed.replace("include_lib", "globals.__n_lb")
+	if (trimmed.indexOf("get_shell") != null and trimmed.indexOf(".get_shell") == null and trimmed.indexOf("@get_shell") == null) then trimmed = replaceAll(trimmed, "get_shell", "globals.__n_sh")
+	if (trimmed.indexOf("get_router") != null and trimmed.indexOf(".get_router") == null and trimmed.indexOf("@get_router") == null) then trimmed = replaceAll(trimmed, "get_router", "globals.__n_rt")
+	if (trimmed.indexOf("include_lib") != null and trimmed.indexOf(".include_lib") == null and trimmed.indexOf("@include_lib") == null) then trimmed = replaceAll(trimmed, "include_lib", "globals.__n_lb")
+	
+	// Dynamic global scoping - applies to all registered globals
+	for globalName in niniState.globales.indexes
+		// Skip if already prefixed with "globals." or is a method call
+		if trimmed.indexOf("globals." + globalName) != null then continue
+		if trimmed.indexOf("." + globalName) != null then continue
+		if trimmed.indexOf("@" + globalName) != null then continue
+		// Skip assignment declarations (e.g., "varName = " at start of line)
+		if trimmed.indexOf(globalName + " = ") == 0 then continue
+		if trimmed.indexOf(globalName + "=") == 0 then continue
+		// Replace if variable name is found
+		if trimmed.indexOf(globalName) != null then
+			trimmed = replaceAll(trimmed, globalName, "globals." + globalName)
+		end if
+	end for
 	
 	// Macros de conveniencia (usan la version blindada directamente para maxima seguridad)
 	if (trimmed.indexOf("mirar(") != null and trimmed.indexOf(".mirar") == null) then trimmed = trimmed.replace("mirar", "globals.__n_sh().host_computer.File")
@@ -705,6 +728,20 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		return "// Modo Ninja Activado"
 	end if
 	
+	// GLOBAL KEYWORD - Dynamic global scoping
+	if trimmed.indexOf("global ") == 0 then
+		parts = trimmed[7:].trim.split(" ")
+		varName = parts[0].trim
+		niniState.globales[varName] = true
+		// Si tiene asignación: global var = value
+		if parts.len > 1 and trimmed.indexOf("=") != null then
+			eqIdx = trimmed.indexOf("=")
+			value = trimmed[eqIdx + 1:].trim
+			return "globals." + varName + " = " + value
+		end if
+		return "globals." + varName + " = {}"
+	end if
+	
 	// TAREA/FUNCION ONE-LINER: tarea nombre: codigo
 	if (trimmed.indexOf("tarea ") == 0 or trimmed.indexOf("funcion ") == 0) and trimmed.indexOf(":") != null then
 		colonIdx = trimmed.indexOf(":")
@@ -777,20 +814,33 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		return "end function"
 	end if
 	
-	if (trimmed.indexOf("tarea ") == 0 or trimmed.indexOf("funcion ") == 0) and endsWithColon then
-		kwLen = 6; if trimmed.indexOf("funcion ") == 0 then kwLen = 8
-		decl = trimmed[kwLen : trimmed.len-1].trim
-		if decl.indexOf("(") != null then
-			funName = decl[:decl.indexOf("(")].trim
-			args = decl[decl.indexOf("(") :].trim
+	if (trimmed.indexOf("tarea ") == 0 or trimmed.indexOf("funcion ") == 0) then
+		// Evitar colisión con asignaciones de variables (ej: funcion = algo)
+		firstEq = trimmed.indexOf("=")
+		firstParen = trimmed.indexOf("(")
+		if firstEq != null and (firstParen == null or firstEq < firstParen) then
+			// Es una asignación, no una declaración de tarea. No hacer nada aquí.
 		else
-			funName = decl
-			args = "()"
+			// Evitar colisión con one-liners (tienen ':' pero NO al final, o ya fueron procesados arriba)
+			isOneLiner = (trimmed.indexOf(":") != null and endsWithColon == false)
+			if not isOneLiner then
+			kwLen = 6; if trimmed.indexOf("funcion ") == 0 then kwLen = 8
+			endIdx = trimmed.len
+			if endsWithColon then endIdx = trimmed.len - 1
+			decl = trimmed[kwLen : endIdx].trim
+			if decl.indexOf("(") != null then
+				funName = decl[:decl.indexOf("(")].trim
+				args = decl[decl.indexOf("(") :].trim
+			else
+				funName = decl
+				args = "()"
+			end if
+			blockStack.push({"bType": "function", "indent": currentIndent})
+			return funName + " = function" + args
 		end if
-		blockStack.push({"bType": "function", "indent": currentIndent})
-		return funName + " = function" + args
 	end if
-	if trimmed == "saquear_sistema" then
+end if
+if trimmed == "saquear_sistema" then
 		return "files = [""/etc/shadow"", ""/etc/passwd"", ""/var/system.log""]; for f in files; file = globals.__n_sh().host_computer.File(f); if file then print(""<color=yellow>Robado:</color> "" + f + "" -> "" + file.get_content); end for"
 	end if
 	if trimmed == "autobackdoor" then

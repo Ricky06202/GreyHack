@@ -1,5 +1,13 @@
 // main.nini - Revenant OS v3.0
 
+// Declarar variables globales PRIMERO (antes de importar)
+global enjambre = {}
+global objetivo_actual = null
+global custom_object = {}
+global ultimo_scan = []
+global modo = "REMOTO"
+global vault_data = []
+
 // Core
 importar "core/kernel.nini"
 importar "core/shell.nini"

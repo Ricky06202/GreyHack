@@ -1,12 +1,8 @@
 // repl.nini - REPL Revenant v3.0
+// (variables globales declaradas en main.nini)
 
-enjambre = {}
-globals.objetivo_actual = null
-globals.custom_object = {}
 estado_activo = verdadero
 _historial = []
-globals.ultimo_scan = []
-globals.modo = "REMOTO"
 
 inicializar_vault = function()
     si no globals.hasIndex("vault_data"): globals.vault_data = []

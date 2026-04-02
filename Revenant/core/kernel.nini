@@ -169,6 +169,7 @@ Kernel.obtener_archivo = function(comp, ruta)
 Kernel.inicializar = function()
     Config.cargar()
     si no globals.hasIndex("custom_object"): globals.custom_object = {}
+    si no globals.hasIndex("enjambre"): globals.enjambre = {}
     info("Kernel inicializado")
 
 Kernel.inicializar()

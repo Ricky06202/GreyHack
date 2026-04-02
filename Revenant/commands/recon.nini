@@ -19,10 +19,11 @@ tarea escanear_puertos(ip)
     retornar resultados
 
 tarea escanear_red(ip_base)
+    si no ip_base: ip_base = ""
     info("Escaneando red " + ip_base + "...")
     si ip_base.indexOf(".") == null:
         mi_ip = get_shell().host_computer.local_ip
-        partes = mi_ip.split(".")
+        partes = mi_ip.split("\.")
         ip_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
     encontrados = []
     para i en rango(1, 255):
