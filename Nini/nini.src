@@ -912,8 +912,20 @@ for i in range(0, lines.len)
 			end for
 		else
 			linesStr = transpiledLine.split(char(10))
+			// Check if we're inside a block that needs indentation
+			needsIndent = false
+			for b in blockStack
+				if b.bType == "for" or b.bType == "if" or b.bType == "while" or b.bType == "try_catch" then
+					needsIndent = true
+					break
+				end if
+			end for
 			for ls in linesStr
-				outputLines.push(ls)
+				if needsIndent and ls.len > 0 and ls[0] != " " and ls[0] != char(9) then
+					outputLines.push("    " + ls)
+				else
+					outputLines.push(ls)
+				end if
 			end for
 		end if
 	end if
