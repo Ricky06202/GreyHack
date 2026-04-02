@@ -247,6 +247,8 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	// Skip special Nini keywords that shouldn't be modified
 	if trimmed == "modo ninja:" then
 		// Will be handled later by FUNCIONALIDADES PRO V6
+	else if trimmed.indexOf("globals.") == 0 then
+		// Skip lines that already start with globals. (e.g., headers, global keyword output)
 	else
 		for globalName in niniState.globales.indexes
 			// Skip 'globals' itself to avoid circular reference
