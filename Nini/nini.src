@@ -244,19 +244,24 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if (trimmed.indexOf("include_lib") != null and trimmed.indexOf(".include_lib") == null and trimmed.indexOf("@include_lib") == null) then trimmed = replaceAll(trimmed, "include_lib", "globals.__n_lb")
 	
 	// Dynamic global scoping - applies to all registered globals
-	for globalName in niniState.globales.indexes
-		// Skip if already prefixed with "globals." or is a method call
-		if trimmed.indexOf("globals." + globalName) != null then continue
-		if trimmed.indexOf("." + globalName) != null then continue
-		if trimmed.indexOf("@" + globalName) != null then continue
-		// Skip assignment declarations (e.g., "varName = " at start of line)
-		if trimmed.indexOf(globalName + " = ") == 0 then continue
-		if trimmed.indexOf(globalName + "=") == 0 then continue
-		// Replace if variable name is found
-		if trimmed.indexOf(globalName) != null then
-			trimmed = replaceAll(trimmed, globalName, "globals." + globalName)
-		end if
-	end for
+	// Skip special Nini keywords that shouldn't be modified
+	if trimmed == "modo ninja:" then
+		// Will be handled later by FUNCIONALIDADES PRO V6
+	else
+		for globalName in niniState.globales.indexes
+			// Skip if already prefixed with "globals." or is a method call
+			if trimmed.indexOf("globals." + globalName) != null then continue
+			if trimmed.indexOf("." + globalName) != null then continue
+			if trimmed.indexOf("@" + globalName) != null then continue
+			// Skip assignment declarations (e.g., "varName = " at start of line)
+			if trimmed.indexOf(globalName + " = ") == 0 then continue
+			if trimmed.indexOf(globalName + "=") == 0 then continue
+			// Replace if variable name is found
+			if trimmed.indexOf(globalName) != null then
+				trimmed = replaceAll(trimmed, globalName, "globals." + globalName)
+			end if
+		end for
+	end if
 	
 	// Macros de conveniencia (usan la version blindada directamente para maxima seguridad)
 	if (trimmed.indexOf("mirar(") != null and trimmed.indexOf(".mirar") == null) then trimmed = trimmed.replace("mirar", "globals.__n_sh().host_computer.File")
