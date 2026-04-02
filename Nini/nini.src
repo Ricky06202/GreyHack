@@ -249,6 +249,8 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		// Will be handled later by FUNCIONALIDADES PRO V6
 	else
 		for globalName in niniState.globales.indexes
+			// Skip 'globals' itself to avoid circular reference
+			if globalName == "globals" then continue
 			// Skip if already prefixed with "globals." or is a method call
 			if trimmed.indexOf("globals." + globalName) != null then continue
 			if trimmed.indexOf("." + globalName) != null then continue
