@@ -4,10 +4,10 @@ _nini_rt = @get_router
 _nini_lb = @include_lib
 
 // Helper function to replace all occurrences in a string
-replaceAll = function(s, old, new)
-	if old == "" then return s
-	parts = s.split(old)
-	return parts.join(new)
+replaceAll = function(s, oldStr, newStr)
+	if oldStr == "" then return s
+	parts = s.split(oldStr)
+	return parts.join(newStr)
 end function
 
 if params.len != 1 or params[0] == "-h" or params[0] == "--help" then
