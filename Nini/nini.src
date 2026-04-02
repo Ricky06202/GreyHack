@@ -226,15 +226,17 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if (trimmed.indexOf("retornar") != null) then trimmed = trimmed.replace("retornar", "return")
 	if (trimmed.indexOf("esperar(") != null) then trimmed = trimmed.replace("esperar", "wait")
 	
-	// Sistema (Auto-Blindaje con prefix global para evitar Key Not Found en mapas)
-	if (trimmed.indexOf("get_shell") != null) then trimmed = trimmed.replace("get_shell", "globals.__n_sh")
-	if (trimmed.indexOf("get_router") != null) then trimmed = trimmed.replace("get_router", "globals.__n_rt")
-	if (trimmed.indexOf("include_lib") != null) then trimmed = trimmed.replace("include_lib", "globals.__n_lb")
-
-	if (trimmed.indexOf("mirar(") != null) then trimmed = trimmed.replace("mirar", "globals.__n_sh().host_computer.File")
-	if (trimmed.indexOf("obtener_archivo(") != null) then trimmed = trimmed.replace("obtener_archivo", "globals.__n_sh().host_computer.File")
-	if (trimmed.indexOf("tocar(") != null) then trimmed = trimmed.replace("tocar", "globals.__n_sh().host_computer.touch")
+	// --- Blindaje Global Inteligente (Evita corromper metodos .objeto) ---
+	// Solo blindamos si NO es un metodo (no precedido por '.') y NO es una referencia de funcion (@)
+	if (trimmed.indexOf("get_shell") != null and trimmed.indexOf(".get_shell") == null and trimmed.indexOf("@get_shell") == null) then trimmed = trimmed.replace("get_shell", "globals.__n_sh")
+	if (trimmed.indexOf("get_router") != null and trimmed.indexOf(".get_router") == null and trimmed.indexOf("@get_router") == null) then trimmed = trimmed.replace("get_router", "globals.__n_rt")
+	if (trimmed.indexOf("include_lib") != null and trimmed.indexOf(".include_lib") == null and trimmed.indexOf("@include_lib") == null) then trimmed = trimmed.replace("include_lib", "globals.__n_lb")
 	
+	// Macros de conveniencia (usan la version blindada directamente para maxima seguridad)
+	if (trimmed.indexOf("mirar(") != null and trimmed.indexOf(".mirar") == null) then trimmed = trimmed.replace("mirar", "globals.__n_sh().host_computer.File")
+	if (trimmed.indexOf("obtener_archivo(") != null and trimmed.indexOf(".obtener_archivo") == null) then trimmed = trimmed.replace("obtener_archivo", "globals.__n_sh().host_computer.File")
+	if (trimmed.indexOf("tocar(") != null and trimmed.indexOf(".tocar") == null) then trimmed = trimmed.replace("tocar", "globals.__n_sh().host_computer.touch")
+
 	if (trimmed.indexOf("nini_xor(") != null) then trimmed = trimmed.replace("nini_xor", "__nini_xor")
 	if (trimmed.indexOf("crackear_hash(") != null) then trimmed = trimmed.replace("crackear_hash", "__nini_crackear_hash")
 	if (trimmed.indexOf("obtener_info_libreria(") != null) then trimmed = trimmed.replace("obtener_info_libreria", "__nini_obtener_info_libreria")
