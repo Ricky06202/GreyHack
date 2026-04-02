@@ -543,10 +543,12 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 			return "if " + cond + " then"
 		else
 			// One-liner: "si cond: action"
-			// Don't push to blockStack - one-liners don't need end if
-			// Process action to handle nested si statements
+			// MUST push to blockStack and emit block form so that "osi" / "sino"
+			// continuations can follow. In GreyScript, "if cond then action" is a
+			// COMPLETE statement and cannot be followed by "else if" on the next line.
+			// Emitting "if cond then\n    action" (block form) fixes this.
 			processedAccion = accion
-			// Handle "si cond: action" patterns in the action
+			// Handle nested "si cond: action" patterns in the inline action
 			while processedAccion.indexOf("si ") != null
 				siIdx = processedAccion.indexOf("si ")
 				colonRelative = processedAccion[siIdx:].indexOf(":")
@@ -558,7 +560,8 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 				end if
 			end while
 			processedAccion = processedAccion.replace("sino:", "else")
-			return "if " + cond + " then " + processedAccion
+			blockStack.push({"bType": "if", "indent": currentIndent})
+			return "if " + cond + " then" + char(10) + "    " + processedAccion
 		end if
 	end if
 	
@@ -567,12 +570,17 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		cond = trimmed[4 : colIdx].trim
 		accion = trimmed[colIdx + 1 :].trim
 		if accion.len == 0 then
+			// Block form: "osi cond:" with body on following lines
 			blockStack.push({"bType": "elseif", "indent": currentIndent})
 			return "else if " + cond + " then"
 		else
-			// One-liner osi is NOT supported in GreyScript - convert to block
-			blockStack.push({"bType": "elseif", "indent": currentIndent})
-			return "else if " + cond + " then" + char(10) + "    " + accion + char(10) + "end if"
+			// One-liner: "osi cond: accion"
+			// Since "si" always generates block form (if cond then + EOL),
+			// "else if" MUST also use block form. In GreyScript, once "if" opens
+			// a block, "else if cond then action" (single-line) is invalid —
+			// the parser expects EOL after "then". Emit block form.
+			// Do NOT push to blockStack - end if comes from the parent si block.
+			return "else if " + cond + " then" + char(10) + "    " + accion
 		end if
 	end if
 
