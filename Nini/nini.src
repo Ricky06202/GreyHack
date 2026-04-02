@@ -558,7 +558,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 				end if
 			end while
 			processedAccion = processedAccion.replace("sino:", "else")
-			return "if (" + cond + ") then; " + processedAccion
+			return "if (" + cond + ") then " + processedAccion
 		end if
 	end if
 	
@@ -571,7 +571,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 			return "else if (" + cond + ") then"
 		else
 			blockStack.push({"bType": "elseif_oneline", "indent": currentIndent})
-			return "else if (" + cond + ") then; " + accion
+			return "else if (" + cond + ") then " + accion
 		end if
 	end if
 
