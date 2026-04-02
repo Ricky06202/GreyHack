@@ -182,3 +182,86 @@ Deja de usar bucles `for mem in` confusos.
 - **`ip = pedir("Dime tu red")`**: Formatea los inputs sosos de Grey Hack a `<color=#00e5ff>[?] Dime tu red </color>` limpiamente.
 - **`modo ninja:`**: (Se declara arriba del todo). Engancha obligatoriamente a la salida final del código final un script que borra las variables del `syslog` dejando 0 rastros.
 - **`tabla_str = construir_tabla(cabeceras, filas)`**: Motor propio de Nini para dibujar tablas ASCII invulnerables al bug de colores de `format_columns`. Resta el espectro invisible de los tags `<color>` para generar anchos y paddings perfectos antes de armar la tabla final para ti.
+
+---
+
+## 7. APIs de Red y Reconocimiento
+
+### Escaneo con `.ping()`
+
+El método `.ping()` de un objeto `Shell` permite verificar si una IP es alcanzable en la red local.
+
+```nini
+sh = get_shell
+resultado = sh.ping("192.168.0.4")
+// Retorna: "Ping successful" o "ip unreachable"
+```
+
+**⚠️ IMPORTANTE - Retorna un string, NO 1/null:**
+- `.ping()` retorna **"Ping successful"** o **"ip unreachable"** (string)
+- NO retorna 1 o null como otros métodos
+- Comparar exactamente con el string para evitar falsos positivos
+
+**Helper `disponible(ip)`:**
+Para no recordar el string exacto, usa la función helper `disponible()`:
+
+```nini
+// disponible(ip) retorna 1 si hay host, 0 si no
+si disponible("192.168.0.4") == 1:
+    info("Host alcanzable!")
+```
+
+### API de Red
+
+| Función | Descripción |
+|---------|-------------|
+| `sh.ping(ip)` | Verificar si IP es alcanzable (retorna "Ping successful" o "ip unreachable") |
+| `disponible(ip)` | Wrapper que retorna 1 o 0 para facilidad de uso |
+| `get_router(ip)` | Obtener objeto router |
+| `router.device_ports(ip)` | Puertos de dispositivo local |
+| `router.used_ports` | Puertos activos en red |
+| `router.port_info(port)` | Info del servicio |
+| `comp.local_ip` | IP local del equipo actual |
+
+### Detectar si una IP es Local
+
+```nini
+tarea es_ip_local(ip):
+    si not ip: retornar falso
+    si ip == "127.0.0.1": retornar verdadero
+    
+    comp = get_shell().host_computer
+    local_ip = comp.local_ip
+    
+    partes_local = local_ip.split(".")
+    partes_ip = ip.split(".")
+    
+    si len(partes_local) < 3 o len(partes_ip) < 3: retornar falso
+    
+    red_local = partes_local[0] + "." + partes_local[1] + "." + partes_local[2]
+    red_ip = partes_ip[0] + "." + partes_ip[1] + "." + partes_ip[2]
+    
+    retornar red_local == red_ip
+```
+
+### Obtener Información de Puertos
+
+```nini
+router = get_router(host)
+puertos = router.used_ports
+
+para p en puertos:
+    info("Puerto: " + p.port_number + " - " + router.port_info(p))
+```
+
+### API Completa de Red
+
+| Función | Descripción |
+|---------|-------------|
+| `sh.ping(ip)` | Verificar si IP es alcanzable (retorna 1 o null) |
+| `get_router(ip)` | Obtener objeto router para análisis de red |
+| `router.device_ports(ip)` | Puertos de un dispositivo local |
+| `router.used_ports` | Puertos activos en la red |
+| `router.port_info(port)` | Información del servicio |
+| `port.get_lan_ip` | IP LAN del dispositivo |
+| `comp.local_ip` | IP local del equipo actual |

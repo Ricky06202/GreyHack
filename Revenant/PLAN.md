@@ -27,24 +27,38 @@ osi modo == "enjambre":
 ## 3. Hoja de Ruta para Mañana
 
 ### Fase 0: Nini-Bundler (Herramienta Antigravity)
-- [ ] Desarrollar un empaquetador en **JavaScript (Bun)** que corra localmente en esta máquina para leer un `main.nini`.
-- [ ] Este script detectará cualquier `importar "archivo.nini"` y fusionará recursivamente todos los módulos en un solo archivo gigante y plano `revenant_bundle.nini`. 
-- [ ] Así, desarrollarás modularmente en Antigravity, pero solo copiarás y pegarás UNA VEZ un solo archivo monolítico dentro de Grey Hack. ¡Resolviendo el problema logístico de Greybel!
+- [x] Desarrollar un empaquetador en **JavaScript (Bun)** que corra localmente en esta máquina para leer un `main.nini`.
+- [x] Este script detectará cualquier `importar "archivo.nini"` y fusionará recursivamente todos los módulos en un solo archivo gigante y plano `revenant_bundle.nini`. 
+- [x] Así, desarrollarás modularmente en Antigravity, pero solo copiarás y pegarás UNA VEZ un solo archivo monolítico dentro de Grey Hack. ¡Resolviendo el problema logístico de Greybel!
 
 ### Fase 1: Consola Interactiva (REPL a lo Metasploit)
-- [ ] Replicar la estructura Lisp de Clojette pero en sintaxis Nini para crear un bucle de consola invulnerable `Manejador_de_Estado = mientras 1: entrada = user_input("Revenant > ")`.
-- [ ] Construir la interfaz de ayuda tabular con `construir_tabla()`.
-- [ ] **NOTA ESTRATÉGICA:** El propósito real de este bucle infinito NO es solo escribir comandos; es para hospedar **Objetos de Shell Remote** en la memoria RAM `enjambre[IP_VICTIMA] = shell()`. Si Revenant termina su ejecución abrupta (como pasaba en el anterior framework), todas las conexiones a los servidores hackeados que hayamos recolectado se desconectarían y la variable se eliminaría por el Garabage Collector de Grey Hack. Este bucle mantiene viva nuestra "Botnet" para que podamos saltar de una IP a otra escribiendo *"usar 1"* o enviando comandos a 50 PCs simultáneamente sin volver a escanear ni compilar.
+- [x] Replicar la estructura Lisp de Clojette pero en sintaxis Nini para crear un bucle de consola invulnerable `Manejador_de_Estado = mientras 1: entrada = user_input("Revenant > ")`.
+- [x] Construir la interfaz de ayuda tabular con `construir_tabla()`.
+- [x] **NOTA ESTRATÉGICA:** El propósito real de este bucle infinito NO es solo escribir comandos; es para hospedar **Objetos de Shell Remote** en la memoria RAM `enjambre[IP_VICTIMA] = shell()`. Si Revenant termina su ejecución abrupta (como pasaba en el anterior framework), todas las conexiones a los servidores hackeados que hayamos recolectado se desconectarían y la variable se eliminaría por el Garabage Collector de Grey Hack. Este bucle mantiene viva nuestra "Botnet" para que podamos saltar de una IP a otra escribiendo *"usar 1"* o enviando comandos a 50 PCs simultáneamente sin volver a escanear ni compilar.
 
 ### Fase 2: Módulo Espectro (Reconocimiento Remoto)
-- [ ] Usar `resolver_objetivo()` y la macro de puertos para reescribir el `wraith_net.src` en exactamente 5 líneas de Nini.
+- [x] Usar `resolver_objetivo()` y la macro de puertos para reescribir el `wraith_net.src` en exactamente 5 líneas de Nini.
 
 ### Fase 3: Módulo Asalto (Inyecciones y Buffer Overflow Automático)
-- [ ] Implementar la API de Metaxploit profunda en Nini.
+- [x] Implementar la API de Metaxploit profunda en Nini.
 
 ### Fase 4: Persistencia Infinita (El Alma del Revenant)
-- [ ] Automatizar rutinas de creación de backdoors `/etc/sysconfig` e inyectables en tareas de segundo plano que sobrevivan reinicios.
+- [x] Automatizar rutinas de creación de backdoors `/etc/sysconfig` e inyectables en tareas de segundo plano que sobrevivan reinicios.
 
 ---
-*Escrito por: Antigravity*
-*Motor Asignado: Nini Transpiler V12*
+
+## Estado Actual (Abril 2026)
+
+### Completado
+- Framework modular completo con 13+ módulos
+- Sistema de vault cifrado
+- Gestión de enjambre/botnet
+- REPL interactivo
+- Nini-Bundler funcional
+- **Fix crítico:** Escaneo de red ahora verifica shell válido con `typeof()` y `resultado.ping("127.0.0.1")` para evitar falsos positivos
+- Documentación completa
+
+### Pendiente
+- Testing en Grey Hack real
+- WiFi cracking module
+- Mejorar rendimiento de escaneo

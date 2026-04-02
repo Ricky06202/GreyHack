@@ -30,7 +30,7 @@ tarea jump_manual
     nodos = enjambre.indexes
     columnas = ["#", "IP", "Tipo"]
     filas = []
-    para i en rango(0, len(nodos)):
+    para i en rango(0, len(nodos) - 1):
         filas.push([i + 1, nodos[i], typeof(enjambre[nodos[i]])])
     print(construir_tabla(columnas, filas))
     sel = pedir("Selecciona (#): ")
@@ -41,20 +41,25 @@ tarea jump_manual
 
 tarea scan_and_jump
     mi_ip = get_shell().host_computer.local_ip
-    partes = mi_ip.split(".")
+    partes = mi_ip.split("\.")
     red_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
     info("Escaneando " + red_base + "0/24...")
+    sh = get_shell()
     encontrados = 0
     para i en rango(1, 255):
         ip = red_base + str(i)
         si enjambre.hasIndex(ip): continue
-        para pwd in ["root", "toor", "admin", "password", "123456", ""]:
-            resultado = get_shell().connect_service(ip, 22, "root", pwd)
-            si resultado != null:
-                exito(ip)
-                enjambre[ip] = resultado
-                Buffer.push(resultado, "SSH " + ip)
-                encontrados = encontrados + 1
+        // disponible(ip) retorna 1 si el host responde, 0 si no
+        si disponible(ip) == 1:
+            // Intentar obtener shell con diferentes passwords
+            para pwd in ["root", "toor", "admin", "password", "123456", ""]:
+                resultado = sh.connect_service(ip, 22, "root", pwd)
+                si resultado != null:
+                    exito(ip)
+                    enjambre[ip] = resultado
+                    Buffer.push(resultado, "SSH " + ip)
+                    encontrados = encontrados + 1
+                    salir  // Password encontrada, salir del bucle
     info("ScanJump: " + str(encontrados) + " targets")
 
 tarea jump_listar

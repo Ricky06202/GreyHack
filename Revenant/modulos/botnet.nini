@@ -12,7 +12,7 @@ tarea modulo_botnet_menu
     columnas = ["#", "IP", "Tipo"]
     filas = []
     
-    para i en rango(0, len(nodos)):
+    para i en rango(0, len(nodos) - 1):
         ip = nodos[i]
         sesion = enjambre[ip]
         tipo = typeof(sesion)

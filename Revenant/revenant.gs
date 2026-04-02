@@ -100,9 +100,18 @@ __nini_descubrir_red_local = function()
   for i in range(1, 254)
     ip = net + i
     if ip == lip then continue
-    if globals.__n_sh().ping(ip) == 1 then h.push(ip)
+    r = globals.__n_sh().ping(ip)
+    if r == "Ping successful" then h.push(ip)
   end for
   return h
+end function
+__nini_disponible = function(ip)
+  // Retorna 1 si el host responde a ping, 0 si no
+  // Traduce el string Ping successful/ip unreachable a valor booleano
+  if not ip then return 0
+  r = globals.__n_sh().ping(ip)
+  if r == "Ping successful" then return 1
+  return 0
 end function
 __nini_obtener_router_objetivo = function(ip)
   r = globals.__n_rt(ip)
@@ -383,7 +392,7 @@ end function
 end if
         columnas = ["#", "Tipo", "Descripcion"]
         filas = []
-    for i in range(0, len(Buffer.items))
+    for i in range(0, len(Buffer.items) - 1)
             item = Buffer.items[i]
             filas.push([i + 1, item.tipo, item.descripcion])
 end for
@@ -554,7 +563,7 @@ end function
         else
     inicio = 0
         end if
-    for i in range(inicio, len(Log.historial))
+    for i in range(inicio, len(Log.historial) - 1)
             entrada = Log.historial[i]
             print(entrada.tipo + ": " + entrada.mensaje)
 end for
@@ -809,7 +818,7 @@ end function
 Menu = {}
     Menu.opciones = function(titulo, opciones)
         Separador.titulo(titulo)
-    for i in range(0, len(opciones))
+    for i in range(0, len(opciones) - 1)
             print("  " + Colores.cian + "[" + str(i + 1) + "]" + Colores.reset + " " + opciones[i].label)
 end for
         Separador.simple()
@@ -838,6 +847,16 @@ Status = {}
 Status.activo = function(t); return Colores.verde + "+ " + Colores.reset + t; end function
 Status.inactivo = function(t); return Colores.rojo + "- " + Colores.reset + t; end function
 Status.info = function(t); return Colores.cian + "* " + Colores.reset + t; end function
+    __nini_disponible = function(ip)
+    if not ip then
+    return 0
+end if
+        resultado = globals.__n_sh().ping(ip)
+    if resultado == "Ping successful" then
+    return 1
+end if
+        return 0
+end function
     escanear_puertos = function(ip)
         print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando " + ip + "..." + "</color>")
         router = globals.__n_rt(ip)
@@ -867,23 +886,24 @@ end for
         return resultados
 end function
     escanear_red = function(ip_base)
-    if not ip_base then
-    ip_base = ""
-end if
-        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando red " + ip_base + "..." + "</color>")
-    if ip_base.indexOf(".") == null then
+    if not ip_base or ip_base == "" then
             mi_ip = globals.__n_sh().host_computer.local_ip
             partes = mi_ip.split("\.")
             ip_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
 end if
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando red " + ip_base + "..." + "</color>")
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "IP base calculada: " + ip_base + "</color>")
+        sh = globals.__n_sh()
         encontrados = []
     for i in range(1, 255)
             ip = ip_base + str(i)
-            resultado = globals.__n_sh().connect_service(ip, 22, "root", "")
-        if resultado != null then
+        if __nini_disponible(ip) == 1 then
                 print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Encontrado: " + ip + "</color>")
-                encontrados.push(ip)
-                globals.enjambre[ip] = resultado
+                resultado = sh.connect_service(ip, 22, "root", "")
+            if resultado != null then
+                    globals.enjambre[ip] = resultado
+                    encontrados.push(ip)
+end if
 end if
 end for
         print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Encontrados: " + str(len(encontrados)) + "</color>")
@@ -1011,7 +1031,7 @@ end if
         nodos = globals.enjambre.indexes
         columnas = ["#", "IP", "Tipo"]
         filas = []
-    for i in range(0, len(nodos))
+    for i in range(0, len(nodos) - 1)
             filas.push([i + 1, nodos[i], typeof(globals.enjambre[nodos[i]])])
 end for
         print(__nini_tabla(columnas, filas))
@@ -1027,24 +1047,28 @@ end if
 end function
     scan_and_jump = function()
         mi_ip = globals.__n_sh().host_computer.local_ip
-        partes = mi_ip.split(".")
+        partes = mi_ip.split("\.")
         red_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
         print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando " + red_base + "0/24..." + "</color>")
+        sh = globals.__n_sh()
         encontrados = 0
     for i in range(1, 255)
             ip = red_base + str(i)
         if globals.enjambre.hasIndex(ip) then
     continue
 end if
-        for pwd in ["root", "toor", "admin", "password", "123456", ""]
-                resultado = globals.__n_sh().connect_service(ip, 22, "root", pwd)
-            if resultado != null then
-                    print("<color=#00ff41>[OK] </color><color=#ffffff>" + ip + "</color>")
-                    globals.enjambre[ip] = resultado
-                    Buffer.push(resultado, "SSH " + ip)
-                    encontrados = encontrados + 1
+        if __nini_disponible(ip) == 1 then
+            for pwd in ["root", "toor", "admin", "password", "123456", ""]
+                    resultado = sh.connect_service(ip, 22, "root", pwd)
+                if resultado != null then
+                        print("<color=#00ff41>[OK] </color><color=#ffffff>" + ip + "</color>")
+                        globals.enjambre[ip] = resultado
+                        Buffer.push(resultado, "SSH " + ip)
+                        encontrados = encontrados + 1
+                        break  // Password encontrada, break del bucle
 end if
 end for
+end if
 end for
         print("<color=#00e5ff>[#] </color><color=#ffffff>" + "ScanJump: " + str(encontrados) + " targets" + "</color>")
 end function
@@ -1075,7 +1099,7 @@ end if
         nodos = globals.enjambre.indexes
         columnas = ["#", "IP", "Tipo"]
         filas = []
-    for i in range(0, len(nodos))
+    for i in range(0, len(nodos) - 1)
             ip = nodos[i]
             sesion = globals.enjambre[ip]
             tipo = typeof(sesion)
@@ -1484,6 +1508,152 @@ end if
             print("  - " + dev)
 end for
 end function
+    modulo_asalto_root = function()
+    if globals.objetivo_actual == null then
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "No hay objetivo. Usa 'objetivo <ip>'" + "</color>")
+            return
+end if
+    if len(globals.ultimo_scan) == 0 then
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando objetivo..." + "</color>")
+            modulo_espectro_recon()
+end if
+        sel = __nini_pedir("Puerto (ID, 0=router, Enter=todos): ")
+        port_int = 0
+        puerto_seleccionado = null
+    if len(sel) > 0 then
+        if sel == "0" then
+                port_int = 0
+                print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Atacando router (puerto 0)..." + "</color>")
+        else
+                sel_int = val(sel)
+            if sel_int > 0 and sel_int <= len(globals.ultimo_scan) then
+                    puerto_seleccionado = globals.ultimo_scan[sel_int - 1]
+                    port_int = puerto_seleccionado.puerto
+                    print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Atacando puerto " + str(port_int) + "..." + "</color>")
+            else
+                    port_int = val(sel)
+                    print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Atacando puerto " + str(port_int) + "..." + "</color>")
+end if
+end if
+    else
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Atacando todos los puertos..." + "</color>")
+            port_int = null
+end if
+    if globals.modo == "LOCAL" then
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Modo LOCAL - escaneando librerias..." + "</color>")
+            ataque_local()
+    else
+            ataque_remoto(port_int)
+end if
+end function
+    ataque_local = function()
+        comp = globals.__n_sh().host_computer
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando librerias in /lib..." + "</color>")
+        lib_folder = comp.File("/lib")
+    if not lib_folder then
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "No se pudo acceder a /lib" + "</color>")
+            return
+end if
+        libs = []
+    for f in lib_folder.get_files
+        if f.name.indexOf(".so") != null then
+                libs.push(f)
+end if
+end for
+    if len(libs) == 0 then
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "No hay librerias." + "</color>")
+            return
+end if
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Librerias: " + str(len(libs)) + "</color>")
+        metax = globals.__n_lb("/lib/metaxploit.so")
+    if not metax then
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "Metaxploit not disponible" + "</color>")
+            return
+end if
+    for lib_file in libs
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Probando: " + lib_file.name + "</color>")
+            lib = metax.load(lib_file.path)
+        if lib then
+                vulns = metax.scan(lib)
+            if len(vulns) > 0 then
+                    print("<color=#00e5ff>[#] </color><color=#ffffff>" + "  Vulns: " + str(len(vulns)) + "</color>")
+                for v in vulns
+                        res = lib.overflow(vulns[0], "")
+                    if res then
+                            print("<color=#00ff41>[OK] </color><color=#ffffff>" + "ACCESO OBTENIDO!" + "</color>")
+                            globals.enjambre[globals.objetivo_actual] = res
+                            return
+end if
+end for
+end if
+end if
+end for
+        print("<color=#ff1744>[X] </color><color=#ffffff>" + "Sin vulnerabilidades." + "</color>")
+end function
+    ataque_remoto = function(port_int)
+        host = globals.objetivo_actual
+        es_router = false
+        r = __nini_obtener_router_objetivo(host)
+    if r and port_int == 0 then
+            es_router = true
+end if
+        lan_target = null
+    if es_router then
+            print("<color=#ffea00>[!] </color><color=#ffffff>" + "ROUTER DETECTADO!" + "</color>")
+            opcion = __nini_pedir("Saltar a IP interna? [s/n]: ")
+        if opcion.lower() == "s" then
+                lan_target = __nini_pedir("IP interna: ")
+                print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Saltando a: " + lan_target + "</color>")
+end if
+end if
+        lib_info = __nini_obtener_info_libreria(host, port_int)
+        vulns_cache = []
+    if lib_info then
+            vulns_cache = obtener_vulnerabilidades(lib_info.lib_name, lib_info.version)
+end if
+    if len(vulns_cache) > 0 then
+            print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Cache hit: " + lib_info.lib_name + "</color>")
+        for v in vulns_cache
+                print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Explotando: " + v.mem + "</color>")
+                sesion = __nini_explotar_directo(lib_info.metalib, v.mem, v.pass, lan_target)
+end for
+        if typeof(sesion) == "shell" or typeof(sesion) == "computer" then
+                print("<color=#00ff41>[OK] </color><color=#ffffff>" + "ACCESO OBTENIDO!" + "</color>")
+                globals.enjambre[host] = sesion
+            si typeof(sesion) == "shell" then
+                print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Auto-jumping habilitado" + "</color>")
+                jumping_auto(sesion, host)
+                return
+end if
+end if
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Buscando vulnerabilidades..." + "</color>")
+        vuln = __nini_buscar_vulnerabilidad(host, port_int)
+    if vuln then
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Vulnerabilidades: " + str(len(vuln.v_list)) + "</color>")
+        for v in vuln.v_list
+                cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, v.mem, v.pass)
+end for
+            sesion = __nini_explotar(vuln, null, lan_target)
+        if typeof(sesion) == "shell" or typeof(sesion) == "computer" then
+                print("<color=#00ff41>[OK] </color><color=#ffffff>" + "ACCESO OBTENIDO!" + "</color>")
+                globals.enjambre[host] = sesion
+            if typeof(sesion) == "shell" then
+                    jumping_auto(sesion, host)
+end if
+        else
+                print("<color=#ff1744>[X] </color><color=#ffffff>" + "Ataque fallido." + "</color>")
+end if
+    else
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "Sin vulnerabilidades." + "</color>")
+end if
+end function
+    __nini_obtener_router_objetivo = function(ip)
+        r = globals.__n_rt(ip)
+    if r and r.public_ip == ip then
+            return r
+end if
+        return null
+end function
 _chain_samples = [
 "password", "123456", "qwerty", "admin", "letmein",
 "welcome", "monkey", "dragon", "master", "login",
@@ -1710,7 +1880,7 @@ end if
         {"label": "Cron job", "cmd": "cron"},
         {"label": "Ver persistencias", "cmd": "list"},
         ]
-        modo = menu_interactivo("PERSISTENCIA", opciones)
+        globals.modo = menu_interactivo("PERSISTENCIA", opciones)
     if not globals.modo then
     return
 end if
@@ -1792,7 +1962,6 @@ end if
 end if
 end for
 end function
-_globals.vault_data = {"creds": {}, "vulns": {}}
 _vault_k = "R3V3N4NT_S3CUR3"
 _version = "STABLE"
     inicializar_vault = function()
@@ -1805,8 +1974,8 @@ end if
             f = globals.__n_sh().host_computer.File(ruta)
             contenido = f.get_content
         if len(contenido) > 0 then
-                _globals.vault_data = deserializar_vault(contenido)
-                print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Vault cargado: " + len(_globals.vault_data.creds) + " creds, " + len(_globals.vault_data.vulns) + " vulns." + "</color>")
+                globals.vault_data = deserializar_vault(contenido)
+                print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Vault cargado: " + len(globals.vault_data.creds) + " creds, " + len(globals.vault_data.vulns) + " vulns." + "</color>")
 end if
     else
             print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Iniciando nuevo Vault en: " + ruta + "</color>")
@@ -1851,21 +2020,21 @@ end if
             f = globals.__n_sh().host_computer.File(ruta)
 end if
     if f then
-            f.set_content(serializar_vault(_globals.vault_data))
+            f.set_content(serializar_vault(globals.vault_data))
     else
             print("<color=#ff1744>[X] </color><color=#ffffff>" + "Fallo de persistencia: El Vault not puede escribirse in " + p + "</color>")
 end if
 end function
     guardar_credencial = function(ip, usuario, clave, priv, lan)
         k = (ip + "_" + usuario + "_" + priv).lower()
-        _globals.vault_data.creds[k] = {"ip": ip, "user": usuario, "pass": clave, "priv": priv, "lan": lan}
+        globals.vault_data.creds[k] = {"ip": ip, "user": usuario, "pass": clave, "priv": priv, "lan": lan}
         guardar_vault()
         print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Vault actualizado: " + usuario + "@" + ip + "</color>")
 end function
     listar_credenciales = function()
         columnas = ["IP", "Usuario", "Clave", "Priv", "LAN"]
         filas = []
-        for c_entry in _vault_data.creds
+        for c_entry in vault_data.creds
             c = c_entry.value
             filas.push([c.ip, c.user, c.pass, c.priv, c.lan])
 end for
@@ -1873,16 +2042,16 @@ end for
 end function
     cachear_vulnerabilidad = function(lib, ver, area, vuln)
         k = (lib + "_" + ver).lower()
-    if not _globals.vault_data.vulns.hasIndex(k) then
-    _globals.vault_data.vulns[k] = []
+    if not globals.vault_data.vulns.hasIndex(k) then
+    globals.vault_data.vulns[k] = []
 end if
-        _globals.vault_data.vulns[k].push({"mem": area, "pass": vuln})
+        globals.vault_data.vulns[k].push({"mem": area, "pass": vuln})
         guardar_vault()
 end function
     obtener_vulnerabilidades = function(lib, ver)
         k = (lib + "_" + ver).lower()
-    if _globals.vault_data.vulns.hasIndex(k) then
-    return _globals.vault_data.vulns[k]
+    if globals.vault_data.vulns.hasIndex(k) then
+    return globals.vault_data.vulns[k]
 end if
         return []
 end function
@@ -1994,7 +2163,7 @@ end if
         {"label": "Configuraciones", "cmd": "configs"},
         {"label": "Backups", "cmd": "backup"},
         ]
-        modo = menu_interactivo("BUSCAR ARCHIVOS", opciones)
+        globals.modo = menu_interactivo("BUSCAR ARCHIVOS", opciones)
     if not globals.modo then
     return
 if (globals.modo == "keys") then
@@ -2023,7 +2192,7 @@ end function
         {"label": "FTP", "cmd": "ftp"},
         {"label": "Crack passwd", "cmd": "passwd"},
         ]
-        modo = menu_interactivo("FUERZA BRUTA", opciones)
+        globals.modo = menu_interactivo("FUERZA BRUTA", opciones)
     if not globals.modo then
     return
 end if
@@ -2089,7 +2258,7 @@ end if
         {"label": "Reverse Shell", "cmd": "shell"},
         {"label": "Payloads", "cmd": "payload"},
         ]
-        modo = menu_interactivo("MENÚ DE EXFILTRACIÓN v2", opciones)
+        globals.modo = menu_interactivo("MENÚ DE EXFILTRACIÓN v2", opciones)
     if not globals.modo then
     return
 end if
@@ -2211,6 +2380,315 @@ end if
 end if
         print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Payload configurado for " + ip_atacante + ":" + puerto + "</color>")
 end function
+    espectro_escaneo_completo = function(host)
+    if not host or host == "" then
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "No hay host definido." + "</color>")
+            return null
+end if
+        sh = globals.__n_sh
+    if sh.ping(host) != 1 then
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "Host inalcanzable: " + host + "</color>")
+            return null
+end if
+        router = globals.__n_rt(host)
+    if not router then
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "No se pudo obtener router." + "</color>")
+            return null
+end if
+        es_local = es_ip_local(host)
+        ports = []
+    if es_local then
+            ports = router.device_ports(host)
+    else
+            ports = router.used_ports
+end if
+    if not ports or len(ports) == 0 then
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "No hay puertos abiertos." + "</color>")
+            return null
+end if
+        resultados = []
+        i = 1
+    for port in ports
+            port_num = port.port_number
+            servicio_completo = router.port_info(port)
+            servicio = servicio_completo
+            version = "N/A"
+            partes_svc = servicio_completo.split(" ")
+        if len(partes_svc) > 1 then
+                servicio = partes_svc[0]
+                version = partes_svc[1]
+end if
+            estado = "open"
+        if port.is_closed and not es_local then
+                estado = "closed"
+end if
+            lan_ip = "N/A"
+        if es_local then
+                lan_ip = host
+        else
+                lan_ip = port.get_lan_ip
+end if
+            resultados.push({
+            "id": i,
+            "puerto": port_num,
+            "servicio": servicio,
+            "version": version,
+            "estado": estado,
+            "lan_ip": lan_ip,
+            })
+            i = i + 1
+end for
+        return resultados
+end function
+    modulo_espectro_recon = function()
+    if globals.objetivo_actual == null then
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "No hay objetivo. Usa 'objetivo <ip>'" + "</color>")
+            return
+end if
+        host = globals.objetivo_actual
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando " + host + "..." + "</color>")
+        resultados = espectro_escaneo_completo(host)
+    if resultados then
+            globals.ultimo_scan = resultados
+            print("")
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "RESULTADOS DEL ESCANEO:" + "</color>")
+            print("")
+            columnas = ["ID", "Puerto", "Estado", "Servicio", "Version", "LAN IP"]
+            filas = []
+        for r in resultados
+                estado_col = r.estado
+            if r.estado == "closed" then
+    estado_col = "<color=#ff3131>" + r.estado + "</color>"
+end if
+            if r.estado == "open" then
+    estado_col = "<color=#00ff41>" + r.estado + "</color>"
+end if
+                filas.push([r.id, r.puerto, estado_col, r.servicio, r.version, r.lan_ip])
+end for
+            print(__nini_tabla(columnas, filas))
+            print("")
+            es_local = es_ip_local(host)
+            globals.modo_actual = "REMOTO"
+        if es_local then
+                globals.modo_actual = "LOCAL"
+end if
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Modo: " + globals.modo_actual + " | Puertos: " + str(len(resultados)) + "</color>")
+    else
+            print("<color=#ff1744>[X] </color><color=#ffffff>" + "Sin resultados." + "</color>")
+end if
+end function
+    es_ip_local = function(ip)
+    if not ip then
+    return false
+end if
+    if ip == "127.0.0.1" then
+    return true
+end if
+        comp = globals.__n_sh().host_computer
+        local_ip = comp.local_ip
+        partes_local = local_ip.split("\.")
+        partes_ip = ip.split("\.")
+    if len(partes_local) < 3 or len(partes_ip) < 3 then
+    return false
+end if
+        red_local = partes_local[0] + "." + partes_local[1] + "." + partes_local[2]
+        red_ip = partes_ip[0] + "." + partes_ip[1] + "." + partes_ip[2]
+        return red_local == red_ip
+end function
+    modulo_lateral_mover = function()
+        opciones = [
+        {"label": "Listar nodos del globals.enjambre", "cmd": "list"},
+        {"label": "Cambiar a otro nodo", "cmd": "switch"},
+        {"label": "Escanear red DESDE pivote", "cmd": "scan"},
+        {"label": "Conectar via SSH/FTP", "cmd": "connect"},
+        {"label": "Conectar via Metaxploit", "cmd": "net"},
+        ]
+        globals.modo = menu_interactivo("MOVIMIENTO LATERAL", opciones)
+    if not globals.modo then
+    return
+end if
+    if globals.modo == "list" then
+    lateral_listar_nodos()
+    else if globals.modo == "switch" then
+    lateral_cambiar_nodo()
+    else if globals.modo == "scan" then
+    lateral_escanear_desde_pivote()
+    else if globals.modo == "connect" then
+    lateral_conectar_servicio()
+    else if globals.modo == "net" then
+    lateral_conectar_metaxploit()
+end if
+end function
+    lateral_listar_nodos = function()
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "NODOS EN EL ENJAMBRE:" + "</color>")
+        i = 1
+    for nodo in enjambre
+            ip = nodo.key
+            sesion = nodo.value
+            tipo = typeof(sesion)
+            if (typeof(sesion) == "shell") then
+    comp_info = sesion.host_computer.local_ip
+            else
+    comp_info = sesion.local_ip
+            end if
+            if (globals.objetivo_actual == ip) then
+    estado = "<color=#ffea00>ACTUAL</color>"
+            else
+    estado = "<color=#00ff41>ACTIVO</color>"
+            end if
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + str(i) + ". " + ip + " (" + tipo + ") " + estado + " | " + comp_info + "</color>")
+            i = i + 1
+end for
+        pausa_tactica()
+end function
+    lateral_cambiar_nodo = function()
+    if len(globals.enjambre) <= 1 then
+    info("Solo hay un nodo."); return
+end if
+    for nodo in enjambre
+            ip = nodo.key
+        if ip != globals.objetivo_actual then
+    info(str(i) + ". " + ip); i = i + 1
+end if
+end for
+        sel = val(__nini_pedir("Nodo > "))
+    if sel <= 0 then
+    return
+end if
+        cont = 0
+    for k in enjambre.keys
+        if k != globals.objetivo_actual then
+                cont = cont + 1
+            if cont == sel then
+                    globals.objetivo_actual = k
+                    print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Cambiado a: " + k + "</color>")
+                    return
+end if
+end if
+end for
+        print("<color=#ff1744>[X] </color><color=#ffffff>" + "Selección inválida." + "</color>")
+end function
+    lateral_escanear_desde_pivote = function()
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "ESCANEANDO RED DESDE EL NODO..." + "</color>")
+        sesion = obtener_shell_nodo()
+    if not sesion then
+    error("No hay shell activa."); return
+end if
+        ip_local = __nini_get_local_ip(sesion)
+    if not ip_local then
+    error("No se pudo obtener IP local."); return
+end if
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "IP local: " + ip_local + "</color>")
+        router_nodo = __nini_get_router_from_node(sesion)
+        _pipe0 = (router_nodo)
+        dispositivos = __nini_lan_ips_from_node(sesion, _pipe0)
+    if dispositivos and len(dispositivos) > 0 then
+            print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Dispositivos: " + str(len(dispositivos)) + "</color>")
+        for ip in dispositivos
+                nodo_tag = ""
+            if ip == ip_local then
+    nodo_tag = " (TU NODO)"
+end if
+                print("<color=#00e5ff>[#] </color><color=#ffffff>" + "  - " + ip + nodo_tag + "</color>")
+end for
+    else
+            red = ip_local.split("\.")[0:3].join("\.") + "."
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Escaneando: " + red + "0/24..." + "</color>")
+            hosts = []
+        for i in range(1, 255)
+                ip = red + str(i)
+            if ip != ip_local then
+                    resultado = sesion.ping(ip)
+                if resultado == "Ping successful" then
+    hosts.push(ip)
+end if
+end if
+end for
+        if len(hosts) == 0 then
+                print("<color=#00e5ff>[#] </color><color=#ffffff>" + "No se encontraron hosts." + "</color>")
+        else
+            for h in hosts
+                    print("<color=#00e5ff>[#] </color><color=#ffffff>" + "  - " + h + "</color>")
+end for
+end if
+end if
+end function
+    lateral_conectar_servicio = function()
+        tipo = (__nini_pedir("Tipo (ssh/ftp): ")).lower()
+    if tipo != "ssh" and tipo != "ftp" then
+    error("Usa 'ssh' or 'ftp'"); return
+end if
+        ip = __nini_pedir("IP: "); usuario = __nini_pedir("Usuario: "); pass = __nini_pedir("Pass: ")
+    if ip == "" or usuario == "" then
+    return
+end if
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Conectando a " + ip + "..." + "</color>")
+        if (tipo == "ssh") then
+    sesion = __nini_conectar_ssh(ip, usuario, pass)
+        else
+    sesion = __nini_conectar_ftp(ip, usuario, pass)
+        end if
+    if sesion then
+            globals.enjambre[ip] = sesion
+            globals.objetivo_actual = ip
+            print("<color=#00ff41>[OK] </color><color=#ffffff>" + "Conectado: " + usuario + "@" + ip + "</color>")
+            modulo_espectro_recon()
+    else; error("No se pudo conectar.")
+end if
+end function
+    lateral_conectar_metaxploit = function()
+        ip = __nini_pedir("IP objetivo: ")
+    if ip == "" then
+    return
+end if
+        puertos = __nini_device_ports(ip)
+    if not puertos or len(puertos) == 0 then
+            print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Sin forwarding. Intentando directo..." + "</color>")
+            sesion = __nini_conectar_net(ip, 22)
+        if sesion then
+    globals.enjambre[ip] = sesion; globals.objetivo_actual = ip; exito("Conexión directa!"); modulo_espectro_recon()
+        else; error("No se pudo.")
+end if
+            return
+end if
+        print("<color=#00e5ff>[#] </color><color=#ffffff>" + "Puertos: " + str(len(puertos)) + "</color>")
+    for p in puertos
+    print("<color=#00e5ff>[#] </color><color=#ffffff>" + "  [" + str(p.port_number) + "] " + __nini_port_info(p) + "</color>")
+    end for
+        sel = val(__nini_pedir("Puerto a explotar: "))
+    if sel <= 0 then
+    return
+end if
+        sesion = __nini_conectar_net(ip, sel)
+    if sesion then
+            globals.enjambre[ip] = sesion
+            globals.objetivo_actual = ip
+            print("<color=#00ff41>[OK] </color><color=#ffffff>" + "ACCESO OBTENIDO!" + "</color>")
+            modulo_espectro_recon()
+    else; error("Explotación fallida.")
+end if
+end function
+    obtener_shell_nodo = function()
+    if not globals.objetivo_actual or globals.objetivo_actual == "localhost" then
+    return globals.__n_sh
+end if
+    if globals.enjambre.hasIndex(globals.objetivo_actual) then
+            sesion = globals.enjambre[globals.objetivo_actual]
+            if (typeof(sesion) == "shell") then
+    return sesion
+            else
+    return null
+            end if
+end if
+        return null
+end function
+    obtener_computadora_objetivo = function()
+        sesion = obtener_shell_nodo()
+    if sesion then
+    return sesion.host_computer
+end if
+        return globals.__n_sh().host_computer
+end function
 // Modo Ninja Activado
 inicializar_vault()
 Shell.registrar("scan", escanear_puertos, "Escanear puertos")
@@ -2218,7 +2696,7 @@ Shell.registrar("scanred", escanear_red, "Escanear red")
 Shell.registrar("whois", whois_objetivo, "WHOIS")
 Shell.registrar("hack", explotar_objetivo, "Explotar")
 Shell.registrar("router", explotar_router, "Explotar router")
-Shell.registrar("limpiarlogs", limpiar_logs, "Limpiar logs")
+Shell.registrar("limpiarlogs", __nini_limpiar_logs, "Limpiar logs")
 Shell.registrar("jump", jump_manual, "Jump")
 Shell.registrar("scanjump", scan_and_jump, "Scan and Jump")
 Shell.registrar("sesiones", jump_listar, "Listar sesiones")

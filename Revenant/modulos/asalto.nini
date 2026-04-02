@@ -114,8 +114,7 @@ tarea ataque_remoto(port_int):
         si typeof(sesion) == "shell" o typeof(sesion) == "computer":
             exito("ACCESO OBTENIDO!")
             enjambre[host] = sesion
-            // Auto-jumping
-            si typeof(sesion) == "shell" then
+            si typeof(sesion) == "shell":
                 info("Auto-jumping habilitado")
                 jumping_auto(sesion, host)
             retornar
@@ -135,8 +134,8 @@ tarea ataque_remoto(port_int):
         si typeof(sesion) == "shell" o typeof(sesion) == "computer":
             exito("ACCESO OBTENIDO!")
             enjambre[host] = sesion
-            // Auto-jumping
-            si typeof(sesion) == "shell" then jumping_auto(sesion, host)
+            si typeof(sesion) == "shell":
+                jumping_auto(sesion, host)
         sino:
             error("Ataque fallido.")
     sino:

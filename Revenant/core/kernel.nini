@@ -20,7 +20,7 @@ Buffer.list = function()
         retornar ""
     columnas = ["#", "Tipo", "Descripcion"]
     filas = []
-    para i en rango(0, len(Buffer.items)):
+    para i en rango(0, len(Buffer.items) - 1):
         item = Buffer.items[i]
         filas.push([i + 1, item.tipo, item.descripcion])
     retornar construir_tabla(columnas, filas)
@@ -134,7 +134,7 @@ Log.agregar = function(tipo, mensaje)
 Log.ver = function(cantidad)
     cantidad = cantidad or 20
     inicio = len(Log.historial) > cantidad >> len(Log.historial) - cantidad |: 0
-    para i en rango(inicio, len(Log.historial)):
+    para i en rango(inicio, len(Log.historial) - 1):
         entrada = Log.historial[i]
         print(entrada.tipo + ": " + entrada.mensaje)
 

@@ -20,18 +20,22 @@ importar "commands/jump.nini"
 
 // Legacy
 importar "modulos/botnet.nini"
+importar "modulos/asalto.nini"
 importar "modulos/escalada.nini"
 importar "modulos/persistencia.nini"
 importar "modulos/vault.nini"
 importar "modulos/intel.nini"
 importar "modulos/exfil.nini"
+importar "modulos/espectro.nini"
+importar "modulos/lateral.nini"
 
 modo ninja:
 inicializar_vault()
 
-// Registrar comandos
+// Registrar comandos (DESPUES de importar para que existan las funciones)
 Shell.registrar("scan", escanear_puertos, "Escanear puertos")
 Shell.registrar("scanred", escanear_red, "Escanear red")
+Shell.registrar("escanear_lan", escanear_lan, "Escanear LAN")
 Shell.registrar("whois", whois_objetivo, "WHOIS")
 Shell.registrar("hack", explotar_objetivo, "Explotar")
 Shell.registrar("router", explotar_router, "Explotar router")

@@ -75,13 +75,18 @@ tarea lateral_escanear_desde_pivote:
             si ip == ip_local: nodo_tag = " (TU NODO)"
             info("  - " + ip + nodo_tag)
     sino:
-        // Fallback: escaneo manual
+        // Fallback: escaneo usando disponible()
+        // disponible(ip) retorna 1 si el host responde a ping, 0 si no
         red = ip_local.split("\.")[0:3].join("\.") + "."
         info("Escaneando: " + red + "0/24...")
         hosts = []
         para i en rango(1, 255):
             ip = red + str(i)
-            si ip != ip_local y sesion.ping(ip) == 1: hosts.push(ip)
+            si ip != ip_local:
+                // disponible() retorna 1 si hay respuesta real
+                // Usar la sesion del pivote para hacer ping
+                resultado = sesion.ping(ip)
+                si resultado == "Ping successful": hosts.push(ip)
         
         si len(hosts) == 0:
             info("No se encontraron hosts.")

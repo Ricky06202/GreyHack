@@ -34,7 +34,7 @@ Separador.titulo = function(titulo)
 Menu = {}
 Menu.opciones = function(titulo, opciones)
     Separador.titulo(titulo)
-    para i en rango(0, len(opciones)):
+    para i en rango(0, len(opciones) - 1):
         print("  " + Colores.cian + "[" + str(i + 1) + "]" + Colores.reset + " " + opciones[i].label)
     Separador.simple()
     sel = user_input(Colores.cian + "Seleccion: " + Colores.reset)

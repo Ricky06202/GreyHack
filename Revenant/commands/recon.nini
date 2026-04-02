@@ -1,5 +1,15 @@
 // commands/recon.nini - Escaneo y recon
 
+// Funcion helper: verificar si un host responde a ping
+// Retorna 1 si hay respuesta ("Ping successful"), 0 si no ("ip unreachable")
+tarea disponible(ip):
+    si not ip: retornar 0
+    sh = get_shell()
+    resultado = sh.ping(ip)
+    // .ping() retorna 1 (número), no el string "Ping successful"
+    si resultado == 1: retornar 1
+    retornar 0
+
 tarea escanear_puertos(ip)
     info("Escaneando " + ip + "...")
     router = get_router(ip)
@@ -19,20 +29,25 @@ tarea escanear_puertos(ip)
     retornar resultados
 
 tarea escanear_red(ip_base)
-    si no ip_base: ip_base = ""
-    info("Escaneando red " + ip_base + "...")
-    si ip_base.indexOf(".") == null:
-        mi_ip = get_shell().host_computer.local_ip
-        partes = mi_ip.split("\.")
-        ip_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
+    sh = get_shell()
+    mi_ip = sh.host_computer.local_ip
+    si not ip_base or ip_base == "":
+        partes_ip = mi_ip.split("\.")
+        ip_base = partes_ip[0] + "." + partes_ip[1] + "." + partes_ip[2] + "."
+    
+    info("IP local: " + mi_ip)
+    info("Escaneando red " + ip_base + "0/24...")
+    
     encontrados = []
-    para i en rango(1, 255):
+    para i en rango(1, 254):
         ip = ip_base + str(i)
-        resultado = get_shell().connect_service(ip, 22, "root", "")
-        si resultado != null:
-            exito("Encontrado: " + ip)
-            encontrados.push(ip)
-            enjambre[ip] = resultado
+        si disponible(ip) == 1:
+            exito("Host activo: " + ip)
+            sesion = sh.connect_service(ip, 22, "root", "")
+            si sesion != null:
+                enjambre[ip] = sesion
+                encontrados.push(ip)
+    
     info("Encontrados: " + str(len(encontrados)))
     si len(encontrados) > 0: Buffer.push(encontrados, "Red " + ip_base)
     retornar encontrados
@@ -51,3 +66,15 @@ tarea whois_objetivo(ip)
     ]
     print(construir_tabla(columnas, filas))
     retornar router
+
+tarea escanear_lan
+    sh = get_shell()
+    // Ejecutar ScanLan.exe del sistema
+    scanlan_path = "/usr/bin/ScanLan.exe"
+    archivo = sh.host_computer.File(scanlan_path)
+    si no archivo:
+        error("ScanLan.exe no encontrado en " + scanlan_path)
+        retornar
+    info("Ejecutando ScanLan.exe...")
+    sh.launch(scanlan_path, "")
+    info("ScanLan.exe ejecutado.")
