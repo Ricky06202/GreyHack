@@ -723,6 +723,21 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		end if
 	end if
 	
+	// VARIABLE = FUNCTION MULTILINE: var = function(args) (without colon, opens block)
+	if trimmed.indexOf("= function") >= 0 and trimmed.indexOf(":") == null and endsWithColon == false then
+		eqIdx = trimmed.indexOf("=")
+		varName = trimmed[:eqIdx].trim
+		funcIdx = trimmed.indexOf("function")
+		funcPart = trimmed[funcIdx + 8:].trim
+		if funcPart.indexOf("(") != null then
+			args = funcPart[:funcPart.indexOf(")") + 1]
+		else
+			args = "()"
+		end if
+		blockStack.push({"bType": "function", "indent": currentIndent})
+		return varName + " = function" + args
+	end if
+	
 	// END FOR / END IF / END WHILE - pasar sin generar output (blockStack lo maneja)
 	if trimmed == "end for" or trimmed == "end if" or trimmed == "end while" then
 		// Sacar el bloque correspondiente del blockStack
@@ -912,17 +927,26 @@ for i in range(0, lines.len)
 			end for
 		else
 			linesStr = transpiledLine.split(char(10))
-			// Check if we're inside a block that needs indentation
-			needsIndent = false
+			// Calculate indentation: add 4 spaces for each block we're inside
+			// But don't count the current block if we just entered it
+			indentLevel = 0
 			for b in blockStack
-				if b.bType == "for" or b.bType == "if" or b.bType == "while" or b.bType == "try_catch" then
-					needsIndent = true
-					break
+				if currentIndent > b.indent then
+					indentLevel = indentLevel + 1
 				end if
 			end for
+			// Add extra indent if we're inside a block and this isn't a block starter
+			isBlockStarter = (trimmed.indexOf("para ") == 0 or trimmed.indexOf("si ") == 0 or trimmed.indexOf("osi ") == 0 or trimmed.indexOf("sino:") == 0 or trimmed.indexOf("mientras ") == 0 or trimmed.indexOf("intentar") == 0)
+			if not isBlockStarter and blockStack.len > 0 then
+				indentLevel = indentLevel + 1
+			end if
+			indentStr = ""
+			for idx in range(1, indentLevel)
+				indentStr = indentStr + "    "
+			end for
 			for ls in linesStr
-				if needsIndent and ls.len > 0 and ls[0] != " " and ls[0] != char(9) then
-					outputLines.push("    " + ls)
+				if indentLevel > 0 and ls.len > 0 and ls[0] != " " and ls[0] != char(9) then
+					outputLines.push(indentStr + ls)
 				else
 					outputLines.push(ls)
 				end if
