@@ -540,10 +540,10 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		if accion.len == 0 or accionIsOnlyWhitespace then
 			// Block form: "si cond:" with content on following lines
 			blockStack.push({"bType": "if", "indent": currentIndent})
-			return "if (" + cond + ") then"
+			return "if " + cond + " then"
 		else
 			// One-liner: "si cond: action"
-			blockStack.push({"bType": "if_oneline", "indent": currentIndent})
+			// Don't push to blockStack - one-liners don't need end if
 			// Process action to handle nested si statements
 			processedAccion = accion
 			// Handle "si cond: action" patterns in the action
@@ -552,13 +552,13 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 				colonRelative = processedAccion[siIdx:].indexOf(":")
 				if colonRelative != null then
 					absColonIdx = siIdx + colonRelative
-					processedAccion = processedAccion[:siIdx] + "if (" + processedAccion[siIdx + 3 : absColonIdx] + ") then" + processedAccion[absColonIdx + 1:]
+					processedAccion = processedAccion[:siIdx] + "if " + processedAccion[siIdx + 3 : absColonIdx] + " then " + processedAccion[absColonIdx + 1:]
 				else
 					break
 				end if
 			end while
 			processedAccion = processedAccion.replace("sino:", "else")
-			return "if (" + cond + ") then " + processedAccion
+			return "if " + cond + " then " + processedAccion
 		end if
 	end if
 	
@@ -568,10 +568,11 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		accion = trimmed[colIdx + 1 :].trim
 		if accion.len == 0 then
 			blockStack.push({"bType": "elseif", "indent": currentIndent})
-			return "else if (" + cond + ") then"
+			return "else if " + cond + " then"
 		else
-			blockStack.push({"bType": "elseif_oneline", "indent": currentIndent})
-			return "else if (" + cond + ") then " + accion
+			// One-liner osi is NOT supported in GreyScript - convert to block
+			blockStack.push({"bType": "elseif", "indent": currentIndent})
+			return "else if " + cond + " then" + char(10) + "    " + accion + char(10) + "end if"
 		end if
 	end if
 
