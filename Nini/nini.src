@@ -225,9 +225,15 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	
 	if (trimmed.indexOf("retornar") != null) then trimmed = trimmed.replace("retornar", "return")
 	if (trimmed.indexOf("esperar(") != null) then trimmed = trimmed.replace("esperar", "wait")
-	if (trimmed.indexOf("mirar(") != null) then trimmed = trimmed.replace("mirar", "__n_sh().host_computer.File")
-	if (trimmed.indexOf("obtener_archivo(") != null) then trimmed = trimmed.replace("obtener_archivo", "__n_sh().host_computer.File")
-	if (trimmed.indexOf("tocar(") != null) then trimmed = trimmed.replace("tocar", "__n_sh().host_computer.touch")
+	
+	// Sistema (Auto-Blindaje con prefix global para evitar Key Not Found en mapas)
+	if (trimmed.indexOf("get_shell") != null) then trimmed = trimmed.replace("get_shell", "globals.__n_sh")
+	if (trimmed.indexOf("get_router") != null) then trimmed = trimmed.replace("get_router", "globals.__n_rt")
+	if (trimmed.indexOf("include_lib") != null) then trimmed = trimmed.replace("include_lib", "globals.__n_lb")
+
+	if (trimmed.indexOf("mirar(") != null) then trimmed = trimmed.replace("mirar", "globals.__n_sh().host_computer.File")
+	if (trimmed.indexOf("obtener_archivo(") != null) then trimmed = trimmed.replace("obtener_archivo", "globals.__n_sh().host_computer.File")
+	if (trimmed.indexOf("tocar(") != null) then trimmed = trimmed.replace("tocar", "globals.__n_sh().host_computer.touch")
 	
 	if (trimmed.indexOf("nini_xor(") != null) then trimmed = trimmed.replace("nini_xor", "__nini_xor")
 	if (trimmed.indexOf("crackear_hash(") != null) then trimmed = trimmed.replace("crackear_hash", "__nini_crackear_hash")
@@ -622,7 +628,7 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if trimmed == "ejecutar_en_segundo_plano:" then
 		blockStack.push({"bType": "async_bg", "indent": currentIndent})
 		niniState.asyncCounter = niniState.asyncCounter + 1
-		return "host = __n_sh().host_computer; host.touch(current_path, ""__bg_task_" + niniState.asyncCounter + ".gs""); bg = host.File(current_path + ""/__bg_task_" + niniState.asyncCounter + ".gs""); bg_code_" + niniState.asyncCounter + " = []"
+		return "host = globals.__n_sh().host_computer; host.touch(current_path, ""__bg_task_" + niniState.asyncCounter + ".gs""); bg = host.File(current_path + ""/__bg_task_" + niniState.asyncCounter + ".gs""); bg_code_" + niniState.asyncCounter + " = []"
 	end if
 
 	// NINI UTILS
@@ -780,20 +786,20 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		return funName + " = function" + args
 	end if
 	if trimmed == "saquear_sistema" then
-		return "files = [""/etc/shadow"", ""/etc/passwd"", ""/var/system.log""]; for f in files; file = __n_sh().host_computer.File(f); if file then print(""<color=yellow>Robado:</color> "" + f + "" -> "" + file.get_content); end for"
+		return "files = [""/etc/shadow"", ""/etc/passwd"", ""/var/system.log""]; for f in files; file = globals.__n_sh().host_computer.File(f); if file then print(""<color=yellow>Robado:</color> "" + f + "" -> "" + file.get_content); end for"
 	end if
 	if trimmed == "autobackdoor" then
 		niniState.requiresMetaxploit = true
 		macroCode = [
 			"print(""<color=#FF0000>[Autobackdoor]</color> Iniciando cadena de ataque en "" + target_ip)",
-			"metaxploit = __n_lb(""/lib/metaxploit.so"")",
+			"metaxploit = globals.__n_lb(""/lib/metaxploit.so"")",
 			"net_session = metaxploit.net_use(target_ip)",
 			"if net_session then",
 			"    print(""Conexion establecida. Verificando privilegios..."")",
-			"    shadow = __n_sh().host_computer.File(""/etc/shadow"")",
+			"    shadow = globals.__n_sh().host_computer.File(""/etc/shadow"")",
 			"    if shadow then print(""Shadow dump: "" + shadow.get_content) else print(""Sin acceso a shadow"")",
 			"    print(""Limpiando huellas criticas..."")",
-			"    syslog = __n_sh().host_computer.File(""/var/system.log"")",
+			"    syslog = globals.__n_sh().host_computer.File(""/var/system.log"")",
 			"    if syslog then syslog.set_content("""")",
 			"else",
 			"    __nini_error = true",
@@ -818,11 +824,11 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 		niniState.requiresMetaxploit = true
 		macroCode = [
 			"print(""<color=#00FF00>[Nini]</color> Iniciando escaneo en "" + target_ip)",
-			"metaxploit = __n_lb(""/lib/metaxploit.so"")",
+			"metaxploit = globals.__n_lb(""/lib/metaxploit.so"")",
 			"net_session = metaxploit.net_use(target_ip)",
 			"if not net_session then __nini_error = true",
 			"scan_results = []",
-			"router = __n_rt(target_ip)",
+			"router = globals.__n_rt(target_ip)",
 			"if router then",
 			"    ports = router.used_ports",
 			"    for port in ports",
@@ -833,10 +839,10 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 			"        end if",
 			"    end for",
 			"end if",
-			"f = __n_sh().host_computer.File(current_path + ""/scan_"" + target_ip + "".txt"")",
+			"f = globals.__n_sh().host_computer.File(current_path + ""/scan_"" + target_ip + "".txt"")",
 			"if not f then",
-			" __n_sh().host_computer.touch(current_path, ""scan_"" + target_ip + "".txt"")",
-			"    f = __n_sh().host_computer.File(current_path + ""/scan_"" + target_ip + "".txt"")",
+			" globals.__n_sh().host_computer.touch(current_path, ""scan_"" + target_ip + "".txt"")",
+			"    f = globals.__n_sh().host_computer.File(current_path + ""/scan_"" + target_ip + "".txt"")",
 			"end if",
 			"if f then f.set_content(scan_results.join(char(10)))",
 		]
@@ -913,8 +919,8 @@ for i in range(0, lines.len)
 			else if b.bType == "async_bg" then
 				bgIdx = niniState.asyncCounter
 				outputLines.push("if bg then bg.set_content(bg_code_" + bgIdx + ".join(char(10)))")
-				outputLines.push("__n_sh().build(current_path + " + char(34) + "/__bg_task_" + bgIdx + ".gs" + char(34) + ", current_path)")
-				outputLines.push("__n_sh().launch(current_path + " + char(34) + "/__bg_task_" + bgIdx + char(34) + ", " + char(34) + char(34) + ")")
+				outputLines.push("globals.__n_sh().build(current_path + " + char(34) + "/__bg_task_" + bgIdx + ".gs" + char(34) + ", current_path)")
+				outputLines.push("globals.__n_sh().launch(current_path + " + char(34) + "/__bg_task_" + bgIdx + char(34) + ", " + char(34) + char(34) + ")")
 				outputLines.push("if bg then bg.delete()")
 				outputLines.push("bgBin = host.File(current_path + " + char(34) + "/__bg_task_" + bgIdx + char(34) + ")")
 				if bgBin then bgBin.delete()
@@ -987,8 +993,8 @@ while blockStack.len > 0
 	else if b.bType == "async_bg" then
 		bgIdx = niniState.asyncCounter
 		outputLines.push("if bg then bg.set_content(bg_code_" + bgIdx + ".join(char(10)))")
-		outputLines.push("__n_sh().build(current_path + " + char(34) + "/__bg_task_" + bgIdx + ".gs" + char(34) + ", current_path)")
-		outputLines.push("__n_sh().launch(current_path + " + char(34) + "/__bg_task_" + bgIdx + char(34) + ", " + char(34) + char(34) + ")")
+		outputLines.push("globals.__n_sh().build(current_path + " + char(34) + "/__bg_task_" + bgIdx + ".gs" + char(34) + ", current_path)")
+		outputLines.push("globals.__n_sh().launch(current_path + " + char(34) + "/__bg_task_" + bgIdx + char(34) + ", " + char(34) + char(34) + ")")
 		outputLines.push("if bg then bg.delete()")
 		outputLines.push("bgBin = host.File(current_path + " + char(34) + "/__bg_task_" + bgIdx + char(34) + ")")
 		outputLines.push("if bgBin then bgBin.delete()")
@@ -997,14 +1003,14 @@ end while
 
 headers = []
 // BLINDAJE DE REFERENCIAS (DOUBLE ARMOR)
-headers.push("__n_sh = @get_shell")
-headers.push("__n_rt = @get_router")
-headers.push("__n_lb = @include_lib")
+headers.push("globals.__n_sh = @get_shell")
+headers.push("globals.__n_rt = @get_router")
+headers.push("globals.__n_lb = @include_lib")
 if niniState.requiresMetaxploit or niniState.requiresExploiter or niniState.requiresFuzzer then
-	headers.push("metaxploit = __n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + "); if not metaxploit then exit(" + char(34) + "Motor Nini: falta metaxploit.so" + char(34) + ")")
+	headers.push("metaxploit = globals.__n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + "); if not metaxploit then exit(" + char(34) + "Motor Nini: falta metaxploit.so" + char(34) + ")")
 end if
 if niniState.requiresCrypto then
-	headers.push("crypto = __n_lb(" + char(34) + "/lib/crypto.so" + char(34) + "); if not crypto then exit(" + char(34) + "Motor Nini: falta crypto.so" + char(34) + ")")
+	headers.push("crypto = globals.__n_lb(" + char(34) + "/lib/crypto.so" + char(34) + "); if not crypto then exit(" + char(34) + "Motor Nini: falta crypto.so" + char(34) + ")")
 end if
 
 // NINI-WRAITH INJECTIONS
@@ -1075,7 +1081,7 @@ end if
 if niniState.requiresPersistencia then
 	headers.push("__nini_instalar_persistencia = function(modo, puerto)")
 	headers.push("  print(""<color=gray>[Persistencia]</color> Instalando daemon ("" + modo + "") en puerto "" + puerto)")
-	headers.push("  host = __n_sh().host_computer")
+	headers.push("  host = globals.__n_sh().host_computer")
 	headers.push("  host.touch(""/bin"", ""systemd-service"")")
 	headers.push("  f = host.File(""/bin/systemd-service"")")
 	headers.push("  if f then f.set_content(""// Nini daemon oculto \n while true \n wait(60) \n end while"")")
@@ -1089,7 +1095,7 @@ end if
 if niniState.requiresCracker then
 	headers.push("__nini_crack_dic = function(content)")
 	headers.push("  lines = content.split(char(10))")
-	headers.push("  c = __n_lb(" + char(34) + "/lib/crypto.so" + char(34) + ")")
+	headers.push("  c = globals.__n_lb(" + char(34) + "/lib/crypto.so" + char(34) + ")")
 	headers.push("  if not c then return {}")
 	headers.push("  res = {}")
 	headers.push("  for line in lines")
@@ -1103,7 +1109,7 @@ end if
 
 if niniState.requiresWifi then
 	headers.push("__nini_wifi = function(iface)")
-	headers.push("  computer = __n_sh().host_computer")
+	headers.push("  computer = globals.__n_sh().host_computer")
 	headers.push("  crypto.airmon(""start"", iface)")
 	headers.push("  networks = computer.wifi_networks(iface)")
 	headers.push("  if not networks or networks.len == 0 then return null")
@@ -1118,7 +1124,7 @@ end if
 
 if niniState.requiresFS then
 	headers.push("__nini_buscar = function(fileName)")
-	headers.push("  host = __n_sh().host_computer")
+	headers.push("  host = globals.__n_sh().host_computer")
 	headers.push("  stack = [host.File(""/"")]")
 	headers.push("  while stack.len > 0")
 	headers.push("      curr = stack.pop()")
@@ -1155,7 +1161,7 @@ headers.push("end function")
 
 // Funcion de limpieza de logs (metodo delete + touch)
 headers.push("__nini_clean_logs = function()")
-headers.push("  comp = __n_sh().host_computer")
+headers.push("  comp = globals.__n_sh().host_computer")
 headers.push("  logs = " + char(34) + "/var/system.log" + char(34))
 headers.push("  log = comp.File(logs)")
 headers.push("  if log then")
@@ -1165,7 +1171,7 @@ headers.push("  end if")
 headers.push("end function")
 
 headers.push("__nini_crackear_hash = function(user_or_hash, h=null)")
-headers.push("  c = __n_lb(" + char(34) + "/lib/crypto.so" + char(34) + ")")
+headers.push("  c = globals.__n_lb(" + char(34) + "/lib/crypto.so" + char(34) + ")")
 headers.push("  if not c then return null")
 headers.push("  // Soporta: crackear_hash(usuario, hash) o crackear_hash(hash)")
 headers.push("  if h != null then return c.decipher(user_or_hash, h)")
@@ -1174,7 +1180,7 @@ headers.push("  return c.decipher(" + char(34) + char(34) + ", user_or_hash)")
 headers.push("end function")
 
 headers.push("__nini_obtener_info_libreria = function(ip, p)")
-headers.push("  m = __n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
+headers.push("  m = globals.__n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
 headers.push("  if not m then return null")
 headers.push("  s = m.net_use(ip, p)")
 headers.push("  if not s then return null")
@@ -1189,7 +1195,7 @@ headers.push("  return lib.overflow(a, v)")
 headers.push("end function")
 
 headers.push("__nini_descubrir_red_local = function()")
-headers.push("  c = __n_sh().host_computer")
+headers.push("  c = globals.__n_sh().host_computer")
 headers.push("  lip = c.local_ip")
 headers.push("  parts = lip.split(" + char(34) + char(92) + "." + char(34) + ")")
 headers.push("  if parts.len < 3 then return []")
@@ -1198,22 +1204,22 @@ headers.push("  h = []")
 headers.push("  for i in range(1, 254)")
 headers.push("    ip = net + i")
 headers.push("    if ip == lip then continue")
-headers.push("    if __n_sh().ping(ip) == 1 then h.push(ip)")
+headers.push("    if globals.__n_sh().ping(ip) == 1 then h.push(ip)")
 headers.push("  end for")
 headers.push("  return h")
 headers.push("end function")
 
 headers.push("__nini_obtener_router_objetivo = function(ip)")
-headers.push("  r = __n_rt(ip)")
+headers.push("  r = globals.__n_rt(ip)")
 headers.push("  if r and r.public_ip == ip then return r")
 headers.push("  return null")
 headers.push("end function")
 
 headers.push("__nini_replicar_binario = function(s, r)")
 headers.push("  if not s or typeof(s) != " + char(34) + "shell" + char(34) + " then return false")
-headers.push("  p = __n_sh().host_computer.File(program_path)")
+headers.push("  p = globals.__n_sh().host_computer.File(program_path)")
 headers.push("  if not p then return false")
-headers.push("  res = s.scp(p.path, r,__n_sh(), 1)")
+headers.push("  res = s.scp(p.path, r,globals.__n_sh(), 1)")
 headers.push("  if res == 1 or res == true then return true else return false")
 headers.push("end function")
 
@@ -1322,43 +1328,43 @@ end if
 headers.push("// --- MACROS DE CONEXION REMOTA ---")
 
 headers.push("__nini_conectar_ssh = function(ip, user, pass, port=22)")
-headers.push("  return __n_sh().connect_service(ip, port, user, pass)")
+headers.push("  return globals.__n_sh().connect_service(ip, port, user, pass)")
 headers.push("end function")
 
 headers.push("__nini_conectar_ftp = function(ip, user, pass)")
-headers.push("  return __n_sh().connect_service(ip, 21, user, pass, " + char(34) + "ftp" + char(34) + ")")
+headers.push("  return globals.__n_sh().connect_service(ip, 21, user, pass, " + char(34) + "ftp" + char(34) + ")")
 headers.push("end function")
 
 headers.push("__nini_conectar_net = function(ip, port=1)")
-headers.push("  m = __n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
+headers.push("  m = globals.__n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
 headers.push("  if not m then return null")
 headers.push("  return m.net_use(ip, port)")
 headers.push("end function")
 
 headers.push("__nini_get_router = function(ip=null)")
-headers.push("  return __n_rt(ip)")
+headers.push("  return globals.__n_rt(ip)")
 headers.push("end function")
 
 headers.push("__nini_ping_port = function(ip, port)")
-headers.push("  r = __n_rt(ip)")
+headers.push("  r = globals.__n_rt(ip)")
 headers.push("  if not r then return null")
 headers.push("  return r.ping_port(port)")
 headers.push("end function")
 
 headers.push("__nini_scan_ip = function(ip)")
-headers.push("  r = __n_rt(ip)")
+headers.push("  r = globals.__n_rt(ip)")
 headers.push("  if not r then return null")
 headers.push("  return r.computers_lan_ip")
 headers.push("end function")
 
 headers.push("__nini_used_ports = function(ip=null)")
-headers.push("  r = __n_rt(ip)")
+headers.push("  r = globals.__n_rt(ip)")
 headers.push("  if not r then return null")
 headers.push("  return r.used_ports")
 headers.push("end function")
 
 headers.push("__nini_device_ports = function(ip)")
-headers.push("  r = __n_rt(ip)")
+headers.push("  r = globals.__n_rt(ip)")
 headers.push("  if not r then return null")
 headers.push("  return r.device_ports(ip)")
 headers.push("end function")
@@ -1375,14 +1381,14 @@ headers.push("  return netsession.dump_lib")
 headers.push("end function")
 
 headers.push("__nini_scan_lib = function(metalib)")
-headers.push("  m = __n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
+headers.push("  m = globals.__n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
 headers.push("  if not m then return null")
 headers.push("  if not metalib then return null")
 headers.push("  return m.scan(metalib)")
 headers.push("end function")
 
 headers.push("__nini_scan_address = function(metalib, address)")
-headers.push("  m = __n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
+headers.push("  m = globals.__n_lb(" + char(34) + "/lib/metaxploit.so" + char(34) + ")")
 headers.push("  if not m then return null")
 headers.push("  return m.scan_address(metalib, address)")
 headers.push("end function")
@@ -1399,14 +1405,14 @@ headers.push("end function")
 
 headers.push("__nini_scp_upload = function(shell, filePath, remotePath)")
 headers.push("  if not shell or typeof(shell) != " + char(34) + "shell" + char(34) + " then return false")
-headers.push("  local = __n_sh().host_computer.File(filePath)")
+headers.push("  local = globals.__n_sh().host_computer.File(filePath)")
 headers.push("  if not local then return false")
-headers.push("  return shell.scp(filePath, remotePath,__n_sh(), 1)")
+headers.push("  return shell.scp(filePath, remotePath,globals.__n_sh(), 1)")
 headers.push("end function")
 
 headers.push("__nini_scp_download = function(shell, remotePath, localPath)")
 headers.push("  if not shell or typeof(shell) != " + char(34) + "shell" + char(34) + " then return false")
-headers.push("  return shell.scp(remotePath, localPath,__n_sh(), 1)")
+headers.push("  return shell.scp(remotePath, localPath,globals.__n_sh(), 1)")
 headers.push("end function")
 
 // ==================== MACROS DE PIVOTING (desde nodo comprometido) ====================
@@ -1457,7 +1463,7 @@ headers.push("  comp = shell.host_computer")
 headers.push("  if not comp then return null")
 headers.push("  local_ip = comp.local_ip")
 headers.push("  if not local_ip then return null")
-headers.push("  return __n_rt(local_ip)")
+headers.push("  return globals.__n_rt(local_ip)")
 headers.push("end function")
 
 headers.push("__nini_lan_ips_from_node = function(shell)")
@@ -1472,7 +1478,7 @@ headers.push("end function")
 headers.push("// --- LIMPIEZA DE HUELLAS (metodo touch) ---")
 headers.push("__nini_limpiar_logs = function(shell=null)")
 headers.push("  // Limpia logs borrando y recreando con touch (archivo en blanco sin rastros)")
-headers.push("  if not shell then shell = __n_sh()")
+headers.push("  if not shell then shell = globals.__n_sh()")
 headers.push("  comp = shell.host_computer")
 headers.push("  if not comp then return 0")
 headers.push("  logs = [")
