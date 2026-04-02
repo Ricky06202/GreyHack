@@ -1,32 +1,89 @@
 // modulo ui.nini - INTERFAZ
 
-tarea mostrar_banner_revenant:
-    print("<color=#00e5ff> [ ###################################################### ] </color>")
-    print("<color=#00e5ff> [ # ]                                              [ # ] </color>")
-    print("<color=#ffffff> [ # ]          R  E  V  E  N  A  N  T              [ # ] </color>")
-    print("<color=#ffffff> [ # ]   P O S T - E X P L O I T A T I O N          [ # ] </color>")
-    print("<color=#424242> [ # ]             F R A M E W O R K                [ # ] </color>")
-    print("<color=#424242> [ # ]                                              [ # ] </color>")
-    print("<color=#00e5ff> [ ###################################################### ] </color>")
-    print("")
+colores = {
+    "cyan": "<color=#00e5ff>",
+    "verde": "<color=#00ff41>",
+    "amarillo": "<color=#ffea00>",
+    "rojo": "<color=#ff1744>",
+    "blanco": "<color=#ffffff>",
+    "gris": "<color=#71858d>",
+    "reset": "</color>",
+}
 
-tarea dibujar_separador: print("<color=#424242>--------------------------------</color>")
+tarea mostrar_banner_revenant:
+    print(colores.cyan + "  ╔══════════════════════════════════╗" + colores.reset)
+    print(colores.cyan + "  ║      R E V E N A N T  OS          ║" + colores.reset)
+    print(colores.gris + "  ║   Post-Exploitation Framework    ║" + colores.reset)
+    print(colores.cyan + "  ╚══════════════════════════════════╝" + colores.reset)
+
+tarea dibujar_separador: print(colores.gris + "--------------------------------" + colores.reset)
 tarea limpiar_pantalla: clear_screen
 
-tarea pausa_tactica: pedir("<color=#424242>[ Enter ]</color>")
+tarea pausa_tactica: pedir(colores.gris + "[ Enter ]" + colores.reset)
 
 tarea dibujar_hud_tactico:
     clear_screen
-    print("<color=#00e5ff>  REVENANT OS v3.0</color>")
-    print("<color=#424242>  Post-Exploitation Framework</color>")
+    mostrar_banner_revenant()
     print("")
     
+    // === CABECERA: TARGET ===
     obj = globals.objetivo_actual or "NINGUNO"
-    ses = str(len(enjambre))
-    modo = globals.modo
-    
-    print("<color=#424242>[</color> OBJ: <color=#00ff41>" + obj + "</color> | SES: <color=#00ff41>" + ses + "</color> | MODO: <color=#00e5ff>" + modo + "</color> <color=#424242>]</color>")
+    obj_color = (obj == "NINGUNO") >> colores.rojo |: colores.verde
+    print(colores.gris + "┌" + "─" * 40 + "┐" + colores.reset)
+    print(colores.gris + "│" + colores.blanco + " TARGET                    " + colores.gris + "│" + colores.reset)
+    print(colores.gris + "│   " + obj_color + obj + colores.gris + " " * (35 - len(obj)) + "│" + colores.reset)
+    print(colores.gris + "└" + "─" * 40 + "┘" + colores.reset)
     print("")
+    
+    // === PANEL: SESIONES ===
+    ses_count = str(len(enjambre))
+    ses_color = (ses_count == "0") >> colores.gris |: colores.verde
+    print(colores.gris + "┌" + "─" * 18 + "┐" + colores.gris + "┌" + "─" * 20 + "┐" + colores.reset)
+    print(colores.gris + "│" + colores.blanco + " SESIONES              " + colores.gris + "│" + colores.blanco + " MODO                 " + colores.gris + "│" + colores.reset)
+    print(colores.gris + "│   " + ses_color + ses_count + colores.gris + " " * 12 + "│" + colores.gris + "   " + colores.cyan + globals.modo + colores.gris + " " * 10 + "│" + colores.reset)
+    print(colores.gris + "└" + "─" * 18 + "┘" + colores.gris + "└" + "─" * 20 + "┘" + colores.reset)
+    print("")
+    
+    // === PANEL: PUERTOS ABIERTOS ===
+    si len(globals.ultimo_scan) > 0:
+        puertos_abiertos = []
+        para r in globals.ultimo_scan:
+            si r.estado == "open": puertos_abiertos.push(r)
+        
+        print(colores.gris + "┌" + "─" * 40 + "┐" + colores.reset)
+        print(colores.gris + "│" + colores.blanco + " PUERTOS ABIERTOS (" + str(len(puertos_abiertos)) + ")                " + colores.gris + "│" + colores.reset)
+        print(colores.gris + "├" + "─" * 40 + "┤" + colores.reset)
+        
+        si len(puertos_abiertos) == 0:
+            print(colores.gris + "│   Sin puertos abiertos             " + colores.gris + "│" + colores.reset)
+        sino:
+            para r in puertos_abiertos:
+                puerto = str(r.puerto)
+                servicio = r.servicio
+                print(colores.gris + "│   " + colores.verde + puerto + "  " + colores.cyan + servicio + colores.reset + " " * 10 + colores.gris + "│" + colores.reset)
+        
+        print(colores.gris + "└" + "─" * 40 + "┘" + colores.reset)
+        print("")
+    
+    // === PANEL: SESIONES ACTIVAS ===
+    si len(enjambre) > 0:
+        print(colores.gris + "┌" + "─" * 40 + "┐" + colores.reset)
+        print(colores.gris + "│" + colores.blanco + " SESIONES ACTIVAS (" + ses_count + ")              " + colores.gris + "│" + colores.reset)
+        print(colores.gris + "├" + "─" * 40 + "┤" + colores.reset)
+        
+        cont = 0
+        para ip in enjambre.indexes:
+            si cont >= 5: siguiente  // Max 5 sesiones mostradas
+            ses = enjambre[ip]
+            tipo = typeof(ses)
+            user = (tipo == "shell") >> ses.user |: "-"
+            print(colores.gris + "│   " + colores.verde + ip.ljust(16) + colores.reset + colores.amarillo + tipo.ljust(8) + colores.reset + user.ljust(8) + colores.gris + "│" + colores.reset)
+            cont = cont + 1
+        
+        print(colores.gris + "└" + "─" * 40 + "┘" + colores.reset)
+        print("")
+    
+    dibujar_separador()
 
 tarea dibujar_ventana(titulo, contenido):
     dibujar_separador()
@@ -36,29 +93,26 @@ tarea dibujar_ventana(titulo, contenido):
     dibujar_separador()
 
 tarea dibujar_ventana_centrada(titulo, contenido):
-    dibujar_separador_doble()
-    print("[ " + titulo.upper() + " ]")
-    dibujar_separador_doble()
+    print(colores.gris + "╔" + "═" * 40 + "╗" + colores.reset)
+    print(colores.gris + "║ " + colores.blanco + titulo.upper().center(38) + colores.gris + " ║" + colores.reset)
+    print(colores.gris + "╠" + "═" * 40 + "╣" + colores.reset)
     print(contenido)
-    dibujar_separador_doble()
-
-tarea pausa_tactica: pedir("<color=#424242>[ Enter ]</color>")
+    print(colores.gris + "╚" + "═" * 40 + "╝" + colores.reset)
 
 tarea menu_interactivo(titulo, opciones):
-    dibujar_separador_doble()
-    print("[ " + titulo.upper() + " ]")
-    dibujar_separador()
+    print(colores.gris + "╔" + "═" * 40 + "╗" + colores.reset)
+    print(colores.gris + "║ " + colores.blanco + titulo.upper().center(38) + colores.gris + " ║" + colores.reset)
+    print(colores.gris + "╠" + "═" * 40 + "╣" + colores.reset)
     
     filas = []
     i = 1
     para opt en opciones:
-        filas.push([i, opt.label])
+        print(colores.gris + "║ " + colores.cyan + "[" + str(i) + "]" + colores.reset + " " + opt.label.ljust(35) + colores.gris + " ║" + colores.reset)
         i = i + 1
     
-    print(construir_tabla(["#", "Accion"], filas))
-    dibujar_separador()
+    print(colores.gris + "╚" + "═" * 40 + "╝" + colores.reset)
     
-    sel = val(pedir("<color=#ffea00>Selecciona > </color>"))
+    sel = val(pedir(colores.amarillo + "Selecciona > " + colores.reset))
     si sel > 0 y sel <= len(opciones): return opciones[sel - 1].cmd
     error("Selección inválida.")
     return null
@@ -68,7 +122,7 @@ tarea prompt_objetivo:
         confirm = pedir("Cambiar (" + globals.objetivo_actual + ")? [s/n]: ")
         si confirm.lower() != "s": return globals.objetivo_actual
     
-    t_obj = pedir("<color=#ffea00>IP o Dominio > </color>")
+    t_obj = pedir(colores.amarillo + "IP o Dominio > " + colores.reset)
     si t_obj == "": return globals.objetivo_actual
     
     res = resolver_objetivo(t_obj)
@@ -80,8 +134,8 @@ tarea prompt_objetivo:
     error("No se pudo resolver: " + t_obj)
     return null
 
-tarea mostrar_cargando(texto): print("<color=#00e5ff>Cargando " + texto + "...</color>")
+tarea mostrar_cargando(texto): print(colores.cyan + "Cargando " + texto + "..." + colores.reset)
 
 tarea confirmar_accion(pregunta):
-    resp = pedir("<color=#ffea00>" + pregunta + " [s/n]: </color>")
+    resp = pedir(colores.amarillo + pregunta + " [s/n]: " + colores.reset)
     return (resp.lower() == "s" o resp.lower() == "si" o resp.lower() == "y")
