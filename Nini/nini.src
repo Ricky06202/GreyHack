@@ -257,6 +257,8 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 			if trimmed.indexOf("globals." + globalName) != null then continue
 			if trimmed.indexOf("." + globalName) != null then continue
 			if trimmed.indexOf("@" + globalName) != null then continue
+			// Skip if preceded by underscore (e.g., _vault_data should not match vault_data)
+			if trimmed.indexOf("_" + globalName) != null then continue
 			// Skip assignment declarations (e.g., "varName = " at start of line)
 			if trimmed.indexOf(globalName + " = ") == 0 then continue
 			if trimmed.indexOf(globalName + "=") == 0 then continue
@@ -1599,7 +1601,7 @@ err = sh.build(targetFolder + "/" + fileName, targetFolder)
 
 binary = fileName.replace(".gs", "")
 if err == "" then
-	outFile.delete
+// 	outFile.delete
 	print("<color=green>[SUCCESS] Ejecutable " + binary + " listo para lanzar. (.gs reciclado)</color>")
 else
 	print("<color=red>[ERROR C-Engine]</color> " + err)

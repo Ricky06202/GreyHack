@@ -1186,7 +1186,6 @@ tarea modulo_botnet_persistir:
 
 // --- FIN SUB-MODULO: modulos/persistencia.nini ---
 // --- INICIO SUB-MODULO: modulos/vault.nini ---
-_vault_data = {"creds": {}, "vulns": {}}
 _vault_k = "R3V3N4NT_S3CUR3"
 _version = "STABLE"
 
@@ -1199,8 +1198,8 @@ tarea inicializar_vault:
         f = obtener_archivo(ruta)
         contenido = f.get_content
         si len(contenido) > 0:
-            _vault_data = deserializar_vault(contenido)
-            info("Vault cargado: " + len(_vault_data.creds) + " creds, " + len(_vault_data.vulns) + " vulns.")
+            vault_data = deserializar_vault(contenido)
+            info("Vault cargado: " + len(vault_data.creds) + " creds, " + len(vault_data.vulns) + " vulns.")
     sino:
         info("Iniciando nuevo Vault en: " + ruta)
 
@@ -1238,20 +1237,20 @@ tarea guardar_vault:
         f = obtener_archivo(ruta)
     
     si f: 
-        f.set_content(serializar_vault(_vault_data))
+        f.set_content(serializar_vault(vault_data))
     sino:
         error("Fallo de persistencia: El Vault no puede escribirse en " + p)
 
 tarea guardar_credencial(ip, usuario, clave, priv, lan):
     k = (ip + "_" + usuario + "_" + priv).lower()
-    _vault_data.creds[k] = {"ip": ip, "user": usuario, "pass": clave, "priv": priv, "lan": lan}
+    vault_data.creds[k] = {"ip": ip, "user": usuario, "pass": clave, "priv": priv, "lan": lan}
     guardar_vault()
     exito("Vault actualizado: " + usuario + "@" + ip)
 
 tarea listar_credenciales:
     columnas = ["IP", "Usuario", "Clave", "Priv", "LAN"]
     filas = []
-    recorrer _vault_data.creds como c_entry:
+    recorrer vault_data.creds como c_entry:
         c = c_entry.value
         filas.push([c.ip, c.user, c.pass, c.priv, c.lan])
     
@@ -1259,13 +1258,13 @@ tarea listar_credenciales:
 
 tarea cachear_vulnerabilidad(lib, ver, area, vuln):
     k = (lib + "_" + ver).lower()
-    si no _vault_data.vulns.tiene(k): _vault_data.vulns[k] = []
-    _vault_data.vulns[k].push({"mem": area, "pass": vuln})
+    si no vault_data.vulns.tiene(k): vault_data.vulns[k] = []
+    vault_data.vulns[k].push({"mem": area, "pass": vuln})
     guardar_vault()
 
 tarea obtener_vulnerabilidades(lib, ver):
     k = (lib + "_" + ver).lower()
-    si _vault_data.vulns.tiene(k): retornar _vault_data.vulns[k]
+    si vault_data.vulns.tiene(k): retornar vault_data.vulns[k]
     retornar []
 
 
