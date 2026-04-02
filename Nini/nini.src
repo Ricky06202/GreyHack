@@ -309,6 +309,8 @@ parseCommand = function(lineNum, trimmed, currentIndent)
 	if (trimmed.indexOf("escanear_direccion(") != null) then trimmed = trimmed.replace("escanear_direccion", "__nini_scan_address")
 	if (trimmed.indexOf("ejecutar_exploit(") != null) then trimmed = trimmed.replace("ejecutar_exploit", "__nini_overflow")
 	if (trimmed.indexOf("limpiar_logs(") != null) then trimmed = trimmed.replace("limpiar_logs", "__nini_limpiar_logs")
+	// Also replace standalone limpiar_logs (e.g., in Shell.registrar)
+	if (trimmed.indexOf("limpiar_logs") != null and trimmed.indexOf("__nini_limpiar_logs") == null) then trimmed = replaceAll(trimmed, "limpiar_logs", "__nini_limpiar_logs")
 	
 	// Macros de PIVOTING (desde nodo comprometido)
 	if (trimmed.indexOf("obtener_ip_local_nodo(") != null) then trimmed = trimmed.replace("obtener_ip_local_nodo", "__nini_get_local_ip")
@@ -1598,7 +1600,7 @@ err = sh.build(targetFolder + "/" + fileName, targetFolder)
 
 binary = fileName.replace(".gs", "")
 if err == "" then
-// 	outFile.delete
+	outFile.delete
 	print("<color=green>[SUCCESS] Ejecutable " + binary + " listo para lanzar. (.gs reciclado)</color>")
 else
 	print("<color=red>[ERROR C-Engine]</color> " + err)
