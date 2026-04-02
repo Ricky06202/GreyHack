@@ -19,7 +19,6 @@ importar "commands/exploit.nini"
 importar "commands/jump.nini"
 
 // Legacy
-importar "modulos/botnet.nini"
 importar "modulos/asalto.nini"
 importar "modulos/escalada.nini"
 importar "modulos/persistencia.nini"
@@ -27,7 +26,7 @@ importar "modulos/vault.nini"
 importar "modulos/intel.nini"
 importar "modulos/exfil.nini"
 importar "modulos/espectro.nini"
-importar "modulos/lateral.nini"
+importar "modulos/limpieza.nini"
 
 modo ninja:
 inicializar_vault()
@@ -56,7 +55,6 @@ Shell.registrar("vault", listar_credenciales, "Vault")
 Shell.registrar("intel", modulo_intel_saquear, "Intel")
 Shell.registrar("exfil", modulo_exfil_menu, "Exfil")
 Shell.registrar("persistencia", modulo_persistencia_configurar, "Persistencia")
-Shell.registrar("ses", modulo_botnet_menu, "Sesiones")
 
 Banner.mostrar()
 info("Revenant v3.0 - 'ayuda' para comandos")

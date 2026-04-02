@@ -10,34 +10,23 @@ tarea mostrar_banner_revenant:
     print("<color=#00e5ff> [ ###################################################### ] </color>")
     print("")
 
-tarea dibujar_separador: print("<color=#424242>======================================================</color>")
-tarea dibujar_separador_doble: print("<color=#b537f2>======================================================</color>")
+tarea dibujar_separador: print("<color=#424242>--------------------------------</color>")
 tarea limpiar_pantalla: clear_screen
 
+tarea pausa_tactica: pedir("<color=#424242>[ Enter ]</color>")
+
 tarea dibujar_hud_tactico:
-    limpiar_pantalla()
-    mostrar_banner_revenant()
-    dibujar_separador()
+    clear_screen
+    print("<color=#00e5ff>  REVENANT OS v3.0</color>")
+    print("<color=#424242>  Post-Exploitation Framework</color>")
+    print("")
     
-    estado_obj = (not globals.objetivo_actual) >> "<color=#ff3131>NINGUNO</color>" |: "<color=#00ff41>" + globals.objetivo_actual + "</color>"
-    estado_enjambre = (len(enjambre) == 0) >> "<color=#424242>" + str(len(enjambre)) + "</color>" |: "<color=#00ff41>" + str(len(enjambre)) + "</color>"
-    modo_color = (globals.modo == "LOCAL") >> "<color=#00ff41>LOCAL</color>" |: "<color=#ff3131>REMOTO</color>"
+    obj = globals.objetivo_actual or "NINGUNO"
+    ses = str(len(enjambre))
+    modo = globals.modo
     
-    print("OBJ: " + estado_obj + " | MODO: " + modo_color + " | SES: " + estado_enjambre)
-    dibujar_separador()
-    
-    // Mostrar tabla de puertos si hay scan reciente
-    si len(ultimo_scan) > 0:
-        print("<color=#00e5ff>[#] PUERTOS ESCANEADOS:</color>")
-        columnas = ["ID", "Puerto", "Estado", "Servicio", "Version"]
-        filas = []
-        para r in globals.ultimo_scan:
-            estado_col = r.estado
-            si r.estado == "closed": estado_col = "<color=#ff3131>" + r.estado + "</color>"
-            si r.estado == "open": estado_col = "<color=#00ff41>" + r.estado + "</color>"
-            filas.push([r.id, r.puerto, estado_col, r.servicio, r.version])
-        print(construir_tabla(columnas, filas))
-        dibujar_separador()
+    print("<color=#424242>[</color> OBJ: <color=#00ff41>" + obj + "</color> | SES: <color=#00ff41>" + ses + "</color> | MODO: <color=#00e5ff>" + modo + "</color> <color=#424242>]</color>")
+    print("")
 
 tarea dibujar_ventana(titulo, contenido):
     dibujar_separador()

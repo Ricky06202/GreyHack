@@ -1,5 +1,12 @@
 // modulo limpieza.nini - LIMPIEZA DE HUELLAS v2.0
 
+tarea obtener_computadora_objetivo:
+    si not globals.objetivo_actual or globals.objetivo_actual == "localhost": return get_shell().host_computer
+    si enjambre.tiene(globals.objetivo_actual):
+        sesion = enjambre[globals.objetivo_actual]
+        return (typeof(sesion) == "shell") >> sesion.host_computer |: null
+    return get_shell().host_computer
+
 tarea modulo_limpieza_ejecutar:
     opciones_clean = [
         {"label": "Limpiar logs del sistema", "cmd": "logs"},

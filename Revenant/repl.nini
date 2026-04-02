@@ -11,15 +11,15 @@ mostrar_ayuda = function()
     Separador.titulo("AYUDA")
     columnas = ["Comando", "Alias", "Descripcion"]
     filas = [
-        ["scan <ip>", "sc", "Escanear puertos",],
-        ["hack <ip>", "h", "Explotar",],
-        ["jump", "j", "Jump sesion",],
-        ["sesiones", "ss", "Ver sesiones",],
-        ["buffer", "buf", "Ver BUFFER",],
-        ["esc", "", "Escalada + ChainSaw",],
+        ["escanear <ip>", "sc", "Escanear puertos",],
+        ["hack <ip>", "h", "Explotar vulnerabilidad",],
+        ["whois <ip>", "", "WHOIS / Info objetivo",],
+        ["escanear_lan", "", "Escanear red local",],
+        ["jump", "j", "Jump a sesion",],
+        ["scanjump", "", "Scan + Jump automatico",],
+        ["escalada", "esc", "Escalada de privilegios",],
+        ["limpiarlogs", "", "Limpiar logs",],
         ["vault", "v", "Credenciales",],
-        ["alias <a> <cmd>", "", "Crear alias",],
-        ["ayuda", "h", "Ayuda",],
         ["salir", "q", "Salir",],
     ]
     print(construir_tabla(columnas, filas))
