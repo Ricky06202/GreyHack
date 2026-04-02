@@ -5,7 +5,7 @@ tarea escanear_puertos(ip)
     router = get_router(ip)
     si no router: retornar null
     puertos = router.used_ports
-    si puertos.len == 0: retornar []
+    si len(puertos) == 0: retornar []
     resultados = []
     para port in puertos:
         resultados.push({"puerto": port.port_number, "estado": port.is_closed, "servicio": router.port_info(port), "lan_ip": port.get_lan_ip})
@@ -21,19 +21,19 @@ tarea escanear_puertos(ip)
 tarea escanear_red(ip_base)
     info("Escaneando red " + ip_base + "...")
     si ip_base.indexOf(".") == null:
-        mi_ip = get_shell.host_computer.local_ip
+        mi_ip = get_shell().host_computer.local_ip
         partes = mi_ip.split(".")
         ip_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
     encontrados = []
     para i en rango(1, 255):
         ip = ip_base + str(i)
-        resultado = get_shell.connect_service(ip, 22, "root", "")
+        resultado = get_shell().connect_service(ip, 22, "root", "")
         si resultado != null:
             exito("Encontrado: " + ip)
             encontrados.push(ip)
             enjambre[ip] = resultado
-    info("Encontrados: " + str(encontrados.len))
-    si encontrados.len > 0: Buffer.push(encontrados, "Red " + ip_base)
+    info("Encontrados: " + str(len(encontrados)))
+    si len(encontrados) > 0: Buffer.push(encontrados, "Red " + ip_base)
     retornar encontrados
 
 tarea whois_objetivo(ip)

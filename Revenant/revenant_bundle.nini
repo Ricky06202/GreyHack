@@ -9,22 +9,22 @@ Buffer.items = []
 Buffer.max_size = 50
 
 Buffer.push = function(objeto, descripcion)
-    si Buffer.items.len >= Buffer.max_size: Buffer.items.remove(0)
-    item = {"objeto": objeto, "tipo": typeof(objeto), "descripcion": descripcion or "Sin desc", "timestamp": time, "id": Buffer.items.len}
+    si len(Buffer.items) >= Buffer.max_size: Buffer.items.remove(0)
+    item = {"objeto": objeto, "tipo": typeof(objeto), "descripcion": descripcion or "Sin desc", "timestamp": time, "id": len(Buffer.items)}
     Buffer.items.push(item)
     retornar item.id
 
 Buffer.get = function(index)
-    si index < 0 or index >= Buffer.items.len: retornar null
+    si index < 0 or index >= len(Buffer.items): retornar null
     retornar Buffer.items[index].objeto
 
 Buffer.list = function()
-    si Buffer.items.len == 0:
+    si len(Buffer.items) == 0:
         info("BUFFER vacio")
         retornar ""
     columnas = ["#", "Tipo", "Descripcion"]
     filas = []
-    para i en rango(0, Buffer.items.len):
+    para i en rango(0, len(Buffer.items)):
         item = Buffer.items[i]
         filas.push([i + 1, item.tipo, item.descripcion])
     retornar construir_tabla(columnas, filas)
@@ -99,8 +99,8 @@ Kernel.info = function()
         ["Usuario", Kernel.usuario,],
         ["Path", Kernel.current_path,],
         ["Modo", Kernel.modo,],
-        ["Sesiones", str(enjambre.len),],
-        ["Buffer", str(Buffer.items.len),],
+        ["Sesiones", str(len(enjambre)),],
+        ["Buffer", str(len(Buffer.items)),],
     ]
     retornar construir_tabla(columnas, filas)
 
@@ -110,10 +110,10 @@ Config.datos = {"color_primario": "#00e5ff", "auto_jump": verdadero, "max_buffer
 Config.guardar = function()
     contenido = ""
     para clave in Config.datos.indexes: contenido = contenido + clave + "=" + str(Config.datos[clave]) + char(10)
-    archivo = get_shell.host_computer.File(Config.archivo)
+    archivo = get_shell().host_computer.File(Config.archivo)
     si archivo: archivo.set_content(contenido)
 Config.cargar = function()
-    archivo = get_shell.host_computer.File(Config.archivo)
+    archivo = get_shell().host_computer.File(Config.archivo)
     si no archivo: retornar
     contenido = archivo.get_content
     si contenido == null or contenido == "": retornar
@@ -121,7 +121,7 @@ Config.cargar = function()
     para linea in lineas:
         si linea == "": continue
         partes = linea.split("=")
-        si partes.len >= 2: Config.datos[partes[0].trim] = partes[1:].join("=").trim
+        si len(partes) >= 2: Config.datos[partes[0].trim] = partes[1:].join("=").trim
 Config.obtener = function(clave, default)
     si Config.datos.hasIndex(clave): retornar Config.datos[clave]
     retornar default
@@ -134,13 +134,41 @@ Log.historial = []
 Log.maximo = 100
 Log.agregar = function(tipo, mensaje)
     Log.historial.push({"tipo": tipo, "mensaje": mensaje, "tiempo": time})
-    si Log.historial.len > Log.maximo: Log.historial.remove(0)
+    si len(Log.historial) > Log.maximo: Log.historial.remove(0)
 Log.ver = function(cantidad)
     cantidad = cantidad or 20
-    inicio = Log.historial.len > cantidad >> Log.historial.len - cantidad |: 0
-    para i en rango(inicio, Log.historial.len):
+    inicio = len(Log.historial) > cantidad >> len(Log.historial) - cantidad |: 0
+    para i en rango(inicio, len(Log.historial)):
         entrada = Log.historial[i]
         print(entrada.tipo + ": " + entrada.mensaje)
+
+Kernel.obtener_archivo = function(comp, ruta)
+    si no comp o no ruta: retornar null
+    si typeof(comp) == "shell": comp = comp.host_computer
+    si typeof(comp) != "computer": retornar null
+    
+    // Solo intentar acceso directo si es local
+    es_local = comp.public_ip == get_shell().host_computer.public_ip and comp.local_ip == get_shell().host_computer.local_ip
+    si es_local:
+        archivo = comp.File(ruta)
+        si archivo: retornar archivo
+    
+    // Navegación manual para remotos (evita 'Invalid arguments')
+    partes = ruta.split("/")
+    actual = comp.File("/")
+    si no actual: retornar null
+    
+    para parte en partes:
+        si parte == "" o parte == ".": continue
+        encontrado = nulo
+        hijos = actual.get_folders + actual.get_files
+        para h en hijos:
+            si h.name == parte:
+                encontrado = h
+                break
+        si no encontrado: retornar null
+        actual = encontrado
+    retornar actual
 
 Kernel.inicializar = function()
     Config.cargar()
@@ -182,11 +210,11 @@ Shell.ejecutar = function(nombre, args)
     nombre = Aliases.resolver(nombre)
     si Shell.comandos.hasIndex(nombre):
         funcion = Shell.comandos[nombre].funcion
-        si args.len == 0: retornar funcion()
-        si args.len == 1: retornar funcion(args[0])
-        si args.len == 2: retornar funcion(args[0], args[1])
-        si args.len == 3: retornar funcion(args[0], args[1], args[2])
-        si args.len == 4: retornar funcion(args[0], args[1], args[2], args[3])
+        si len(args) == 0: retornar funcion()
+        si len(args) == 1: retornar funcion(args[0])
+        si len(args) == 2: retornar funcion(args[0], args[1])
+        si len(args) == 3: retornar funcion(args[0], args[1], args[2])
+        si len(args) == 4: retornar funcion(args[0], args[1], args[2], args[3])
         retornar funcion(args.join(" "))
     si nombre == "ls" or nombre == "dir": retornar Shell.cmd_ls(args)
     si nombre == "cd": retornar Shell.cmd_cd(args)
@@ -199,9 +227,9 @@ Shell.ejecutar = function(nombre, args)
     retornar null
 
 Shell.cmd_ls = function(args)
-    ruta = args.len > 0 >> args[0] |: "."
-    comp = get_shell.host_computer
-    archivo = comp.File(ruta)
+    ruta = len(args) > 0 >> args[0] |: "."
+    comp = get_shell().host_computer
+    archivo = Kernel.obtener_archivo(comp, ruta)
     si no archivo: retornar null
     si archivo.is_directory:
         archivos = archivo.get_files
@@ -213,7 +241,7 @@ Shell.cmd_ls = function(args)
     retornar archivo.name
 
 Shell.cmd_cd = function(args)
-    si args.len == 0 or args[0] == "":
+    si len(args) == 0 or args[0] == "":
         Kernel.current_path = Kernel.home_path
         retornar Kernel.current_path
     nueva_ruta = args[0]
@@ -232,10 +260,10 @@ Shell.cmd_cd = function(args)
     retornar Kernel.current_path
 
 Shell.cmd_cat = function(args)
-    si args.len == 0: retornar null
+    si len(args) == 0: retornar null
     ruta = args[0]
-    comp = get_shell.host_computer
-    archivo = comp.File(ruta)
+    comp = get_shell().host_computer
+    archivo = Kernel.obtener_archivo(comp, ruta)
     si no archivo: retornar null
     si archivo.is_binary: retornar "Archivo binario"
     retornar archivo.get_content
@@ -264,8 +292,8 @@ Colores = {"rojo": "<color=#FF0000FF><b>", "cian": "<color=#00FFFFFF><b>", "verd
 
 Prompt = {}
 Prompt.generar = function()
-    ip_pub = get_shell.host_computer.public_ip
-    ip_local = get_shell.host_computer.local_ip
+    ip_pub = get_shell().host_computer.public_ip
+    ip_local = get_shell().host_computer.local_ip
     user_color = Kernel.usuario == "root" >> Colores.rojo |: Colores.verde
     glass = Glasspool.activo >> Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
     retornar user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
@@ -294,13 +322,13 @@ Separador.titulo = function(titulo)
 Menu = {}
 Menu.opciones = function(titulo, opciones)
     Separador.titulo(titulo)
-    para i en rango(0, opciones.len):
+    para i en rango(0, len(opciones)):
         print("  " + Colores.cian + "[" + str(i + 1) + "]" + Colores.reset + " " + opciones[i].label)
     Separador.simple()
     sel = user_input(Colores.cian + "Seleccion: " + Colores.reset)
     si sel == "": retornar null
     idx = val(sel) - 1
-    si idx < 0 or idx >= opciones.len: retornar null
+    si idx < 0 or idx >= len(opciones): retornar null
     si opciones[idx].hasIndex("cmd"): retornar opciones[idx].cmd
     retornar idx
 
@@ -328,7 +356,7 @@ tarea escanear_puertos(ip)
     router = get_router(ip)
     si no router: retornar null
     puertos = router.used_ports
-    si puertos.len == 0: retornar []
+    si len(puertos) == 0: retornar []
     resultados = []
     para port in puertos:
         resultados.push({"puerto": port.port_number, "estado": port.is_closed, "servicio": router.port_info(port), "lan_ip": port.get_lan_ip})
@@ -344,19 +372,19 @@ tarea escanear_puertos(ip)
 tarea escanear_red(ip_base)
     info("Escaneando red " + ip_base + "...")
     si ip_base.indexOf(".") == null:
-        mi_ip = get_shell.host_computer.local_ip
+        mi_ip = get_shell().host_computer.local_ip
         partes = mi_ip.split(".")
         ip_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
     encontrados = []
     para i en rango(1, 255):
         ip = ip_base + str(i)
-        resultado = get_shell.connect_service(ip, 22, "root", "")
+        resultado = get_shell().connect_service(ip, 22, "root", "")
         si resultado != null:
             exito("Encontrado: " + ip)
             encontrados.push(ip)
             enjambre[ip] = resultado
-    info("Encontrados: " + str(encontrados.len))
-    si encontrados.len > 0: Buffer.push(encontrados, "Red " + ip_base)
+    info("Encontrados: " + str(len(encontrados)))
+    si len(encontrados) > 0: Buffer.push(encontrados, "Red " + ip_base)
     retornar encontrados
 
 tarea whois_objetivo(ip)
@@ -416,7 +444,8 @@ tarea explotar_router(ip)
 
 tarea limpiar_logs(ip)
     si ip == "":
-        get_shell.host_computer.File("/var/system.log").set_content("")
+        archivo = Kernel.obtener_archivo(get_shell().host_computer, "/var/system.log")
+        si archivo: archivo.set_content("")
         info("Logs locales limpiados")
     osi enjambre.hasIndex(ip):
         sesion = enjambre[ip]
@@ -430,41 +459,45 @@ tarea limpiar_logs(ip)
 
 jumping_auto = function(sesion, ip)
     si typeof(sesion) != "shell": retornar null
-    comp = get_shell.host_computer
-    script_nombre = "revenant.gs"
-    para f in comp.File(current_path).get_files:
-        si f.name.indexOf("revenant") != null and f.name.indexOf(".gs") != null: script_nombre = f.name
-    script_local = comp.File(current_path + "/" + script_nombre)
-    si no script_local: script_local = comp.File(program_path)
+    comp = get_shell().host_computer
+    
+    // El "current file" es program_path
+    script_local = comp.File(program_path)
     si no script_local: retornar null
+    
+    script_nombre = script_local.name
     info("Copiando a " + ip + "...")
-    para dest in ["/tmp", "/home"]:
-        resultado = sesion.host_computer.touch(dest, script_nombre)
-        archivo = sesion.host_computer.File(dest + "/" + script_nombre)
-        si archivo:
-            archivo.set_content(script_local.get_content)
+    
+    para dest en ["/tmp", "/home"]:
+        sesion.host_computer.touch(dest, script_nombre)
+        
+        // Usar helper para obtener el archivo remoto de forma segura
+        archivo_remoto = Kernel.obtener_archivo(sesion.host_computer, dest + "/" + script_nombre)
+        
+        si archivo_remoto:
+            archivo_remoto.set_content(script_local.get_content)
             exito("Copiado a: " + dest + "/" + script_nombre)
             sesion.launch(dest + "/" + script_nombre)
             Buffer.push(sesion, "Jump " + ip)
-            retornar archivo
+            retornar archivo_remoto
     retornar null
 
 tarea jump_manual
-    si enjambre.len == 0: retornar
+    si len(enjambre) == 0: retornar
     nodos = enjambre.indexes
     columnas = ["#", "IP", "Tipo"]
     filas = []
-    para i en rango(0, nodos.len):
+    para i en rango(0, len(nodos)):
         filas.push([i + 1, nodos[i], typeof(enjambre[nodos[i]])])
     print(construir_tabla(columnas, filas))
     sel = pedir("Selecciona (#): ")
     si sel == "": retornar
     idx = val(sel) - 1
-    si idx < 0 or idx >= nodos.len: retornar
+    si idx < 0 or idx >= len(nodos): retornar
     jumping_auto(enjambre[nodos[idx]], nodos[idx])
 
 tarea scan_and_jump
-    mi_ip = get_shell.host_computer.local_ip
+    mi_ip = get_shell().host_computer.local_ip
     partes = mi_ip.split(".")
     red_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
     info("Escaneando " + red_base + "0/24...")
@@ -473,7 +506,7 @@ tarea scan_and_jump
         ip = red_base + str(i)
         si enjambre.hasIndex(ip): continue
         para pwd in ["root", "toor", "admin", "password", "123456", ""]:
-            resultado = get_shell.connect_service(ip, 22, "root", pwd)
+            resultado = get_shell().connect_service(ip, 22, "root", pwd)
             si resultado != null:
                 exito(ip)
                 enjambre[ip] = resultado
@@ -482,7 +515,7 @@ tarea scan_and_jump
     info("ScanJump: " + str(encontrados) + " targets")
 
 tarea jump_listar
-    si enjambre.len == 0: retornar
+    si len(enjambre) == 0: retornar
     columnas = ["IP", "Tipo", "Usuario"]
     filas = []
     para ip in enjambre.indexes:
@@ -499,18 +532,18 @@ tarea jump_listar
 // modulo botnet.nini - El Alma de Revenant
 
 tarea modulo_botnet_menu
-    si enjambre.len == 0:
+    si len(enjambre) == 0:
         error("El enjambre esta vacio. Asalta algum objetivo primero.")
         retornar
     
     // Mostrar sesiones disponibles
-    info("SESIONES ACTIVAS (" + str(enjambre.len) + "):")
+    info("SESIONES ACTIVAS (" + str(len(enjambre)) + "):")
     
     nodos = enjambre.indexes
     columnas = ["#", "IP", "Tipo"]
     filas = []
     
-    para i en rango(0, nodos.len):
+    para i en rango(0, len(nodos)):
         ip = nodos[i]
         sesion = enjambre[ip]
         tipo = typeof(sesion)
@@ -524,7 +557,7 @@ tarea modulo_botnet_menu
     si sel == "": retornar
     
     idx = val(sel) - 1
-    si idx < 0 or idx >= nodos.len:
+    si idx < 0 or idx >= len(nodos):
         error("Seleccion invalida.")
         retornar
     
@@ -622,11 +655,11 @@ tarea sesion_action_scanjump(ip, sesion)
         retornar
     
     dispositivos = router.devices_lan_ip
-    si dispositivos.len == 0:
+    si len(dispositivos) == 0:
         info("No hay dispositivos en la red local")
         retornar
     
-    info("Dispositivos encontrados: " + str(dispositivos.len))
+    info("Dispositivos encontrados: " + str(len(dispositivos)))
     
     exitos = 0
     para target_ip in dispositivos:
@@ -638,7 +671,7 @@ tarea sesion_action_scanjump(ip, sesion)
         // Intentar SSH como root con passwords comunes
         passwords = ["root", "toor", "admin", "123456", "password", ""]
         para pwd in passwords:
-            resultado = get_shell.connect_service(target_ip, 22, "root", pwd)
+            resultado = get_shell().connect_service(target_ip, 22, "root", pwd)
             si resultado != null:
                 exito("SSH a " + target_ip + " exitoso!")
                 enjambre[target_ip] = resultado
@@ -655,7 +688,7 @@ tarea sesion_action_files(ip, sesion)
         error("No se pudo obtener computadora.")
         retornar
     
-    root = comp.File("/")
+    root = Kernel.obtener_archivo(comp, "/")
     si no root:
         error("No se pudo acceder al sistema de archivos.")
         retornar
@@ -719,7 +752,7 @@ tarea sesion_action_download(ip, sesion)
     ruta = pedir("Ruta del archivo remoto: ")
     si ruta == "": retornar
     
-    archivo = comp.File(ruta)
+    archivo = Kernel.obtener_archivo(comp, ruta)
     si no archivo:
         error("Archivo no encontrado: " + ruta)
         retornar
@@ -734,13 +767,16 @@ tarea sesion_action_download(ip, sesion)
         retornar
     
     nombre_local = archivo.name
-    archivo_local = get_shell.host_computer.File(current_path + "/" + nombre_local)
+    // El local siempre tiene current_path y program_path disponibles
+    local_dir = parent_path(program_path)
+    ruta_l = local_dir + "/" + nombre_local
+    archivo_local = Kernel.obtener_archivo(get_shell().host_computer, ruta_l)
     
     si archivo_local:
         archivo_local.set_content(contenido)
     sino:
-        get_shell.host_computer.touch(current_path, nombre_local)
-        archivo_local = get_shell.host_computer.File(current_path + "/" + nombre_local)
+        get_shell().host_computer.touch(local_dir, nombre_local)
+        archivo_local = Kernel.obtener_archivo(get_shell().host_computer, ruta_l)
         si archivo_local: archivo_local.set_content(contenido)
     
     exito("Descargado: " + nombre_local)
@@ -757,7 +793,7 @@ tarea sesion_action_upload(ip, sesion)
     ruta_local = pedir("Ruta del archivo local: ")
     si ruta_local == "": retornar
     
-    archivo_local = get_shell.host_computer.File(ruta_local)
+    archivo_local = get_shell().host_computer.File(ruta_local)
     si no archivo_local:
         error("Archivo local no encontrado.")
         retornar
@@ -768,7 +804,7 @@ tarea sesion_action_upload(ip, sesion)
     
     nombre = archivo_local.name
     comp.touch(ruta_remota, nombre)
-    archivo_remoto = comp.File(ruta_remota + nombre)
+    archivo_remoto = Kernel.obtener_archivo(comp, ruta_remota + "/" + nombre)
     
     si archivo_remoto:
         archivo_remoto.set_content(contenido)
@@ -825,7 +861,7 @@ tarea sesion_action_list_dir(ip, sesion)
         retornar
     
     hijos = sesion.get_files
-    si no hijos or hijos.len == 0:
+    si no hijos or len(hijos) == 0:
         info("Directorio vacio.")
         retornar
     
@@ -846,7 +882,7 @@ tarea sesion_action_ports(ip, sesion)
         retornar
     
     puertos = sesion.used_ports
-    si no puertos or puertos.len == 0:
+    si no puertos or len(puertos) == 0:
         info("No hay puertos.")
         retornar
     
@@ -866,7 +902,7 @@ tarea sesion_action_devices(ip, sesion)
         retornar
     
     devices = sesion.devices
-    si no devices or devices.len == 0:
+    si no devices or len(devices) == 0:
         info("No hay dispositivos.")
         retornar
     
@@ -901,8 +937,8 @@ _chain_build = function(samples, order)
     chains = {}
     para sample en samples:
         mayus = sample.upper
-        si mayus.len <= order: siguiente
-        para i en rango(0, mayus.len - order - 1):
+        si len(mayus) <= order: siguiente
+        para i en rango(0, len(mayus) - order - 1):
             token = mayus[i : i + order]
             next_char = mayus[i + order]
             si no chains.hasIndex(token): chains[token] = []
@@ -910,12 +946,12 @@ _chain_build = function(samples, order)
 
 _chain_next = function(chains, token)
     si no chains.hasIndex(token): retornar null
-    retornar chains[token][floor(rnd * chains[token].len)]
+    retornar chains[token][floor(rnd * len(chains[token]))]
 
 _chain_generate = function(chains, token, max_len, order)
     password = token.lower
-    mientras password.len < max_len:
-        sub = password[password.len - order :].upper
+    mientras len(password) < max_len:
+        sub = password[len(password) - order :].upper
         next_c = _chain_next(chains, sub)
         si next_c == null: salir
         password = password + next_c.lower
@@ -924,7 +960,7 @@ _chain_generate = function(chains, token, max_len, order)
 _chain_try = function(sesion, user, password, ip, port)
     si ip == "" or ip == null:
         retornar get_shell(user, password)
-    retornar get_shell.connect_service(ip, port, user, password)
+    retornar get_shell().connect_service(ip, port, user, password)
 
 tarea chainsaw_crack(sesion, user, ip, port)
     info("CHAINSAW - Markov Chain Cracker")
@@ -944,7 +980,7 @@ tarea chainsaw_crack(sesion, user, ip, port)
     // Fase 2
     para token en chains.indexes:
         pwd = _chain_generate(chains, token, max_len, order)
-        si pwd.len < 3: siguiente
+        si len(pwd) < 3: siguiente
         intentos = intentos + 1
         resultado = _chain_try(sesion, user, pwd, ip, port)
         si resultado != null:
@@ -1026,11 +1062,11 @@ tarea modulo_escalada_vector(sesion)
         para f en etc.get_files:
             si f.has_permission("w"): vectores.push({"path": f.path, "type": "WRITEABLE_ETC", "severity": "ALTA"})
 
-    si vectores.len == 0:
+    si len(vectores) == 0:
         alerta("No hay vectores detectados")
         info("Tip: Usa ChainSaw")
     sino:
-        exito("Vectores: " + str(vectores.len))
+        exito("Vectores: " + str(len(vectores)))
         columnas = ["Ruta", "Tipo", "Severidad"]
         filas = []
         para v en vectores:
@@ -1121,9 +1157,9 @@ tarea persistencia_ver:
     info("Usa 'vault' para ver credenciales.")
 
 tarea modulo_botnet_persistir:
-    si enjambre.len == 0: error("Enjambre vacío."); return
+    si len(enjambre) == 0: error("Enjambre vacío."); return
     
-    info("Instalando en " + str(enjambre.len) + " nodos...")
+    info("Instalando en " + str(len(enjambre)) + " nodos...")
     
     para nodo en enjambre:
         ip = nodo.key
@@ -1152,26 +1188,26 @@ tarea inicializar_vault:
     si mirar(ruta):
         f = obtener_archivo(ruta)
         contenido = f.get_content
-        si contenido.len > 0:
+        si len(contenido) > 0:
             _vault_data = deserializar_vault(contenido)
-            info("Vault cargado: " + _vault_data.creds.len + " creds, " + _vault_data.vulns.len + " vulns.")
+            info("Vault cargado: " + len(_vault_data.creds) + " creds, " + len(_vault_data.vulns) + " vulns.")
     sino:
         info("Iniciando nuevo Vault en: " + ruta)
 
 tarea cifrar(txt):
     res = ""
-    recorrer rango(0, txt.len - 1) como i:
-        v = nini_xor(code(txt[i]), code(_vault_k[i % _vault_k.len]))
+    recorrer rango(0, len(txt) - 1) como i:
+        v = nini_xor(code(txt[i]), code(_vault_k[i % len(_vault_k)]))
         res = res + str(v) + ","
     retornar res
 
 tarea descifrar(txt):
     res = ""
     partes = txt.split(",")
-    recorrer rango(0, partes.len - 1) como i:
+    recorrer rango(0, len(partes) - 1) como i:
         p = partes[i]
         si p == "": continuar
-        res = res + char(nini_xor(val(p), code(_vault_k[res.len % _vault_k.len])))
+        res = res + char(nini_xor(val(p), code(_vault_k[len(res) % len(_vault_k)])))
     retornar res
 
 tarea serializar_vault(data):
@@ -1327,8 +1363,8 @@ tarea modulo_intel_buscar_archivos:
     para ruta en ["/home", "/root", "/etc", "/var"]:
         resultados = resultados + intel_buscar_en_directorio(comp, ruta, exts, 2)
     
-    si resultados.len == 0: info("No se encontraron archivos.")
-    sino: info("Encontrados: " + str(resultados.len)); dibujar_ventana("RESULTADOS", str(resultados))
+    si len(resultados) == 0: info("No se encontraron archivos.")
+    sino: info("Encontrados: " + str(len(resultados))); dibujar_ventana("RESULTADOS", str(resultados))
 
 tarea modulo_intel_brute_force:
     opciones = [
@@ -1425,7 +1461,7 @@ tarea modulo_exfil_download:
         archivo = sesion.host_computer.File(ruta_remota)
         si archivo:
             contenido = archivo.get_content
-            info("Archivo descargado: " + contenido.len + " bytes")
+            info("Archivo descargado: " + len(contenido) + " bytes")
             exito("Download completado.")
         sino:
             error("Archivo no encontrado.")

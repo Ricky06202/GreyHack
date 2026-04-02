@@ -32,7 +32,7 @@ tarea lateral_listar_nodos:
     pausa_tactica()
 
 tarea lateral_cambiar_nodo:
-    si enjambre.len <= 1: info("Solo hay un nodo."); return
+    si len(enjambre) <= 1: info("Solo hay un nodo."); return
     
     // Mostrar nodos disponibles
     para nodo en enjambre:
@@ -68,8 +68,8 @@ tarea lateral_escanear_desde_pivote:
     router_nodo = obtener_router_nodo(sesion)
     dispositivos = (router_nodo) >> dispositivos_red_nodo(sesion)
     
-    si dispositivos y dispositivos.len > 0:
-        exito("Dispositivos: " + str(dispositivos.len))
+    si dispositivos y len(dispositivos) > 0:
+        exito("Dispositivos: " + str(len(dispositivos)))
         para ip en dispositivos:
             nodo_tag = ""
             si ip == ip_local: nodo_tag = " (TU NODO)"
@@ -83,7 +83,7 @@ tarea lateral_escanear_desde_pivote:
             ip = red + str(i)
             si ip != ip_local y sesion.ping(ip) == 1: hosts.push(ip)
         
-        si hosts.len == 0:
+        si len(hosts) == 0:
             info("No se encontraron hosts.")
         sino:
             para h en hosts:
@@ -112,7 +112,7 @@ tarea lateral_conectar_metaxploit:
     
     puertos = puertos_dispositivo(ip)
     
-    si not puertos o puertos.len == 0:
+    si not puertos o len(puertos) == 0:
         info("Sin forwarding. Intentando directo...")
         sesion = conectar_net(ip, 22)
         si sesion: enjambre[ip] = sesion; globals.objetivo_actual = ip; exito("Conexión directa!"); modulo_espectro_recon()
@@ -120,7 +120,7 @@ tarea lateral_conectar_metaxploit:
         return
     
     // Mostrar puertos
-    info("Puertos: " + str(puertos.len))
+    info("Puertos: " + str(len(puertos)))
     para p en puertos: info("  [" + str(p.port_number) + "] " + info_puerto(p))
     
     sel = val(pedir("Puerto a explotar: "))
@@ -144,4 +144,4 @@ tarea obtener_shell_nodo:
 tarea obtener_computadora_objetivo:
     sesion = obtener_shell_nodo()
     si sesion: return sesion.host_computer
-    return get_shell.host_computer
+    return get_shell().host_computer

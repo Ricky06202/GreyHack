@@ -4,8 +4,8 @@ Colores = {"rojo": "<color=#FF0000FF><b>", "cian": "<color=#00FFFFFF><b>", "verd
 
 Prompt = {}
 Prompt.generar = function()
-    ip_pub = get_shell.host_computer.public_ip
-    ip_local = get_shell.host_computer.local_ip
+    ip_pub = get_shell().host_computer.public_ip
+    ip_local = get_shell().host_computer.local_ip
     user_color = Kernel.usuario == "root" >> Colores.rojo |: Colores.verde
     glass = Glasspool.activo >> Colores.cian + "|> " + Colores.reset |: Colores.verde + "|> " + Colores.reset
     retornar user_color + Kernel.usuario + Colores.reset + "@" + ip_pub + ":" + Kernel.current_path + " " + glass
@@ -34,13 +34,13 @@ Separador.titulo = function(titulo)
 Menu = {}
 Menu.opciones = function(titulo, opciones)
     Separador.titulo(titulo)
-    para i en rango(0, opciones.len):
+    para i en rango(0, len(opciones)):
         print("  " + Colores.cian + "[" + str(i + 1) + "]" + Colores.reset + " " + opciones[i].label)
     Separador.simple()
     sel = user_input(Colores.cian + "Seleccion: " + Colores.reset)
     si sel == "": retornar null
     idx = val(sel) - 1
-    si idx < 0 or idx >= opciones.len: retornar null
+    si idx < 0 or idx >= len(opciones): retornar null
     si opciones[idx].hasIndex("cmd"): retornar opciones[idx].cmd
     retornar idx
 

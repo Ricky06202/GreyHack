@@ -29,11 +29,11 @@ Shell.ejecutar = function(nombre, args)
     nombre = Aliases.resolver(nombre)
     si Shell.comandos.hasIndex(nombre):
         funcion = Shell.comandos[nombre].funcion
-        si args.len == 0: retornar funcion()
-        si args.len == 1: retornar funcion(args[0])
-        si args.len == 2: retornar funcion(args[0], args[1])
-        si args.len == 3: retornar funcion(args[0], args[1], args[2])
-        si args.len == 4: retornar funcion(args[0], args[1], args[2], args[3])
+        si len(args) == 0: retornar funcion()
+        si len(args) == 1: retornar funcion(args[0])
+        si len(args) == 2: retornar funcion(args[0], args[1])
+        si len(args) == 3: retornar funcion(args[0], args[1], args[2])
+        si len(args) == 4: retornar funcion(args[0], args[1], args[2], args[3])
         retornar funcion(args.join(" "))
     si nombre == "ls" or nombre == "dir": retornar Shell.cmd_ls(args)
     si nombre == "cd": retornar Shell.cmd_cd(args)
@@ -46,9 +46,9 @@ Shell.ejecutar = function(nombre, args)
     retornar null
 
 Shell.cmd_ls = function(args)
-    ruta = args.len > 0 >> args[0] |: "."
-    comp = get_shell.host_computer
-    archivo = comp.File(ruta)
+    ruta = len(args) > 0 >> args[0] |: "."
+    comp = get_shell().host_computer
+    archivo = Kernel.obtener_archivo(comp, ruta)
     si no archivo: retornar null
     si archivo.is_directory:
         archivos = archivo.get_files
@@ -60,7 +60,7 @@ Shell.cmd_ls = function(args)
     retornar archivo.name
 
 Shell.cmd_cd = function(args)
-    si args.len == 0 or args[0] == "":
+    si len(args) == 0 or args[0] == "":
         Kernel.current_path = Kernel.home_path
         retornar Kernel.current_path
     nueva_ruta = args[0]
@@ -79,10 +79,10 @@ Shell.cmd_cd = function(args)
     retornar Kernel.current_path
 
 Shell.cmd_cat = function(args)
-    si args.len == 0: retornar null
+    si len(args) == 0: retornar null
     ruta = args[0]
-    comp = get_shell.host_computer
-    archivo = comp.File(ruta)
+    comp = get_shell().host_computer
+    archivo = Kernel.obtener_archivo(comp, ruta)
     si no archivo: retornar null
     si archivo.is_binary: retornar "Archivo binario"
     retornar archivo.get_content

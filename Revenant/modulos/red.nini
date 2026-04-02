@@ -10,10 +10,10 @@ tarea modulo_red_escanear:
     
     hosts = descubrir_red_local()
     
-    si hosts.len == 0:
+    si len(hosts) == 0:
         alerta("No se detectaron otros hosts activos en la subred.")
     sino:
-        exito("Hosts detectados: " + hosts.len)
+        exito("Hosts detectados: " + len(hosts))
         columnas = ["IP", "Estado"]
         filas = []
         recorrer hosts como h:

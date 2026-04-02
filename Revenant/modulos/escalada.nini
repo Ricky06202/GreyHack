@@ -23,8 +23,8 @@ _chain_build = function(samples, order)
     chains = {}
     para sample en samples:
         mayus = sample.upper
-        si mayus.len <= order: siguiente
-        para i en rango(0, mayus.len - order - 1):
+        si len(mayus) <= order: siguiente
+        para i en rango(0, len(mayus) - order - 1):
             token = mayus[i : i + order]
             next_char = mayus[i + order]
             si no chains.hasIndex(token): chains[token] = []
@@ -32,12 +32,12 @@ _chain_build = function(samples, order)
 
 _chain_next = function(chains, token)
     si no chains.hasIndex(token): retornar null
-    retornar chains[token][floor(rnd * chains[token].len)]
+    retornar chains[token][floor(rnd * len(chains[token]))]
 
 _chain_generate = function(chains, token, max_len, order)
     password = token.lower
-    mientras password.len < max_len:
-        sub = password[password.len - order :].upper
+    mientras len(password) < max_len:
+        sub = password[len(password) - order :].upper
         next_c = _chain_next(chains, sub)
         si next_c == null: salir
         password = password + next_c.lower
@@ -46,7 +46,7 @@ _chain_generate = function(chains, token, max_len, order)
 _chain_try = function(sesion, user, password, ip, port)
     si ip == "" or ip == null:
         retornar get_shell(user, password)
-    retornar get_shell.connect_service(ip, port, user, password)
+    retornar get_shell().connect_service(ip, port, user, password)
 
 tarea chainsaw_crack(sesion, user, ip, port)
     info("CHAINSAW - Markov Chain Cracker")
@@ -66,7 +66,7 @@ tarea chainsaw_crack(sesion, user, ip, port)
     // Fase 2
     para token en chains.indexes:
         pwd = _chain_generate(chains, token, max_len, order)
-        si pwd.len < 3: siguiente
+        si len(pwd) < 3: siguiente
         intentos = intentos + 1
         resultado = _chain_try(sesion, user, pwd, ip, port)
         si resultado != null:
@@ -148,11 +148,11 @@ tarea modulo_escalada_vector(sesion)
         para f en etc.get_files:
             si f.has_permission("w"): vectores.push({"path": f.path, "type": "WRITEABLE_ETC", "severity": "ALTA"})
 
-    si vectores.len == 0:
+    si len(vectores) == 0:
         alerta("No hay vectores detectados")
         info("Tip: Usa ChainSaw")
     sino:
-        exito("Vectores: " + str(vectores.len))
+        exito("Vectores: " + str(len(vectores)))
         columnas = ["Ruta", "Tipo", "Severidad"]
         filas = []
         para v en vectores:

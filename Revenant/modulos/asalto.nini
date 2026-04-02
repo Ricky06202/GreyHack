@@ -6,7 +6,7 @@ tarea modulo_asalto_root:
         retornar
     
     // Ver si hay scan previo
-    si globals.ultimo_scan.len == 0:
+    si len(ultimo_scan) == 0:
         info("Escaneando objetivo...")
         modulo_espectro_recon()
     
@@ -16,13 +16,13 @@ tarea modulo_asalto_root:
     port_int = 0
     puerto_seleccionado = null
     
-    si sel.len > 0:
+    si len(sel) > 0:
         si sel == "0":
             port_int = 0
             info("Atacando router (puerto 0)...")
         sino:
             sel_int = val(sel)
-            si sel_int > 0 y sel_int <= globals.ultimo_scan.len:
+            si sel_int > 0 y sel_int <= len(ultimo_scan):
                 puerto_seleccionado = globals.ultimo_scan[sel_int - 1]
                 port_int = puerto_seleccionado.puerto
                 info("Atacando puerto " + str(port_int) + "...")
@@ -41,7 +41,7 @@ tarea modulo_asalto_root:
         ataque_remoto(port_int)
 
 tarea ataque_local:
-    comp = get_shell.host_computer
+    comp = get_shell().host_computer
     
     info("Escaneando librerias en /lib...")
     
@@ -55,11 +55,11 @@ tarea ataque_local:
         si f.name.indexOf(".so") != null:
             libs.push(f)
     
-    si libs.len == 0:
+    si len(libs) == 0:
         error("No hay librerias.")
         retornar
     
-    info("Librerias: " + str(libs.len))
+    info("Librerias: " + str(len(libs)))
     
     metax = include_lib("/lib/metaxploit.so")
     si not metax:
@@ -72,8 +72,8 @@ tarea ataque_local:
         lib = metax.load(lib_file.path)
         si lib:
             vulns = metax.scan(lib)
-            si vulns.len > 0:
-                info("  Vulns: " + str(vulns.len))
+            si len(vulns) > 0:
+                info("  Vulns: " + str(len(vulns)))
                 para v en vulns:
                     res = lib.overflow(vulns[0], "")
                     si res:
@@ -106,7 +106,7 @@ tarea ataque_remoto(port_int):
     si lib_info:
         vulns_cache = obtener_vulnerabilidades(lib_info.lib_name, lib_info.version)
     
-    si vulns_cache.len > 0:
+    si len(vulns_cache) > 0:
         exito("Cache hit: " + lib_info.lib_name)
         para v en vulns_cache:
             info("Explotando: " + v.mem)
@@ -125,7 +125,7 @@ tarea ataque_remoto(port_int):
     vuln = buscar_vulnerabilidad(host, port_int)
     
     si vuln:
-        info("Vulnerabilidades: " + str(vuln.v_list.len))
+        info("Vulnerabilidades: " + str(len(vuln.v_list)))
         
         para v en vuln.v_list:
             cachear_vulnerabilidad(vuln.metalib.lib_name, vuln.metalib.version, v.mem, v.pass)

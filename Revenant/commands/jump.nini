@@ -2,41 +2,45 @@
 
 jumping_auto = function(sesion, ip)
     si typeof(sesion) != "shell": retornar null
-    comp = get_shell.host_computer
-    script_nombre = "revenant.gs"
-    para f in comp.File(current_path).get_files:
-        si f.name.indexOf("revenant") != null and f.name.indexOf(".gs") != null: script_nombre = f.name
-    script_local = comp.File(current_path + "/" + script_nombre)
-    si no script_local: script_local = comp.File(program_path)
+    comp = get_shell().host_computer
+    
+    // El "current file" es program_path
+    script_local = comp.File(program_path)
     si no script_local: retornar null
+    
+    script_nombre = script_local.name
     info("Copiando a " + ip + "...")
-    para dest in ["/tmp", "/home"]:
-        resultado = sesion.host_computer.touch(dest, script_nombre)
-        archivo = sesion.host_computer.File(dest + "/" + script_nombre)
-        si archivo:
-            archivo.set_content(script_local.get_content)
+    
+    para dest en ["/tmp", "/home"]:
+        sesion.host_computer.touch(dest, script_nombre)
+        
+        // Usar helper para obtener el archivo remoto de forma segura
+        archivo_remoto = Kernel.obtener_archivo(sesion.host_computer, dest + "/" + script_nombre)
+        
+        si archivo_remoto:
+            archivo_remoto.set_content(script_local.get_content)
             exito("Copiado a: " + dest + "/" + script_nombre)
             sesion.launch(dest + "/" + script_nombre)
             Buffer.push(sesion, "Jump " + ip)
-            retornar archivo
+            retornar archivo_remoto
     retornar null
 
 tarea jump_manual
-    si enjambre.len == 0: retornar
+    si len(enjambre) == 0: retornar
     nodos = enjambre.indexes
     columnas = ["#", "IP", "Tipo"]
     filas = []
-    para i en rango(0, nodos.len):
+    para i en rango(0, len(nodos)):
         filas.push([i + 1, nodos[i], typeof(enjambre[nodos[i]])])
     print(construir_tabla(columnas, filas))
     sel = pedir("Selecciona (#): ")
     si sel == "": retornar
     idx = val(sel) - 1
-    si idx < 0 or idx >= nodos.len: retornar
+    si idx < 0 or idx >= len(nodos): retornar
     jumping_auto(enjambre[nodos[idx]], nodos[idx])
 
 tarea scan_and_jump
-    mi_ip = get_shell.host_computer.local_ip
+    mi_ip = get_shell().host_computer.local_ip
     partes = mi_ip.split(".")
     red_base = partes[0] + "." + partes[1] + "." + partes[2] + "."
     info("Escaneando " + red_base + "0/24...")
@@ -45,7 +49,7 @@ tarea scan_and_jump
         ip = red_base + str(i)
         si enjambre.hasIndex(ip): continue
         para pwd in ["root", "toor", "admin", "password", "123456", ""]:
-            resultado = get_shell.connect_service(ip, 22, "root", pwd)
+            resultado = get_shell().connect_service(ip, 22, "root", pwd)
             si resultado != null:
                 exito(ip)
                 enjambre[ip] = resultado
@@ -54,7 +58,7 @@ tarea scan_and_jump
     info("ScanJump: " + str(encontrados) + " targets")
 
 tarea jump_listar
-    si enjambre.len == 0: retornar
+    si len(enjambre) == 0: retornar
     columnas = ["IP", "Tipo", "Usuario"]
     filas = []
     para ip in enjambre.indexes:

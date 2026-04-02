@@ -10,26 +10,26 @@ tarea inicializar_vault:
     si mirar(ruta):
         f = obtener_archivo(ruta)
         contenido = f.get_content
-        si contenido.len > 0:
+        si len(contenido) > 0:
             _vault_data = deserializar_vault(contenido)
-            info("Vault cargado: " + _vault_data.creds.len + " creds, " + _vault_data.vulns.len + " vulns.")
+            info("Vault cargado: " + len(_vault_data.creds) + " creds, " + len(_vault_data.vulns) + " vulns.")
     sino:
         info("Iniciando nuevo Vault en: " + ruta)
 
 tarea cifrar(txt):
     res = ""
-    recorrer rango(0, txt.len - 1) como i:
-        v = nini_xor(code(txt[i]), code(_vault_k[i % _vault_k.len]))
+    recorrer rango(0, len(txt) - 1) como i:
+        v = nini_xor(code(txt[i]), code(_vault_k[i % len(_vault_k)]))
         res = res + str(v) + ","
     retornar res
 
 tarea descifrar(txt):
     res = ""
     partes = txt.split(",")
-    recorrer rango(0, partes.len - 1) como i:
+    recorrer rango(0, len(partes) - 1) como i:
         p = partes[i]
         si p == "": continuar
-        res = res + char(nini_xor(val(p), code(_vault_k[res.len % _vault_k.len])))
+        res = res + char(nini_xor(val(p), code(_vault_k[len(res) % len(_vault_k)])))
     retornar res
 
 tarea serializar_vault(data):

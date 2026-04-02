@@ -1,18 +1,18 @@
 // modulo botnet.nini - El Alma de Revenant
 
 tarea modulo_botnet_menu
-    si enjambre.len == 0:
+    si len(enjambre) == 0:
         error("El enjambre esta vacio. Asalta algum objetivo primero.")
         retornar
     
     // Mostrar sesiones disponibles
-    info("SESIONES ACTIVAS (" + str(enjambre.len) + "):")
+    info("SESIONES ACTIVAS (" + str(len(enjambre)) + "):")
     
     nodos = enjambre.indexes
     columnas = ["#", "IP", "Tipo"]
     filas = []
     
-    para i en rango(0, nodos.len):
+    para i en rango(0, len(nodos)):
         ip = nodos[i]
         sesion = enjambre[ip]
         tipo = typeof(sesion)
@@ -26,7 +26,7 @@ tarea modulo_botnet_menu
     si sel == "": retornar
     
     idx = val(sel) - 1
-    si idx < 0 or idx >= nodos.len:
+    si idx < 0 or idx >= len(nodos):
         error("Seleccion invalida.")
         retornar
     
@@ -124,11 +124,11 @@ tarea sesion_action_scanjump(ip, sesion)
         retornar
     
     dispositivos = router.devices_lan_ip
-    si dispositivos.len == 0:
+    si len(dispositivos) == 0:
         info("No hay dispositivos en la red local")
         retornar
     
-    info("Dispositivos encontrados: " + str(dispositivos.len))
+    info("Dispositivos encontrados: " + str(len(dispositivos)))
     
     exitos = 0
     para target_ip in dispositivos:
@@ -140,7 +140,7 @@ tarea sesion_action_scanjump(ip, sesion)
         // Intentar SSH como root con passwords comunes
         passwords = ["root", "toor", "admin", "123456", "password", ""]
         para pwd in passwords:
-            resultado = get_shell.connect_service(target_ip, 22, "root", pwd)
+            resultado = get_shell().connect_service(target_ip, 22, "root", pwd)
             si resultado != null:
                 exito("SSH a " + target_ip + " exitoso!")
                 enjambre[target_ip] = resultado
@@ -157,7 +157,7 @@ tarea sesion_action_files(ip, sesion)
         error("No se pudo obtener computadora.")
         retornar
     
-    root = comp.File("/")
+    root = Kernel.obtener_archivo(comp, "/")
     si no root:
         error("No se pudo acceder al sistema de archivos.")
         retornar
@@ -221,7 +221,7 @@ tarea sesion_action_download(ip, sesion)
     ruta = pedir("Ruta del archivo remoto: ")
     si ruta == "": retornar
     
-    archivo = comp.File(ruta)
+    archivo = Kernel.obtener_archivo(comp, ruta)
     si no archivo:
         error("Archivo no encontrado: " + ruta)
         retornar
@@ -236,13 +236,16 @@ tarea sesion_action_download(ip, sesion)
         retornar
     
     nombre_local = archivo.name
-    archivo_local = get_shell.host_computer.File(current_path + "/" + nombre_local)
+    // El local siempre tiene current_path y program_path disponibles
+    local_dir = parent_path(program_path)
+    ruta_l = local_dir + "/" + nombre_local
+    archivo_local = Kernel.obtener_archivo(get_shell().host_computer, ruta_l)
     
     si archivo_local:
         archivo_local.set_content(contenido)
     sino:
-        get_shell.host_computer.touch(current_path, nombre_local)
-        archivo_local = get_shell.host_computer.File(current_path + "/" + nombre_local)
+        get_shell().host_computer.touch(local_dir, nombre_local)
+        archivo_local = Kernel.obtener_archivo(get_shell().host_computer, ruta_l)
         si archivo_local: archivo_local.set_content(contenido)
     
     exito("Descargado: " + nombre_local)
@@ -259,7 +262,7 @@ tarea sesion_action_upload(ip, sesion)
     ruta_local = pedir("Ruta del archivo local: ")
     si ruta_local == "": retornar
     
-    archivo_local = get_shell.host_computer.File(ruta_local)
+    archivo_local = get_shell().host_computer.File(ruta_local)
     si no archivo_local:
         error("Archivo local no encontrado.")
         retornar
@@ -270,7 +273,7 @@ tarea sesion_action_upload(ip, sesion)
     
     nombre = archivo_local.name
     comp.touch(ruta_remota, nombre)
-    archivo_remoto = comp.File(ruta_remota + nombre)
+    archivo_remoto = Kernel.obtener_archivo(comp, ruta_remota + "/" + nombre)
     
     si archivo_remoto:
         archivo_remoto.set_content(contenido)
@@ -327,7 +330,7 @@ tarea sesion_action_list_dir(ip, sesion)
         retornar
     
     hijos = sesion.get_files
-    si no hijos or hijos.len == 0:
+    si no hijos or len(hijos) == 0:
         info("Directorio vacio.")
         retornar
     
@@ -348,7 +351,7 @@ tarea sesion_action_ports(ip, sesion)
         retornar
     
     puertos = sesion.used_ports
-    si no puertos or puertos.len == 0:
+    si no puertos or len(puertos) == 0:
         info("No hay puertos.")
         retornar
     
@@ -368,7 +371,7 @@ tarea sesion_action_devices(ip, sesion)
         retornar
     
     devices = sesion.devices
-    si no devices or devices.len == 0:
+    si no devices or len(devices) == 0:
         info("No hay dispositivos.")
         retornar
     

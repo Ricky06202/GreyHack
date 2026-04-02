@@ -5,22 +5,22 @@ Buffer.items = []
 Buffer.max_size = 50
 
 Buffer.push = function(objeto, descripcion)
-    si Buffer.items.len >= Buffer.max_size: Buffer.items.remove(0)
-    item = {"objeto": objeto, "tipo": typeof(objeto), "descripcion": descripcion or "Sin desc", "timestamp": time, "id": Buffer.items.len}
+    si len(Buffer.items) >= Buffer.max_size: Buffer.items.remove(0)
+    item = {"objeto": objeto, "tipo": typeof(objeto), "descripcion": descripcion or "Sin desc", "timestamp": time, "id": len(Buffer.items)}
     Buffer.items.push(item)
     retornar item.id
 
 Buffer.get = function(index)
-    si index < 0 or index >= Buffer.items.len: retornar null
+    si index < 0 or index >= len(Buffer.items): retornar null
     retornar Buffer.items[index].objeto
 
 Buffer.list = function()
-    si Buffer.items.len == 0:
+    si len(Buffer.items) == 0:
         info("BUFFER vacio")
         retornar ""
     columnas = ["#", "Tipo", "Descripcion"]
     filas = []
-    para i en rango(0, Buffer.items.len):
+    para i en rango(0, len(Buffer.items)):
         item = Buffer.items[i]
         filas.push([i + 1, item.tipo, item.descripcion])
     retornar construir_tabla(columnas, filas)
@@ -95,8 +95,8 @@ Kernel.info = function()
         ["Usuario", Kernel.usuario,],
         ["Path", Kernel.current_path,],
         ["Modo", Kernel.modo,],
-        ["Sesiones", str(enjambre.len),],
-        ["Buffer", str(Buffer.items.len),],
+        ["Sesiones", str(len(enjambre)),],
+        ["Buffer", str(len(Buffer.items)),],
     ]
     retornar construir_tabla(columnas, filas)
 
@@ -106,10 +106,10 @@ Config.datos = {"color_primario": "#00e5ff", "auto_jump": verdadero, "max_buffer
 Config.guardar = function()
     contenido = ""
     para clave in Config.datos.indexes: contenido = contenido + clave + "=" + str(Config.datos[clave]) + char(10)
-    archivo = get_shell.host_computer.File(Config.archivo)
+    archivo = get_shell().host_computer.File(Config.archivo)
     si archivo: archivo.set_content(contenido)
 Config.cargar = function()
-    archivo = get_shell.host_computer.File(Config.archivo)
+    archivo = get_shell().host_computer.File(Config.archivo)
     si no archivo: retornar
     contenido = archivo.get_content
     si contenido == null or contenido == "": retornar
@@ -117,7 +117,7 @@ Config.cargar = function()
     para linea in lineas:
         si linea == "": continue
         partes = linea.split("=")
-        si partes.len >= 2: Config.datos[partes[0].trim] = partes[1:].join("=").trim
+        si len(partes) >= 2: Config.datos[partes[0].trim] = partes[1:].join("=").trim
 Config.obtener = function(clave, default)
     si Config.datos.hasIndex(clave): retornar Config.datos[clave]
     retornar default
@@ -130,13 +130,41 @@ Log.historial = []
 Log.maximo = 100
 Log.agregar = function(tipo, mensaje)
     Log.historial.push({"tipo": tipo, "mensaje": mensaje, "tiempo": time})
-    si Log.historial.len > Log.maximo: Log.historial.remove(0)
+    si len(Log.historial) > Log.maximo: Log.historial.remove(0)
 Log.ver = function(cantidad)
     cantidad = cantidad or 20
-    inicio = Log.historial.len > cantidad >> Log.historial.len - cantidad |: 0
-    para i en rango(inicio, Log.historial.len):
+    inicio = len(Log.historial) > cantidad >> len(Log.historial) - cantidad |: 0
+    para i en rango(inicio, len(Log.historial)):
         entrada = Log.historial[i]
         print(entrada.tipo + ": " + entrada.mensaje)
+
+Kernel.obtener_archivo = function(comp, ruta)
+    si no comp o no ruta: retornar null
+    si typeof(comp) == "shell": comp = comp.host_computer
+    si typeof(comp) != "computer": retornar null
+    
+    // Solo intentar acceso directo si es local
+    es_local = comp.public_ip == get_shell().host_computer.public_ip and comp.local_ip == get_shell().host_computer.local_ip
+    si es_local:
+        archivo = comp.File(ruta)
+        si archivo: retornar archivo
+    
+    // Navegación manual para remotos (evita 'Invalid arguments')
+    partes = ruta.split("/")
+    actual = comp.File("/")
+    si no actual: retornar null
+    
+    para parte en partes:
+        si parte == "" o parte == ".": continue
+        encontrado = nulo
+        hijos = actual.get_folders + actual.get_files
+        para h en hijos:
+            si h.name == parte:
+                encontrado = h
+                break
+        si no encontrado: retornar null
+        actual = encontrado
+    retornar actual
 
 Kernel.inicializar = function()
     Config.cargar()

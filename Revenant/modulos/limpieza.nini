@@ -23,7 +23,7 @@ tarea limpieza_logs:
     comp = obtener_computadora_objetivo()
     si not comp:
         info("Usando equipo local...")
-        comp = get_shell.host_computer
+        comp = get_shell().host_computer
     
     // Logs a limpiar
     logs = [
@@ -38,8 +38,8 @@ tarea limpieza_logs:
         partes = ruta.split("/")
         nombre = partes[-1]
         carpeta = "/"
-        si partes.len > 2:
-            carpeta = partes[0:partes.len-1].join("/")
+        si len(partes) > 2:
+            carpeta = partes[0:len(partes)-1].join("/")
         
         archivo = comp.File(ruta)
         si archivo:
@@ -62,7 +62,7 @@ tarea limpieza_historial:
     
     comp = obtener_computadora_objetivo()
     si not comp:
-        comp = get_shell.host_computer
+        comp = get_shell().host_computer
     
     // Limpiar system.log desde el objetivo
     archivo = comp.File("/var/system.log")

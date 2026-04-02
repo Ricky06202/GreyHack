@@ -46,7 +46,7 @@ tarea modulo_exfil_download:
         archivo = sesion.host_computer.File(ruta_remota)
         si archivo:
             contenido = archivo.get_content
-            info("Archivo descargado: " + contenido.len + " bytes")
+            info("Archivo descargado: " + len(contenido) + " bytes")
             exito("Download completado.")
         sino:
             error("Archivo no encontrado.")

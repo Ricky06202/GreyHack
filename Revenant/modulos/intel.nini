@@ -100,8 +100,8 @@ tarea modulo_intel_buscar_archivos:
     para ruta en ["/home", "/root", "/etc", "/var"]:
         resultados = resultados + intel_buscar_en_directorio(comp, ruta, exts, 2)
     
-    si resultados.len == 0: info("No se encontraron archivos.")
-    sino: info("Encontrados: " + str(resultados.len)); dibujar_ventana("RESULTADOS", str(resultados))
+    si len(resultados) == 0: info("No se encontraron archivos.")
+    sino: info("Encontrados: " + str(len(resultados))); dibujar_ventana("RESULTADOS", str(resultados))
 
 tarea modulo_intel_brute_force:
     opciones = [

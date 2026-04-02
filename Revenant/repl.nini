@@ -31,7 +31,7 @@ mostrar_ayuda = function()
 procesar_comando = function(entrada)
     si entrada == "": retornar
     _historial.push(entrada)
-    si _historial.len > 50: _historial.remove(0)
+    si len(_historial) > 50: _historial.remove(0)
     partes = entrada.split(" ")
     comando = Aliases.resolver(partes[0].lower)
     args = partes[1:]
@@ -43,7 +43,7 @@ procesar_comando = function(entrada)
         estado_activo = falso
         retornar
     si comando == "objetivo" or comando == "o":
-        si args.len == 0:
+        si len(args) == 0:
             info("Objetivo: " + (globals.objetivo_actual or "Ninguno"))
         sino:
             globals.objetivo_actual = args[0]
@@ -57,17 +57,17 @@ procesar_comando = function(entrada)
         info("Modo: " + globals.modo)
         retornar
     si comando == "historial":
-        para i en rango(_historial.len - 1, max(0, _historial.len - 11), -1):
+        para i en rango(len(_historial) - 1, max(0, len(_historial) - 11), -1):
             print("  " + str(i + 1) + ": " + _historial[i])
         retornar
     si comando == "clear" or comando == "limpiar":
         clear_screen()
         retornar
     si comando == "buffer" or comando == "buf":
-        si args.len == 0: print(Buffer.list())
-        si args.len > 0 and args[0] == "clear": Buffer.clear()
+        si len(args) == 0: print(Buffer.list())
+        si len(args) > 0 and args[0] == "clear": Buffer.clear()
         retornar
-    si comando == "alias" and args.len >= 2:
+    si comando == "alias" and len(args) >= 2:
         Aliases.agregar(args[0], args[1:])
         retornar
     si comando == "aliases":

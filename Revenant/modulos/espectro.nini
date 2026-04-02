@@ -24,7 +24,7 @@ tarea espectro_escaneo_completo(host):
     sino:
         ports = router.used_ports
     
-    si not ports o ports.len == 0:
+    si not ports o len(ports) == 0:
         info("No hay puertos abiertos.")
         retornar null
     
@@ -40,7 +40,7 @@ tarea espectro_escaneo_completo(host):
         version = "N/A"
         
         partes_svc = servicio_completo.split(" ")
-        si partes_svc.len > 1:
+        si len(partes_svc) > 1:
             servicio = partes_svc[0]
             version = partes_svc[1]
         
@@ -101,7 +101,7 @@ tarea modulo_espectro_recon:
         si es_local:
             modo_actual = "LOCAL"
         
-        info("Modo: " + modo_actual + " | Puertos: " + str(resultados.len))
+        info("Modo: " + modo_actual + " | Puertos: " + str(len(resultados)))
     sino:
         error("Sin resultados.")
 
@@ -109,13 +109,13 @@ tarea es_ip_local(ip):
     si not ip: retornar falso
     si ip == "127.0.0.1": retornar verdadero
     
-    comp = get_shell.host_computer
+    comp = get_shell().host_computer
     local_ip = comp.local_ip
     
     partes_local = local_ip.split("\.")
     partes_ip = ip.split("\.")
     
-    si partes_local.len < 3 o partes_ip.len < 3: retornar falso
+    si len(partes_local) < 3 o len(partes_ip) < 3: retornar falso
     
     red_local = partes_local[0] + "." + partes_local[1] + "." + partes_local[2]
     red_ip = partes_ip[0] + "." + partes_ip[1] + "." + partes_ip[2]

@@ -20,14 +20,14 @@ tarea dibujar_hud_tactico:
     dibujar_separador()
     
     estado_obj = (not globals.objetivo_actual) >> "<color=#ff3131>NINGUNO</color>" |: "<color=#00ff41>" + globals.objetivo_actual + "</color>"
-    estado_enjambre = (enjambre.len == 0) >> "<color=#424242>" + str(enjambre.len) + "</color>" |: "<color=#00ff41>" + str(enjambre.len) + "</color>"
+    estado_enjambre = (len(enjambre) == 0) >> "<color=#424242>" + str(len(enjambre)) + "</color>" |: "<color=#00ff41>" + str(len(enjambre)) + "</color>"
     modo_color = (globals.modo == "LOCAL") >> "<color=#00ff41>LOCAL</color>" |: "<color=#ff3131>REMOTO</color>"
     
     print("OBJ: " + estado_obj + " | MODO: " + modo_color + " | SES: " + estado_enjambre)
     dibujar_separador()
     
     // Mostrar tabla de puertos si hay scan reciente
-    si globals.ultimo_scan.len > 0:
+    si len(ultimo_scan) > 0:
         print("<color=#00e5ff>[#] PUERTOS ESCANEADOS:</color>")
         columnas = ["ID", "Puerto", "Estado", "Servicio", "Version"]
         filas = []
@@ -70,7 +70,7 @@ tarea menu_interactivo(titulo, opciones):
     dibujar_separador()
     
     sel = val(pedir("<color=#ffea00>Selecciona > </color>"))
-    si sel > 0 y sel <= opciones.len: return opciones[sel - 1].cmd
+    si sel > 0 y sel <= len(opciones): return opciones[sel - 1].cmd
     error("Selección inválida.")
     return null
 
